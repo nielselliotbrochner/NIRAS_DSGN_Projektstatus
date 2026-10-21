@@ -278,7 +278,8 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .dlg-b { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 18px; overflow: auto; max-height: calc(90vh - 56px); }
 .dlg-b .form input { max-width: 100%; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 16px; border-radius: var(--r); font-size: 13px; z-index: 60; opacity: 0; transition: opacity .2s; pointer-events: none; }
-.toast.on { opacity: 1; pointer-events: auto; cursor: pointer; max-width: min(900px, calc(100vw - 32px)); }
+.toast.on { opacity: 1; max-width: min(900px, calc(100vw - 32px)); }
+.toast.on.sticky { pointer-events: auto; cursor: pointer; background: var(--deep); }
 @media (max-width: 820px) { .hide-sm { display: none; } .wrap { padding: 16px; } .top { padding: 12px 16px; } }
 @media print { body:not(.rp-print) .top-actions, .controls, .tabs, .chips, .drawer, .statusbar { display: none !important; } .tablebox { max-height: none; overflow: visible; } }
 </style>
@@ -1030,8 +1031,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
       </div>
       <div class="card">
         <h2>Udvikling pr. måned</h2>
-        <p class="note">Omsætning og dækningsbidrag pr. måned fra de indlæste månedsudtræk. Klik på en måned for at vise den i månedstallene.</p>
-        <div class="legend"><span><span class="sw" style="background:var(--deep)"></span>Omsætning</span><span><span class="sw" style="background:#C9A68A"></span>Dækningsbidrag</span></div>
+        <p class="note">Omsætning og dækningsbidrag pr. måned (venstre akse) og TFM (højre akse) fra de indlæste månedsudtræk. Klik på en måned for at vise den i månedstallene.</p>
+        <div class="legend"><span><span class="sw" style="background:var(--deep)"></span>Omsætning</span><span><span class="sw" style="background:#C9A68A"></span>Dækningsbidrag</span><span><span class="sw" style="background:#BA1223;height:3px;border-radius:2px"></span>TFM (højre akse)</span></div>
         <div class="chart" id="trend"></div>
       </div>
     </section>
@@ -1359,9 +1360,9 @@ const s = (tag, attrs = {}, text) => {
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 // Beskeden bliver længere jo længere teksten er; sticky = bliver stående, til man klikker på den
 const toast = (msg, sticky = false) => {
-  const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t);
-  t.title = 'Klik for at lukke'; t.onclick = () => t.classList.remove('on');
-  if (!sticky) toast.t = setTimeout(() => t.classList.remove('on'), Math.max(3200, String(msg).length * 50));
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on'); t.classList.toggle('sticky', !!sticky); clearTimeout(toast.t);
+  t.title = sticky ? 'Klik for at lukke' : ''; t.onclick = () => t.classList.remove('on', 'sticky');
+  if (!sticky) toast.t = setTimeout(() => t.classList.remove('on'), Math.min(12000, Math.max(3200, String(msg).length * 40)));
 };
 const ls = {
   get: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
@@ -2123,9 +2124,27 @@ function drawTrend() {
   const raw = (max - min) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), stp = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((k) => k >= raw);
   const ticks = []; for (let v = Math.floor(min / stp) * stp; v <= max + stp * 0.001; v += stp) ticks.push(v);
   const top = ticks[ticks.length - 1] < max ? max : ticks[ticks.length - 1];
-  const m = { t: 12, r: 8, b: 30, l: measure(svg, ticks.map(F.mio)) + 14 };
+  // TFM på højre akse: samme antal intervaller som venstre akse, så gitterlinjerne deles
+  const tv = rows.map((r) => r.tfm).filter(isNum), nI = ticks.length - 1;
+  let tLo = 0, tStp = 0.5;
+  if (tv.length) {
+    const tMin = Math.min(...tv), tMax = Math.max(...tv);
+    for (const st of [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5]) {
+      // læg TFM-linjen i den øverste del af grafen, men aldrig under 0
+      const lo = Math.max(0, Math.min(Math.floor((tMax - st * nI) / st + 1e-9 + 1) * st, Math.floor(tMin / st) * st));
+      if (lo + st * nI >= tMax - 1e-9) { tLo = lo; tStp = st; break; }
+    }
+  }
+  const tTicks = ticks.map((_, i) => tLo + tStp * i);
+  const fT = (v) => nf2.format(v);
+  const m = { t: 12, r: (tv.length ? measure(svg, tTicks.map(fT)) + 14 : 8), b: 30, l: measure(svg, ticks.map(F.mio)) + 14 };
   const y = lin(ticks[0], Math.max(top, ticks[ticks.length - 1]), H - m.b, m.t);
-  ticks.forEach((v) => { svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: '#EFE6DE' })); svg.append(s('text', { x: m.l - 8, y: y(v), 'text-anchor': 'end', 'dominant-baseline': 'middle' }, F.mio(v))); });
+  const yT = lin(tTicks[0], tTicks[tTicks.length - 1], y(ticks[0]), y(ticks[ticks.length - 1]));
+  ticks.forEach((v, i) => {
+    svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: '#EFE6DE' }));
+    svg.append(s('text', { x: m.l - 8, y: y(v), 'text-anchor': 'end', 'dominant-baseline': 'middle' }, F.mio(v)));
+    if (tv.length) svg.append(s('text', { x: W - m.r + 8, y: y(v), 'text-anchor': 'start', 'dominant-baseline': 'middle', fill: '#BA1223' }, fT(tTicks[i])));
+  });
   const bw = (W - m.l - m.r) / rows.length; const bar = Math.min(32, bw * 0.34);
   const every = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 64)));
   const avail = new Set(monthKeys());
@@ -2143,6 +2162,16 @@ function drawTrend() {
     hit.addEventListener('pointerleave', () => { t.hidden = true; });
     svg.append(hit);
   });
+  // TFM-linje (afbrydes ved måneder uden TFM); øverst, men uden at fange klik
+  if (tv.length) {
+    const g = s('g', { 'pointer-events': 'none' });
+    const segs = []; let cur = [];
+    rows.forEach((r, i) => { if (isNum(r.tfm)) cur.push([m.l + bw * i + bw / 2, yT(r.tfm)]); else if (cur.length) { segs.push(cur); cur = []; } });
+    if (cur.length) segs.push(cur);
+    segs.forEach((sg) => g.append(s('path', { d: sg.map((q, j) => (j ? 'L' : 'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(''), fill: 'none', stroke: '#BA1223', 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' })));
+    segs.flat().forEach((q) => g.append(s('circle', { cx: q[0], cy: q[1], r: 4.5, fill: '#fff', stroke: '#BA1223', 'stroke-width': 2.5 })));
+    svg.append(g);
+  }
 }
 
 /* ----- tabeller ----- */
