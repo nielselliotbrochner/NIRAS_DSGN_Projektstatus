@@ -184,6 +184,10 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .rpt .kv td:first-child { color: #6F6560; }
 .rpt .nt { border-left: 2px solid #E7DBD1; padding: 2px 0 2px 8px; margin: 4px 0; }
 .rpt .nt .d { color: #6F6560; font-size: 7.5pt; }
+/* Noter skrevet i dag: gul highlighter */
+.rpt .nt.today { background: #FFF07A; border-left-color: #E8C400; padding-right: 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.rpt tr.today td { background: #FFF07A; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.rpt .hl-key { background: #FFF07A; padding: 0 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .rpt .od { color: #BA1223; font-weight: 700; }
 .rpt .hcb { display: inline-block; min-width: 14px; text-align: center; border-radius: 3px; padding: 0 3px; font-weight: 700; font-size: 7.5pt; }
 .rpt .ft { margin-top: 14px; border-top: 1px solid #E7DBD1; padding-top: 4px; color: #6F6560; font-size: 7.5pt; display: flex; justify-content: space-between; }
@@ -2563,6 +2567,9 @@ function rpNotes(r) {
   return [...r.noter].filter((n) => (Date.parse(n.oprettet) || 0) >= cutoff || (o.openall && n.opfoelgning && n.status !== 'lukket')).reverse();
 }
 const isOpen = (n) => n.opfoelgning && n.status !== 'lukket';
+// Dags dato i dansk tid; bruges til at markere dagens noter med gul i rapporten
+const cphDay = (d) => (d ? new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date(d)) : '');
+const isToday = (n) => cphDay(n.oprettet) === cphDay(Date.now());
 // faste formularelementer: sæt værdier og lyt én gang
 const RPF = { r: '#rp-r', y: '#rp-y', n: '#rp-n', fokus: '#rp-fokus', open: '#rp-open', risk: '#rp-risk', openall: '#rp-openall' };
 Object.entries(RPF).forEach(([k, sel]) => $(sel).addEventListener('change', (e) => { S.rp[k] = e.target.checked; saveRP(); drawReportTab(); }));
@@ -2614,6 +2621,7 @@ function buildReport() {
       E('div', { class: 'meta', text: `${rpBu()} · Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
     E('div', { class: 'meta', style: 'text-align:right;white-space:pre-line', text: `Udarbejdet ${F.date(new Date().toISOString())}\n${nf0.format(sel.length)} af ${nf0.format(all.length)} projekter` })));
   if (o.intro && o.intro.trim()) root.append(E('div', { class: 'intro', text: o.intro.trim() }));
+  if (sel.some((r) => r.noter.some((n) => isToday(n) && rpNotes(r).includes(n)))) root.append(E('p', { class: 'meta' }, E('span', { class: 'hl-key', text: 'Gul markering' }), ` = noter skrevet i dag, ${F.date(new Date().toISOString())}.`));
   // nøgletal
   if (o.sec.kpi) {
     const k = (l, v, sub) => E('div', {}, E('span', { class: 'l', text: l }), E('span', { class: 'v', text: v }), sub ? E('span', { class: 's', text: sub }) : null);
@@ -2643,7 +2651,7 @@ function buildReport() {
     else {
       const today = new Date().toISOString().slice(0, 10);
       root.append(E('table', {}, E('thead', {}, E('tr', {}, ...['Projekt', 'Opfølgning', 'Frist', 'Skrevet'].map((l) => E('th', { text: l })))),
-        E('tbody', {}, ...op.map(({ r, n }) => E('tr', {}, td(`${r.projekt} ${r.navn || ''}`), td(n.opfoelgning), td(n.frist ? F.date(n.frist) : '', n.frist && n.frist < today ? 'od' : null), td(F.date(n.oprettet)))))));
+        E('tbody', {}, ...op.map(({ r, n }) => E('tr', { class: isToday(n) ? 'today' : null }, td(`${r.projekt} ${r.navn || ''}`), td(n.opfoelgning), td(n.frist ? F.date(n.frist) : '', n.frist && n.frist < today ? 'od' : null), td(F.date(n.oprettet)))))));
     }
   }
   // oversigt
@@ -2675,7 +2683,7 @@ function buildReport() {
       if (o.sec.desc && (inf.beskrivelse || inf.adresse)) pj.append(E('p', { style: 'margin:6px 0 0;white-space:pre-wrap', text: [inf.beskrivelse, inf.adresse ? '📍 ' + inf.adresse : ''].filter(Boolean).join('\n') }));
       if (notes.length) {
         const today = new Date().toISOString().slice(0, 10);
-        pj.append(...notes.map((n) => E('div', { class: 'nt' },
+        pj.append(...notes.map((n) => E('div', { class: isToday(n) ? 'nt today' : 'nt', title: isToday(n) ? 'Skrevet i dag' : null },
           E('div', { class: 'd', text: `${F.date(n.oprettet)}${n.periode ? ' · månedsluk ' + F.perS(n.periode) : ''}${n.opfoelgning ? ' · ' + (n.status === 'lukket' ? 'lukket' : 'åben') : ''}` }),
           n.note ? E('div', { text: n.note }) : null,
           n.opfoelgning ? E('div', { class: isOpen(n) && n.frist && n.frist < today ? 'od' : null, text: `Opfølgning: ${n.opfoelgning}${n.frist ? ' · frist ' + F.date(n.frist) : ''}` }) : null)));
