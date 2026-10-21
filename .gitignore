@@ -1,0 +1,15 @@
+# Fortrolige data må aldrig i repositoryet
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.json
+*.pdf
+Mine_projektdata_*
+Projektrapport_*
+data_*
+# System
+.DS_Store
+Thumbs.db
+.env
+.env.*
