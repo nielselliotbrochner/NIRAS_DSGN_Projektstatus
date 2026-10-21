@@ -1552,13 +1552,15 @@ async function parseFile(file) {
     const m = /PTD_(\d{4})(\d{2})(\d{2})/i.exec(file.name);
     key = m ? `${m[1]}-${m[2]}-${m[3]}` : new Date(file.lastModified).toISOString().slice(0, 10);
   } else {
-    const m = /Monthly_(\d{4})(\d{2})/i.exec(file.name);
-    if (m) key = `${m[1]}-${m[2]}`;
+    // Måneden læses af udtrækkets eget filter (fx "Aug, 2026 (Month Name, Year)"). Filnavnet bruges kun som reserve
+    // og kun ved præcis seks cifre (Monthly_ÅÅÅÅMM), så en udtræksdato som Monthly_20261021 ikke læses som oktober.
+    const f = /([A-Za-zæøå]{3})[a-zæøå]*,?\s*(\d{4})\s*\(Month/i.exec(filterText);
+    if (f && MONTHS[f[1].toLowerCase()]) key = `${f[2]}-${String(MONTHS[f[1].toLowerCase()]).padStart(2, '0')}`;
     else {
-      const f = /([A-Za-zæøå]{3})[a-zæøå]*,?\s*(\d{4})\s*\(Month/i.exec(filterText);
-      if (f && MONTHS[f[1].toLowerCase()]) key = `${f[2]}-${String(MONTHS[f[1].toLowerCase()]).padStart(2, '0')}`;
+      const m = /Monthly_(\d{4})(\d{2})(?!\d)/i.exec(file.name);
+      if (m && +m[2] >= 1 && +m[2] <= 12) key = `${m[1]}-${m[2]}`;
     }
-    if (!key) throw new Error(`${file.name}: kunne ikke finde måneden. Navngiv filen …Monthly_ÅÅÅÅMM.xlsx`);
+    if (!key) throw new Error(`${file.name}: kunne ikke finde måneden i udtrækkets filter. Navngiv filen …Monthly_ÅÅÅÅMM.xlsx`);
   }
   return { kind, key, rows, recon, file: file.name, loaded: new Date().toISOString() };
 }
