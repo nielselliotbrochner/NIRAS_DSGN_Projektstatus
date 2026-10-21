@@ -87,4 +87,4 @@ Opret tabellen med `id`, `projekt_id` (fremmednøgle, on delete cascade) og `pro
 
 ## Adgang
 
-Row Level Security på alle tabeller: kun brugere, der er logget ind.
+Row Level Security på alle tabeller. Det er ikke nok at være logget ind: brugerens e-mail skal stå i tabellen `adgang` (tjekkes af funktionen `har_adgang()`).

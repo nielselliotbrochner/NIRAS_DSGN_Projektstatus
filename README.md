@@ -14,7 +14,7 @@ Dashboard til månedsluk: projektstatus pr. måned og til dato, flag, risk log, 
 
 - Repositoryet indeholder **ingen projektdata**. ERP-udtræk, risk log, eksporter og rapporter er udelukket i `.gitignore`.
 - Excel-filerne læses kun i browseren. Uden Supabase gemmes udtræk, noter og fokus i browseren på din egen computer.
-- Med Supabase gemmes udtræk og egne registreringer i databasen (EU-region). Kun brugere, der er logget ind, har adgang.
+- Med Supabase gemmes udtræk og egne registreringer i databasen (EU-region). Kun godkendte brugere (tabellen `adgang`) har adgang.
 
 ## Brug hver måned
 
@@ -31,7 +31,9 @@ URL og publishable key er udfyldt i dashboardet, så der kun skal logges ind.
 - `supabase/schema.sql`: hele skemaet. Kan køres igen i SQL Editor uden at skade data.
 - `supabase/05_projekt_tildel_nummer.sql`: funktionen, der giver et tilbud sit ERP-nummer. Køres manuelt i SQL Editor, før bid/no bid tages i brug.
 
-Ny bruger: Authentication > Users > Add user (e-mail og adgangskode).
+Ny bruger: opret brugeren under Authentication > Users > Add user (e-mail og adgangskode), og tilføj e-mailen i tabellen `adgang`:
+`insert into public.adgang (email) values ('navn@niras.dk');`
+Kun e-mails i `adgang` kan læse og skrive data, også selv om andre skulle oprette en bruger.
 Har du noter eller udtræk i browseren, så flyt dem med knapperne under Indstillinger.
 
 ## Kort

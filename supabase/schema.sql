@@ -459,8 +459,25 @@ begin
 end $$;
 
 ------------------------------------------------------------------------
--- 7. Adgang: kun brugere, der er logget ind
+-- 7. Adgang: kun godkendte brugere
+--    Det er ikke nok at være logget ind: e-mailen skal stå i tabellen adgang.
+--    Ny bruger: opret brugeren under Authentication > Users, og kør
+--      insert into public.adgang (email) values ('navn@niras.dk');
 ------------------------------------------------------------------------
+
+create table if not exists public.adgang (
+  email     text primary key,
+  oprettet  timestamptz not null default now()
+);
+alter table public.adgang enable row level security;
+drop policy if exists "egen adgang" on public.adgang;
+create policy "egen adgang" on public.adgang for select to authenticated using (lower(email) = lower(auth.jwt() ->> 'email'));
+
+create or replace function public.har_adgang() returns boolean
+language sql stable security invoker set search_path = public as $$
+  select exists (select 1 from public.adgang where lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+$$;
+grant execute on function public.har_adgang() to authenticated;
 
 do $$
 declare t text;
@@ -473,10 +490,10 @@ begin
     execute format('drop policy if exists "logget ind: opret" on public.%I', t);
     execute format('drop policy if exists "logget ind: ret" on public.%I', t);
     execute format('drop policy if exists "logget ind: slet" on public.%I', t);
-    execute format('create policy "logget ind: læs"  on public.%I for select to authenticated using (true)', t);
-    execute format('create policy "logget ind: opret" on public.%I for insert to authenticated with check (true)', t);
-    execute format('create policy "logget ind: ret"   on public.%I for update to authenticated using (true) with check (true)', t);
-    execute format('create policy "logget ind: slet"  on public.%I for delete to authenticated using (true)', t);
+    execute format('create policy "logget ind: læs"  on public.%I for select to authenticated using (public.har_adgang())', t);
+    execute format('create policy "logget ind: opret" on public.%I for insert to authenticated with check (public.har_adgang())', t);
+    execute format('create policy "logget ind: ret"   on public.%I for update to authenticated using (public.har_adgang()) with check (public.har_adgang())', t);
+    execute format('create policy "logget ind: slet"  on public.%I for delete to authenticated using (public.har_adgang())', t);
   end loop;
 end $$;
 
