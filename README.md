@@ -2,7 +2,7 @@
 
 Dashboard til månedsluk: projektstatus pr. måned og til dato, flag, risk log, kort og rapporter til projektansvarlige. Én HTML-fil, der kører i browseren.
 
-**Åbnes fra GitHub Pages:** https://nielselliotbrochner.github.io/niras_dsgn_projektstatus/
+**Åbnes fra GitHub Pages:** https://nielselliotbrochner.github.io/NIRAS_DSGN_Projektstatus/
 
 Siden indeholder ingen data. Den starter med en login-skærm; alle tal og noter hentes fra Supabase efter login, og kun e-mails i tabellen `adgang` har adgang. Uploads gemmes direkte i databasen og ikke i browseren, og "Log ud" rydder browseren.
 
