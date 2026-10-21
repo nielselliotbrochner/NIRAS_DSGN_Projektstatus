@@ -350,7 +350,7 @@ begin
 end $$;
 
 -- Opdateret-tidsstempel
-create or replace function public.saet_opdateret() returns trigger language plpgsql as $$
+create or replace function public.saet_opdateret() returns trigger language plpgsql set search_path = public as $$
 begin new.opdateret = now(); return new; end $$;
 
 -- Når et projekt får eller skifter projektnummer, rettes kopien i alle moduler

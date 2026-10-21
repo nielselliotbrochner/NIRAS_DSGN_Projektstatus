@@ -23,12 +23,16 @@ Dashboard til månedsluk: projektstatus pr. måned og til dato, flag, risk log, 
 3. Gennemgå flag, skriv noter og opfølgninger, og lav rapporter til hver PA under fanen Rapport.
 4. Eksportér dine egne data når som helst under "Mine data" (Excel eller JSON).
 
-## Opsætning af Supabase
+## Supabase
 
-1. Kør `supabase/schema.sql` i SQL Editor.
-2. Opret brugere under Authentication > Users.
-3. I dashboardet: Indstillinger > Supabase. Indtast projekt-URL, publishable key og login.
-4. Har du noter eller udtræk i browseren, så flyt dem med knapperne under Indstillinger.
+Projektet **NIRAS Projektstatus** (region eu-north-1, Stockholm) er oprettet, og skemaet er kørt.
+URL og publishable key er udfyldt i dashboardet, så der kun skal logges ind.
+
+- `supabase/schema.sql`: hele skemaet. Kan køres igen i SQL Editor uden at skade data.
+- `supabase/05_projekt_tildel_nummer.sql`: funktionen, der giver et tilbud sit ERP-nummer. Køres manuelt i SQL Editor, før bid/no bid tages i brug.
+
+Ny bruger: Authentication > Users > Add user (e-mail og adgangskode).
+Har du noter eller udtræk i browseren, så flyt dem med knapperne under Indstillinger.
 
 ## Kort
 

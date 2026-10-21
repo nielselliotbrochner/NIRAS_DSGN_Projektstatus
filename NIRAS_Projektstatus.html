@@ -1606,7 +1606,8 @@ const aggMonth = (per, rows) => {
 
 /* ================= Noter og fokus: lokalt nu, Supabase senere ================= */
 const Store = {
-  cfg: ls.get('pd.sb', { url: '', key: '' }),
+  // NIRAS Projektstatus i Supabase (publishable key er beregnet til browseren; adgang kræver login)
+  cfg: ls.get('pd.sb', { url: 'https://afwhyejitlhlghugmplv.supabase.co', key: 'sb_publishable_8FmnT8qxYuqh6ij-RPikmw_rI24pVFp' }),
   session: ls.get('pd.sb.session', null),
   mode() { return this.cfg.url && this.cfg.key && this.session ? 'supabase' : 'local'; },
   label() { return this.mode() === 'supabase' ? `Supabase (${this.session.user?.email || 'logget ind'})` : 'Lokalt i denne browser'; },
