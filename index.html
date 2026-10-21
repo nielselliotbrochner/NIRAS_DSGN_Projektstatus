@@ -123,6 +123,13 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .kpop a, .map .leaflet-container a.leaflet-popup-close-button:hover { color: var(--deep) !important; }
 .map path.leaflet-interactive:focus { outline: none; }
 .search { min-width: 220px; flex: 1 1 220px; max-width: 360px; }
+.gate { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.gate-box { background: #fff; border: 1px solid var(--line); border-top: 5px solid var(--deep); border-radius: var(--r); padding: 28px 28px 22px; width: min(400px, 100%); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(34,27,24,.08); }
+.gate-box label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.gate-box input { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+.gate-mark { font-weight: 700; letter-spacing: .18em; color: var(--deep); }
+.gate-h { font-family: var(--serif); font-weight: 400; font-size: 28px; margin: 0; }
+.gate-msg { margin: 0; font-size: 13px; color: var(--red); min-height: 1em; }
 .rp-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); align-items: start; }
 .rp-fs { border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px 10px; display: grid; gap: 6px; margin: 0; }
 .rp-fs legend { font-size: 12px; font-weight: 700; color: var(--deep); padding: 0 4px; text-transform: uppercase; letter-spacing: .05em; }
@@ -942,6 +949,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <button class="tbtn primary" id="btn-upload" type="button">Indlæs Excel</button>
     <button class="tbtn" id="btn-export" type="button">Eksportér visning</button>
     <button class="tbtn" id="btn-mydata" type="button">Mine data</button>
+    <button class="tbtn" id="btn-logout" type="button" title="Log ud">Log ud</button>
     <button class="tbtn" id="btn-settings" type="button">Indstillinger</button>
   </div>
 </header>
@@ -954,7 +962,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <section class="drop" id="empty">
     <h2>Træk dine ERP-udtræk herind</h2>
     <div>PTD-filen (til dato), månedsfilen og risk log-filen. Flere udtræk kan indlæses på én gang og gemmes som historik.</div>
-    <div>Filerne læses kun her i browseren og sendes ingen steder hen.</div>
+    <div>Filerne afstemmes her i browseren og gemmes derefter med dato i databasen bag login.</div>
     <button class="btn primary" type="button" id="btn-upload2">Vælg filer</button>
   </section>
 
@@ -1273,22 +1281,24 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="chips"><button class="btn primary small" id="carto-save" type="button">Gem nøgle</button></div>
     </section>
     <section class="form">
-      <p class="sec-h">Supabase</p>
-      <p class="note">Udfyld, når databasen er klar. Indtil da gemmes udtræk, noter og fokus i denne browser. Når du er logget ind, gemmes nye udtræk med dato i Supabase, og dashboardet henter derfra. Tabellerne oprettes med filen supabase_projektstatus.sql.</p>
-      <label>Projekt-URL<input id="sb-url" type="url" placeholder="https://xxxx.supabase.co"></label>
-      <label>Publishable / anon key<input id="sb-key" type="text" placeholder="sb_publishable_… eller eyJ…"></label>
-      <div class="row">
-        <label>E-mail<input id="sb-email" type="email" autocomplete="username"></label>
-        <label>Adgangskode<input id="sb-pass" type="password" autocomplete="current-password"></label>
-      </div>
-      <div class="chips">
-        <button class="btn primary small" id="sb-login" type="button">Forbind og log ind</button>
-        <button class="btn small" id="sb-logout" type="button">Log ud og brug lokalt</button>
-      </div>
+      <p class="sec-h">Database og login</p>
+      <p class="note">Dashboardet bruger databasen NIRAS Projektstatus i Supabase (EU). Kun e-mails i tabellen adgang kan se data. Nye brugere oprettes i Supabase under Authentication > Users og tilføjes med <code>insert into public.adgang (email) values ('navn@niras.dk');</code></p>
+      <div class="chips"><button class="btn small" id="sb-logout" type="button">Log ud</button></div>
       <p class="note" id="sb-status"></p>
     </section>
   </div>
 </dialog>
+<div class="gate" id="gate" hidden>
+  <div class="gate-box">
+    <div class="gate-mark">NIRAS</div>
+    <h1 class="gate-h">Projektstatus</h1>
+    <p class="note">Log ind for at se dashboardet. Alle tal og noter ligger i en lukket database og vises kun for godkendte brugere.</p>
+    <label>E-mail<input id="g-email" type="email" autocomplete="username"></label>
+    <label>Adgangskode<input id="g-pass" type="password" autocomplete="current-password"></label>
+    <button class="btn primary" id="g-login" type="button">Log ind</button>
+    <p class="gate-msg" id="g-msg" role="alert"></p>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <div id="print-root"></div>
 
@@ -1607,7 +1617,7 @@ const aggMonth = (per, rows) => {
 /* ================= Noter og fokus: lokalt nu, Supabase senere ================= */
 const Store = {
   // NIRAS Projektstatus i Supabase (publishable key er beregnet til browseren; adgang kræver login)
-  cfg: ls.get('pd.sb', { url: 'https://afwhyejitlhlghugmplv.supabase.co', key: 'sb_publishable_8FmnT8qxYuqh6ij-RPikmw_rI24pVFp' }),
+  cfg: { url: 'https://afwhyejitlhlghugmplv.supabase.co', key: 'sb_publishable_8FmnT8qxYuqh6ij-RPikmw_rI24pVFp' },
   session: ls.get('pd.sb.session', null),
   mode() { return this.cfg.url && this.cfg.key && this.session ? 'supabase' : 'local'; },
   label() { return this.mode() === 'supabase' ? `Supabase (${this.session.user?.email || 'logget ind'})` : 'Lokalt i denne browser'; },
@@ -1616,7 +1626,8 @@ const Store = {
       ...opt,
       headers: { apikey: this.cfg.key, Authorization: 'Bearer ' + this.session.access_token, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(opt.headers || {}) },
     });
-    if (res.status === 401 && retry && this.session?.refresh_token) { await this.refresh(); return this.sbFetch(path, opt, false); }
+    if (res.status === 401 && retry && this.session?.refresh_token) { try { await this.refresh(); } catch (e) { this.logout(); showGate('Din session er udløbet. Log ind igen.'); throw new Error('Session udløbet'); } return this.sbFetch(path, opt, false); }
+    if (res.status === 401) { this.logout(); showGate('Din session er udløbet. Log ind igen.'); throw new Error('Session udløbet'); }
     if (!res.ok) throw new Error(`Supabase svarede ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const t = await res.text(); return t ? JSON.parse(t) : null;
   },
@@ -1629,6 +1640,7 @@ const Store = {
   login(email, password) { return this.auth({ email, password }, 'password'); },
   refresh() { return this.auth({ refresh_token: this.session.refresh_token }, 'refresh_token'); },
   logout() { this.session = null; ls.del('pd.sb.session'); },
+  async harAdgang() { return (await this.sbFetch('/rest/v1/rpc/har_adgang', { method: 'POST', body: '{}' })) === true; },
   async load() {
     if (this.mode() === 'local') return { notes: ls.get('pd.notes', []), fokus: ls.get('pd.fokus', {}), info: ls.get('pd.info', {}) };
     const [notes, fok, inf] = await Promise.all([
@@ -1920,7 +1932,7 @@ function drawStatus() {
   else bar.append(pill('warn', 'Intet månedsudtræk indlæst'));
   if (S.risk) { const nd = new Set(S.riskTrend.map((x) => x.dato)).size; bar.append(pill('ok', `Risk log pr. ${F.date(S.risk.key)} · ${nf0.format(S.risk.rows.length)} projekter${nd > 1 ? ' · ' + nd + ' udtræk' : ''}`, S.risk.file)); }
   else bar.append(pill('warn', 'Ingen risk log indlæst'));
-  bar.append(pill(S.src === 'supabase' ? 'ok' : 'warn', S.src === 'supabase' ? 'Udtræk: Supabase' : 'Udtræk: i denne browser'));
+  bar.append(pill(Store.mode() === 'supabase' ? 'ok' : 'warn', Store.mode() === 'supabase' ? (S.ptd ? 'Udtræk: database' : 'Udtræk: databasen er tom endnu') : 'Udtræk: i denne browser'));
   bar.append(pill(Store.mode() === 'supabase' ? 'ok' : 'warn', 'Noter og fokus: ' + Store.label()));
 }
 
@@ -2793,7 +2805,7 @@ async function loadFiles(files) {
   const ko = { ptd: 0, maaned: 1, risiko: 2 };
   parsed.sort((a, b) => (a.kind === b.kind ? a.key.localeCompare(b.key) : ko[a.kind] - ko[b.kind]));
   for (const d of parsed) {
-    try { await saveLocal(d); } catch (e) { msgs.push('Kunne ikke gemme i browseren'); }
+    if (Store.mode() !== 'supabase') { try { await saveLocal(d); } catch (e) { msgs.push('Kunne ikke gemme i browseren'); } }
     msgs.push(`${dLabel(d)}: ${nf0.format(d.rows.length)} projekter${d.recon.ok === false ? ', AFVIGER fra Total-linjen i ' + d.recon.diff.join(', ') : d.recon.ok ? ', afstemt' : ''}`);
   }
   if (Store.mode() === 'supabase' && parsed.length) {
@@ -2834,8 +2846,7 @@ function fillSettings() {
   $('#btn-push-local').hidden = !(Store.mode() === 'supabase' && (lp.length || lm.length || lr.length));
   const nl = Store.mode() === 'local' ? ls.get('pd.notes', []).length : S.notes.length;
   $('#set-store').textContent = `Noter og fokus gemmes: ${Store.label()}. ${nf0.format(nl)} noter og ${Object.values(S.fokus).filter((f) => f.fokus).length} fokusprojekter.` + (Store.mode() === 'local' ? ' Lokale noter findes kun i denne browser på denne computer, så tag en backup jævnligt.' : '');
-  $('#sb-url').value = Store.cfg.url || ''; $('#sb-key').value = Store.cfg.key || '';
-  $('#sb-status').textContent = Store.mode() === 'supabase' ? 'Forbundet som ' + (Store.session.user?.email || '') : 'Ikke forbundet. Udtræk, noter og fokus gemmes i browseren.';
+  $('#sb-status').textContent = Store.mode() === 'supabase' ? 'Logget ind som ' + (Store.session.user?.email || '') : 'Ikke logget ind.';
   $('#btn-notes-migrate').hidden = !(Store.mode() === 'supabase' && ls.get('pd.notes', []).length + Object.keys(ls.get('pd.fokus', {})).length + Object.keys(ls.get('pd.info', {})).length > 0);
 }
 $('#btn-settings').addEventListener('click', () => { fillSettings(); dlg.showModal(); });
@@ -2991,28 +3002,79 @@ $('#notes-file').addEventListener('change', async (e) => {
     await reloadNotes(); fillSettings(); toast('Backup indlæst');
   } catch (err) { toast(err.message); }
 });
-$('#sb-login').addEventListener('click', async () => {
-  Store.cfg = { url: $('#sb-url').value.trim(), key: $('#sb-key').value.trim() }; ls.set('pd.sb', Store.cfg);
-  try { await Store.login($('#sb-email').value.trim(), $('#sb-pass').value); $('#sb-pass').value = ''; await loadData(); await reloadNotes(); fillSettings(); toast('Forbundet til Supabase'); }
-  catch (e) { Store.logout(); $('#sb-status').textContent = e.message; }
-});
 $('#carto-save').addEventListener('click', () => {
   const k = $('#carto-key').value.trim(); ls.set('pd.cartoKey', k); tileErr = false;
   if (tLayer) { map.removeLayer(tLayer); tLayer = null; }
   toast(k ? 'CARTO-nøgle gemt' : 'CARTO-nøgle fjernet'); render();
 });
-$('#sb-logout').addEventListener('click', async () => { Store.logout(); await loadData(); await reloadNotes(); fillSettings(); toast('Bruger browserens udtræk og noter'); });
+$('#sb-logout').addEventListener('click', () => logOut());
+$('#btn-logout').addEventListener('click', () => logOut());
 $('#btn-notes-migrate').addEventListener('click', () => act(async () => { const r = await Store.migrate(); toast(`Flyttet: ${r.notes} noter, ${r.fokus} fokusmarkeringer og ${r.info} projektbeskrivelser`); fillSettings(); }));
 
 let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 
+/* ================= Login ================= */
+let gateResolve = null, startupDone = false;
+const gateErr = (e) => {
+  const m = String(e && e.message || e);
+  if (/invalid login|invalid_grant|credentials/i.test(m)) return 'Forkert e-mail eller adgangskode.';
+  if (/email not confirmed/i.test(m)) return 'Brugeren er ikke bekræftet. Sæt flueben ved Auto Confirm, eller bekræft brugeren i Supabase.';
+  if (e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(m)) return 'Kan ikke nå databasen. Den kan være sat på pause (gratisplanen pauser efter 7 dage uden brug). Åbn supabase.com, vælg projektet NIRAS Projektstatus og tryk Restore. Prøv igen om et par minutter.';
+  return m;
+};
+function showGate(msg) {
+  $('#gate').hidden = false; $('#app').setAttribute('aria-hidden', 'true');
+  $('#g-msg').textContent = msg || '';
+  setTimeout(() => ($('#g-email').value ? $('#g-pass') : $('#g-email')).focus(), 50);
+  return new Promise((res) => { gateResolve = res; });
+}
+async function doLogin() {
+  const email = $('#g-email').value.trim(), pass = $('#g-pass').value;
+  if (!email || !pass) { $('#g-msg').textContent = 'Skriv e-mail og adgangskode.'; return; }
+  $('#g-login').disabled = true; $('#g-msg').textContent = 'Logger ind …';
+  try {
+    await Store.login(email, pass);
+    if (!(await Store.harAdgang())) { Store.logout(); $('#g-msg').textContent = 'Din bruger er oprettet, men har ikke adgang til data endnu. Få din e-mail tilføjet i tabellen adgang.'; return; }
+    $('#g-pass').value = ''; ls.set('pd.lastEmail', email);
+    $('#gate').hidden = true; $('#app').removeAttribute('aria-hidden');
+    if (gateResolve) { const r = gateResolve; gateResolve = null; r(); }
+    if (startupDone) await afterLogin();
+  } catch (e) { Store.logout(); $('#g-msg').textContent = gateErr(e); }
+  finally { $('#g-login').disabled = false; }
+}
+$('#g-login').addEventListener('click', doLogin);
+['#g-email', '#g-pass'].forEach((sel) => $(sel).addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); }));
+async function ensureLogin() {
+  $('#g-email').value = ls.get('pd.lastEmail', '');
+  if (Store.session?.refresh_token) {
+    try { await Store.refresh(); if (await Store.harAdgang()) return; Store.logout(); return showGate('Din bruger har ikke adgang til data.'); }
+    catch (e) { Store.logout(); return showGate(e instanceof TypeError ? gateErr(e) : ''); }
+  }
+  return showGate('');
+}
+async function afterLogin() {
+  await loadData();
+  try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
+  rebuild(); render();
+  $('#btn-logout').title = 'Log ud (' + (Store.session?.user?.email || '') + ')';
+}
+async function logOut() {
+  if (!confirm('Log ud? Data i denne browser ryddes, og alt ligger fortsat i databasen.')) return;
+  Store.logout();
+  try { await idb.clear(); } catch (e) { /* ingen lokal cache */ }
+  location.reload();
+}
+
 /* ================= Start ================= */
 (async () => {
   const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'risiko', 'kort', 'rapport', 'regler'].includes(h0)) S.tab = h0;
+  await ensureLogin();
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
   rebuild();
   show(S.tab);
+  $('#btn-logout').title = 'Log ud (' + (Store.session?.user?.email || '') + ')';
+  startupDone = true;
 })();
 })();
 </script>
