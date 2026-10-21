@@ -24,6 +24,8 @@ Siden indeholder ingen data. Den starter med en login-skærm; alle tal og noter 
 
 1. Træk de tre udtræk ind i dashboardet: `data_26_PTD_ÅÅÅÅMMDD.xlsx`, `data_26_Monthly_ÅÅÅÅMM.xlsx` og `data_26_risklog_ÅÅÅÅMMDD.xlsx`.
 2. Dashboardet afstemmer mod udtrækkenes Total-linje og gemmer dem med dato.
+   Måneden læses af filnavnet (`Monthly_ÅÅÅÅMM`). Ældre måneder kan indlæses når som helst; de overskriver ikke hinanden.
+   Vælg en tidligere måned i feltet **Måned** ved filtrene eller ved at klikke i grafen "Udvikling pr. måned". Til dato viser altid det seneste udtræk.
 3. Gennemgå flag, skriv noter og opfølgninger, og lav rapporter til hver PA under fanen Rapport.
 4. Eksportér dine egne data når som helst under "Mine data" (Excel eller JSON).
 

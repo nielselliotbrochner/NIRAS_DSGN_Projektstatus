@@ -48,6 +48,11 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .controls select, .search { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; }
 .ms { position: relative; }
+.msel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 0 4px 0 10px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+.msel:hover { border-color: var(--muted); }
+.msel.on { border-color: var(--deep); box-shadow: inset 0 0 0 1px var(--deep); }
+.controls .msel select { border: 0; background: transparent; padding: 6px 4px; font: inherit; color: inherit; cursor: pointer; }
+.controls .msel select:focus-visible { outline: 2px solid var(--deep); outline-offset: 1px; }
 .ms-btn { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; max-width: 300px; }
 .ms-btn:hover { border-color: var(--muted); }
 .ms-btn.on { border-color: var(--deep); box-shadow: inset 0 0 0 1px var(--deep); }
@@ -977,6 +982,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="ms" id="ms-bu"></div>
         <div class="ms" id="ms-pl"></div>
         <div class="ms" id="ms-pa"></div>
+        <label class="msel" id="msel" hidden title="Hvilken måned der vises i månedstal og månedsflag. Til dato er altid det seneste udtræk."><span class="ms-k">Måned</span><select id="sel-month" aria-label="Vælg måned"></select></label>
         <button class="btn" id="btn-reset" type="button">Nulstil</button>
       </div>
       <nav class="tabs" role="tablist">
@@ -1024,7 +1030,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       </div>
       <div class="card">
         <h2>Udvikling pr. måned</h2>
-        <p class="note">Omsætning og dækningsbidrag pr. måned fra de indlæste månedsudtræk</p>
+        <p class="note">Omsætning og dækningsbidrag pr. måned fra de indlæste månedsudtræk. Klik på en måned for at vise den i månedstallene.</p>
         <div class="legend"><span><span class="sw" style="background:var(--deep)"></span>Omsætning</span><span><span class="sw" style="background:#C9A68A"></span>Dækningsbidrag</span></div>
         <div class="chart" id="trend"></div>
       </div>
@@ -1726,6 +1732,12 @@ const Store = {
       trend: tr.map((t) => ({ periode: String(t.periode).slice(0, 7), bu: t.bu, pl: t.pl, po: t.po, oms: num(t.oms), db: num(t.db), loen: num(t.loen), aktive: num(t.aktive) })),
     };
   },
+  async loadMonth(key) {
+    const u = (S.ups || []).find((x) => x.type === 'maaned' && String(x.noegle) === key);
+    if (!u) return null;
+    const rows = await this.fetchAll(`/rest/v1/erp_maaned?select=*&periode=eq.${key}-01&order=projekt`);
+    return { kind: 'maaned', key, rows: rows.map(normDbRow), recon: { ok: u.afstemt, diff: u.afvigelser ? String(u.afvigelser).split(', ') : [] }, file: u.filnavn, loaded: u.uploadet };
+  },
   async projectHistory(projekt) {
     const r = await this.fetchAll(`/rest/v1/erp_ptd?select=pr_dato,poc,tfm,tfm_eac,oms,db,wip&projekt=eq.${encodeURIComponent(projekt)}&order=pr_dato`);
     return r.map((x) => ({ d: String(x.pr_dato).slice(0, 10), poc: nn(x.poc), tfm: nn(x.tfm), tfm_eac: nn(x.tfm_eac), oms: nn(x.oms), db: nn(x.db), wip: nn(x.wip) }));
@@ -1774,7 +1786,7 @@ const S = {
   ptd: null, months: {}, notes: [], fokus: {}, info: {}, infoEdit: null, rules: loadRules(),
   risk: null, riskTrend: [], riskBy: new Map(), rhist: {}, rhistCache: {}, rchip: 'k2', rq: '', rp: { pa: null, manual: {}, intro: '', ...{ r: true, y: true, n: false, minb: 0, fokus: true, open: true, risk: true, riskmin: 3, sort: 'score', age: 90, openall: true, sec: { kpi: true, flag: true, open: true, table: true, pages: true, risk: true, desc: false } }, ...ls.get('pd.rp', {}) }, kfarve: ls.get('pd.kfarve', 'flag'),
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
-  P: [], periode: '', bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
+  P: [], periode: '', mSel: '', mLatest: '', bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 } },
 };
@@ -1834,12 +1846,47 @@ const msBU = makeMS($('#ms-bu'), { label: 'BU', allText: 'Alle', title: 'Forretn
 const msPL = makeMS($('#ms-pl'), { label: 'Projektleder (PL)', allText: 'Alle', title: 'Projektleder (PM i ERP)', get: () => S.pls, set: (v) => { S.pls = v; }, onChange: () => render() });
 const msPA = makeMS($('#ms-pa'), { label: 'Projektansvarlig (PA)', allText: 'Alle', title: 'Projektansvarlig (PO i ERP)', get: () => S.pas, set: (v) => { S.pas = v; }, onChange: () => render() });
 
+/* ----- månedsvælger ----- */
+function monthKeys() {
+  const k = new Set(Object.keys(S.months));
+  if (S.src === 'supabase') S.ups.filter((u) => u.type === 'maaned').forEach((u) => k.add(String(u.noegle)));
+  else S.localKeys.filter((x) => x.startsWith('m:')).forEach((x) => k.add(x.slice(2)));
+  return [...k].sort();
+}
+const mWord = () => (S.periode && S.periode !== S.mLatest ? 'Valgt måned' : 'Seneste måned');
+async function ensureMonth(key) {
+  if (!key || S.months[key]) return;
+  const m = S.src === 'supabase' ? await Store.loadMonth(key) : await idb.get('m:' + key);
+  if (!m) throw new Error('Måneden ' + F.per(key) + ' findes ikke');
+  S.months[key] = m;
+}
+async function selectMonth(key) {
+  const k = key === S.mLatest ? '' : key || '';
+  if (k === S.mSel) return;
+  const sel = $('#sel-month');
+  try {
+    if (k && !S.months[k]) { sel.disabled = true; toast('Henter ' + F.per(k) + ' …'); await ensureMonth(k); toast(F.per(k) + ' vises nu i månedstallene'); }
+    S.mSel = k;
+  } catch (e) { toast('Kunne ikke hente måneden: ' + e.message); }
+  sel.disabled = false;
+  rebuild(); render();
+}
+function drawMonthSel() {
+  const sel = $('#sel-month'), keys = monthKeys().reverse();
+  $('#msel').hidden = !keys.length;
+  sel.replaceChildren(...keys.map((k, i) => h('option', { value: i === 0 ? '' : k, text: F.per(k) + (i === 0 ? ' (seneste)' : '') })));
+  sel.value = S.periode === S.mLatest ? '' : S.periode;
+  $('#msel').classList.toggle('on', !!S.periode && S.periode !== S.mLatest);
+}
+$('#sel-month').addEventListener('change', (e) => selectMonth(e.target.value));
+
 /* ================= Beregninger ================= */
 function rebuild() {
   if (!S.ptd) { S.P = []; return; }
   const asof = S.ptd.key;
-  const pers = Object.keys(S.months).sort();
-  S.periode = pers[pers.length - 1] || '';
+  const pers = monthKeys();
+  S.mLatest = pers[pers.length - 1] || '';
+  S.periode = S.mSel && S.months[S.mSel] ? S.mSel : (S.months[S.mLatest] ? S.mLatest : (Object.keys(S.months).sort().pop() || ''));
   const mm = new Map((S.months[S.periode]?.rows || []).map((r) => [r.projekt, r]));
   const g = Object.fromEntries(S.rules.map((x) => [x.regel, x]));
   const notesBy = new Map();
@@ -1937,6 +1984,7 @@ function drawStatus() {
 }
 
 function drawControls() {
+  drawMonthSel();
   const bus = Object.keys(countBy(S.P, 'bu'));
   if (S.bus.size && ![...S.bus].some((b) => bus.includes(b))) S.bus = new Set(bus.includes('DSGN') ? ['DSGN'] : []);
   msBU.update(toOpts(countBy(S.P, 'bu'), S.bus));
@@ -1946,7 +1994,7 @@ function drawControls() {
 }
 
 function drawHeader(rows, sum) {
-  $('#subline').textContent = `Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Seneste måned: ' + F.per(S.periode) : ''} · ${scopeLabel()}`;
+  $('#subline').textContent = `Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · ' + mWord() + ': ' + F.per(S.periode) : ''} · ${scopeLabel()}`;
   const cnt = {}; rows.forEach((r) => r.hit.forEach((x) => { cnt[x.navn] = (cnt[x.navn] || 0) + 1; }));
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   const t = $('#takeaway'); t.replaceChildren(
@@ -1958,7 +2006,7 @@ function drawHeader(rows, sum) {
 
 const tile = (l, v, sub) => h('div', { class: 'tile' }, h('span', { class: 'l', text: l }), h('span', { class: 'v', text: v }), sub ? h('span', { class: 's', text: sub }) : null);
 function drawTiles(o) {
-  $('#month-h').textContent = S.periode ? 'Seneste måned: ' + F.per(S.periode) : 'Seneste måned';
+  $('#month-h').textContent = S.periode ? mWord() + ': ' + F.per(S.periode) : 'Seneste måned';
   $('#tiles-month').replaceChildren(...(S.periode ? [
     tile('Omsætning', F.mio(o.mOms)), tile('Dækningsbidrag', F.mio(o.mDb), 'DG ' + (F.pct(o.mDg) || '—')),
     tile('TFM i måneden', F.tfm(o.mTfm) || '—'), tile('Projekter med timer', nf0.format(o.mAktive))] : [h('p', { class: 'empty', text: 'Indlæs et månedsudtræk for at se måneden.' })]));
@@ -2045,15 +2093,18 @@ function drawTrend() {
   ticks.forEach((v) => { svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: '#EFE6DE' })); svg.append(s('text', { x: m.l - 8, y: y(v), 'text-anchor': 'end', 'dominant-baseline': 'middle' }, F.mio(v))); });
   const bw = (W - m.l - m.r) / rows.length; const bar = Math.min(32, bw * 0.34);
   const every = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 64)));
+  const avail = new Set(monthKeys());
   rows.forEach((r, i) => {
     const cx = m.l + bw * i + bw / 2;
+    if (r.p === S.periode) { const hw = Math.min(bw - 4, bar * 2 + 36); svg.append(s('rect', { x: cx - hw / 2, y: m.t - 6, width: hw, height: H - m.b - m.t + 6, rx: 6, fill: '#F2E2D5' })); }
     [['oms', '#700B15', -1], ['db', '#C9A68A', 1]].forEach(([k, c, side]) => {
       const x0 = side < 0 ? cx - bar - 2 : cx + 2;
       svg.append(s('rect', { x: x0, width: bar, y: Math.min(y(r[k]), y(0)), height: Math.max(1, Math.abs(y(r[k]) - y(0))), rx: 4, fill: c }));
     });
-    if (i % every === 0) svg.append(s('text', { x: cx, y: H - 10, 'text-anchor': 'middle' }, F.perS(r.p)));
-    const hit = s('rect', { x: m.l + bw * i, y: 0, width: bw, height: H - m.b, fill: 'transparent' });
-    hit.addEventListener('pointermove', (ev) => showTip(box, t, [F.per(r.p), `Omsætning ${F.mio(r.oms)}`, `DB ${F.mio(r.db)} · DG ${F.pct(r.dg) || '—'}`, `TFM ${F.tfm(r.tfm) || '—'}`], ev));
+    if (i % every === 0 || r.p === S.periode) svg.append(s('text', { x: cx, y: H - 10, 'text-anchor': 'middle', 'font-weight': r.p === S.periode ? 700 : null }, F.perS(r.p)));
+    const hit = s('rect', { x: m.l + bw * i, y: 0, width: bw, height: H - m.b, fill: 'transparent', style: avail.has(r.p) ? 'cursor:pointer' : null });
+    if (avail.has(r.p)) hit.addEventListener('click', () => { t.hidden = true; selectMonth(r.p); });
+    hit.addEventListener('pointermove', (ev) => showTip(box, t, [F.per(r.p), `Omsætning ${F.mio(r.oms)}`, `DB ${F.mio(r.db)} · DG ${F.pct(r.dg) || '—'}`, `TFM ${F.tfm(r.tfm) || '—'}`, ...(avail.has(r.p) && r.p !== S.periode ? ['Klik for at vise måneden'] : [])], ev));
     hit.addEventListener('pointerleave', () => { t.hidden = true; });
     svg.append(hit);
   });
@@ -2461,7 +2512,7 @@ function buildReport() {
   // hoved
   root.append(E('div', { class: 'rh' },
     E('div', {}, E('div', { class: 'mk', text: 'NIRAS' }), E('h1', { text: `Projektrapport · PA ${o.pa}` }),
-      E('div', { class: 'meta', text: `${S.bus.size ? listTxt(S.bus, 'BU') : 'Alle BU'} · Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Seneste måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
+      E('div', { class: 'meta', text: `${S.bus.size ? listTxt(S.bus, 'BU') : 'Alle BU'} · Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
     E('div', { class: 'meta', style: 'text-align:right;white-space:pre-line', text: `Udarbejdet ${F.date(new Date().toISOString())}\n${nf0.format(sel.length)} af ${nf0.format(all.length)} projekter` })));
   if (o.intro && o.intro.trim()) root.append(E('div', { class: 'intro', text: o.intro.trim() }));
   // nøgletal
@@ -2722,7 +2773,7 @@ async function reloadNotes() { const d = await Store.load(); S.notes = d.notes; 
 /* ================= Hændelser ================= */
 function show(id) { S.tab = id; $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id))); $$('main > .page[id]').forEach((p) => { p.hidden = p.id !== id; }); try { history.replaceState(null, '', '#' + id); } catch (e) { /* file:// */ } render(); }
 $$('.tab').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
-$('#btn-reset').addEventListener('click', () => { S.bus = new Set(S.P.some((r) => r.bu === 'DSGN') ? ['DSGN'] : []); S.pls = new Set(); S.pas = new Set(); S.chip = 'alle'; S.regel = null; S.q = ''; $('#search').value = ''; render(); });
+$('#btn-reset').addEventListener('click', () => { S.bus = new Set(S.P.some((r) => r.bu === 'DSGN') ? ['DSGN'] : []); S.pls = new Set(); S.pas = new Set(); S.chip = 'alle'; S.regel = null; S.q = ''; $('#search').value = ''; if (S.mSel) { S.mSel = ''; rebuild(); } render(); });
 $$('.chip[data-chip]').forEach((b) => b.addEventListener('click', () => { S.chip = b.dataset.chip; render(); }));
 $$('.chip[data-role]').forEach((b) => b.addEventListener('click', () => { S.pRole = b.dataset.role; render(); }));
 $('#chip-rule').addEventListener('click', () => { S.regel = null; render(); });
@@ -2794,10 +2845,12 @@ async function loadFromSupabase() {
   S.src = 'supabase'; S.ptd = r.ptd; S.months = r.month ? { [r.month.key]: r.month } : {}; S.trend = r.trend; S.risk = r.risk; S.riskTrend = r.riskTrend; S.rhistCache = {};
 }
 async function loadData() {
+  let ok = false;
   if (Store.mode() === 'supabase') {
-    try { await loadFromSupabase(); return; } catch (e) { toast('Kunne ikke hente fra Supabase: ' + e.message + '. Viser browserens udtræk.'); }
+    try { await loadFromSupabase(); ok = true; } catch (e) { toast('Kunne ikke hente fra Supabase: ' + e.message + '. Viser browserens udtræk.'); }
   }
-  await loadFromLocal();
+  if (!ok) await loadFromLocal();
+  if (S.mSel) { if (monthKeys().includes(S.mSel)) await ensureMonth(S.mSel).catch(() => { S.mSel = ''; }); else S.mSel = ''; }
 }
 async function loadFiles(files) {
   const msgs = [], parsed = [];
