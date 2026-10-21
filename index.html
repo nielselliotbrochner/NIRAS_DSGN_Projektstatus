@@ -48,6 +48,9 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .controls select, .search { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; }
 .ms { position: relative; }
+.rp-who { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 10px 12px; background: var(--sand, #F2E2D5); border-radius: var(--r); }
+.rp-who b { font-size: 15px; }
+.rp-who .warn { flex-basis: 100%; margin: 4px 0 0; color: var(--deep); }
 .msel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 0 4px 0 10px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
 .msel:hover { border-color: var(--muted); }
 .msel.on { border-color: var(--deep); box-shadow: inset 0 0 0 1px var(--deep); }
@@ -1143,11 +1146,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <section class="page" id="rapport" hidden>
       <div class="grid rp-grid">
         <div class="card">
-          <h2>Rapport til projektansvarlig</h2>
-          <p class="note">Vælg PA, hvilke projekter og noter der skal med, og hvilke afsnit rapporten skal have. Den gemmes som PDF via browserens udskriftsdialog.</p>
+          <h2>Rapport</h2>
+          <p class="note">Rapporten følger filtrene øverst: vælg BU og en eller flere projektledere (PL) eller projektansvarlige (PA) der. Her vælger du, hvilke projekter og noter der skal med, og hvilke afsnit rapporten skal have. Den gemmes som PDF via browserens udskriftsdialog.</p>
           <div class="form rp-form">
-            <label>Projektansvarlig (PA)<select id="rp-pa"></select></label>
-            <p class="note" id="rp-scope"></p>
+            <div class="rp-who" id="rp-scope"></div>
             <fieldset class="rp-fs"><legend>Projekter med</legend>
               <label class="ck"><input type="checkbox" id="rp-r"> Røde flag</label>
               <label class="ck"><input type="checkbox" id="rp-y"> Kun gule flag</label>
@@ -1172,7 +1174,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
               <label class="ck"><input type="checkbox" data-rps="risk"> Risiko på projektsiderne</label>
               <label class="ck"><input type="checkbox" data-rps="desc"> Projektbeskrivelse på projektsiderne</label>
             </fieldset>
-            <label>Besked til PA (valgfri)<textarea id="rp-intro" rows="3" placeholder="Fx hvad vi skal tale om ved næste projektgennemgang"></textarea></label>
+            <label>Besked til modtageren (valgfri)<textarea id="rp-intro" rows="3" placeholder="Fx hvad vi skal tale om ved næste projektgennemgang"></textarea></label>
             <div class="chips"><button class="btn primary" id="rp-pdf" type="button">Gem som PDF</button><span class="note">Vælg "Gem som PDF" som printer i dialogen.</span></div>
           </div>
         </div>
@@ -2507,8 +2509,12 @@ $$('.seg [data-kfarve]').forEach((b) => b.addEventListener('click', () => { S.kf
 
 /* ----- Rapport til PA ----- */
 const RP = () => S.rp;
-const saveRP = () => { const { pa, manual, intro, ...rest } = S.rp; ls.set('pd.rp', rest); };
-const rpCandidates = () => S.P.filter((r) => buOk(r) && (r.po || '?') === RP().pa);
+const saveRP = () => { const { pa, manual, intro, scopeKey, ...rest } = S.rp; ls.set('pd.rp', rest); };
+// Rapporten følger filtrene øverst (BU, PL og PA, gerne flere navne)
+const rpCandidates = () => S.P.filter(inScope);
+const rpNames = (set) => { const a = [...set].sort((x, y) => x.localeCompare(y, 'da')); return a.length <= 6 ? a.join(', ') : a.slice(0, 5).join(', ') + ` og ${a.length - 5} andre`; };
+const rpWho = () => [S.pls.size ? 'PL ' + rpNames(S.pls) : '', S.pas.size ? 'PA ' + rpNames(S.pas) : ''].filter(Boolean).join(' · ') || (S.bus.size ? rpNames(S.bus) : 'Alle BU') + ', alle projekter';
+const rpBu = () => (S.bus.size ? rpNames(S.bus) : 'Alle BU');
 function rpAuto(r) {
   const o = RP();
   if (o.fokus && r.fokus) return true;
@@ -2534,21 +2540,21 @@ Object.entries(RPF).forEach(([k, sel]) => $(sel).addEventListener('change', (e) 
 [['#rp-minb', 'minb'], ['#rp-riskmin', 'riskmin'], ['#rp-age', 'age']].forEach(([sel, k]) => $(sel).addEventListener('change', (e) => { S.rp[k] = Number(e.target.value) || 0; saveRP(); drawReportTab(); }));
 $('#rp-sort').addEventListener('change', (e) => { S.rp.sort = e.target.value; saveRP(); drawReportTab(); });
 $$('[data-rps]').forEach((c) => c.addEventListener('change', () => { S.rp.sec[c.dataset.rps] = c.checked; saveRP(); drawReportTab(); }));
-$('#rp-pa').addEventListener('change', (e) => { S.rp.pa = e.target.value; S.rp.manual = {}; drawReportTab(); });
 $('#rp-intro').addEventListener('input', (e) => { S.rp.intro = e.target.value; clearTimeout(drawReportTab.t); drawReportTab.t = setTimeout(drawPreview, 300); });
 $('#rp-auto').addEventListener('click', () => { S.rp.manual = {}; drawReportTab(); });
 function drawReportTab() {
   const o = RP();
-  const pas = countBy(S.P.filter(buOk), 'po');
-  const list = Object.keys(pas).sort((a, b) => a.localeCompare(b, 'da'));
-  if (!o.pa || !(o.pa in pas)) o.pa = S.pas.size === 1 && [...S.pas][0] in pas ? [...S.pas][0] : list[0];
-  $('#rp-pa').replaceChildren(...list.map((p) => new Option(`${p} (${pas[p]} projekter)`, p)));
-  $('#rp-pa').value = o.pa || '';
+  // manuelle til- og fravalg gælder kun for det udvalg, de blev lavet i
+  const key = [[...S.bus].sort(), [...S.pls].sort(), [...S.pas].sort()].map((x) => x.join(',')).join('|');
+  if (o.scopeKey !== key) { o.scopeKey = key; o.manual = {}; }
   Object.entries(RPF).forEach(([k, sel]) => { $(sel).checked = !!o[k]; });
   $('#rp-minb').value = String(o.minb || 0); $('#rp-riskmin').value = String(o.riskmin); $('#rp-age').value = String(o.age); $('#rp-sort').value = o.sort;
   $$('[data-rps]').forEach((c) => { c.checked = !!o.sec[c.dataset.rps]; });
   if ($('#rp-intro') !== document.activeElement) $('#rp-intro').value = o.intro || '';
-  $('#rp-scope').textContent = `Projekter i ${S.bus.size ? listTxt(S.bus, 'BU') : 'alle BU'}, hvor ${o.pa || '–'} er projektansvarlig. BU vælges i filteret øverst.`;
+  const noOne = !S.pls.size && !S.pas.size;
+  $('#rp-scope').replaceChildren(...[
+    h('span', { class: 'ms-k', text: 'Rapport for' }), h('b', { text: rpWho() }), h('span', { class: 'note', text: `${rpBu()} · ${nf0.format(rpCandidates().length)} projekter i udvalget` }),
+    noOne ? h('p', { class: 'note warn', text: 'Ingen person valgt. Vælg en eller flere PL eller PA i filtrene øverst, ellers kommer alle projekter i BU med.' }) : null].filter(Boolean));
   const cand = rpCandidates().sort((a, b) => b.score - a.score || num(b.oms) - num(a.oms));
   const n = cand.filter(rpIncluded).length;
   $('#rp-count').textContent = `${nf0.format(n)} af ${nf0.format(cand.length)} projekter er med${Object.keys(o.manual).length ? ` (${Object.keys(o.manual).length} valgt manuelt)` : ''}.`;
@@ -2567,7 +2573,7 @@ function drawReportTab() {
 function drawPreview() { $('#rp-preview').replaceChildren(buildReport()); }
 function buildReport() {
   const o = RP(), sel = rpSelected(), all = rpCandidates();
-  const mrows = (S.months[S.periode]?.rows || []).filter((r) => buOk(r) && (r.po || '?') === o.pa);
+  const mrows = (S.months[S.periode]?.rows || []).filter(inScope);
   const sum = summarize(all, mrows);
   const E = (tag, props, ...k) => h(tag, props || {}, ...k);
   const td = (v, cls) => E('td', { class: cls || null, text: v == null || v === '' ? '–' : String(v) });
@@ -2575,14 +2581,14 @@ function buildReport() {
   const root = E('div', { class: 'rpt' });
   // hoved
   root.append(E('div', { class: 'rh' },
-    E('div', {}, E('div', { class: 'mk', text: 'NIRAS' }), E('h1', { text: `Projektrapport · PA ${o.pa}` }),
-      E('div', { class: 'meta', text: `${S.bus.size ? listTxt(S.bus, 'BU') : 'Alle BU'} · Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
+    E('div', {}, E('div', { class: 'mk', text: 'NIRAS' }), E('h1', { text: `Projektrapport · ${rpWho()}` }),
+      E('div', { class: 'meta', text: `${rpBu()} · Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
     E('div', { class: 'meta', style: 'text-align:right;white-space:pre-line', text: `Udarbejdet ${F.date(new Date().toISOString())}\n${nf0.format(sel.length)} af ${nf0.format(all.length)} projekter` })));
   if (o.intro && o.intro.trim()) root.append(E('div', { class: 'intro', text: o.intro.trim() }));
   // nøgletal
   if (o.sec.kpi) {
     const k = (l, v, sub) => E('div', {}, E('span', { class: 'l', text: l }), E('span', { class: 'v', text: v }), sub ? E('span', { class: 's', text: sub }) : null);
-    root.append(E('h2', { text: `Nøgletal for alle ${nf0.format(all.length)} projekter med ${o.pa} som PA` }), E('div', { class: 'kp' },
+    root.append(E('h2', { text: `Nøgletal for alle ${nf0.format(all.length)} projekter i udvalget` }), E('div', { class: 'kp' },
       k('Omsætning til dato', F.mio(sum.oms)), k('DB til dato', F.mio(sum.db), 'DG ' + (F.pct(sum.dg) || '–')), k('TFM til dato', F.tfm(sum.tfm) || '–'),
       k('Omsætning ' + (S.periode ? F.perS(S.periode) : 'måned'), F.mio(sum.mOms)), k('DB i måneden', F.mio(sum.mDb), 'DG ' + (F.pct(sum.mDg) || '–')), k('TFM i måneden', F.tfm(sum.mTfm) || '–'),
       k('Ufaktureret WIP', F.mio(sum.wipPos)), k('Forfaldent', F.mio(sum.forfalden)), k('Flag', `${sum.roede} røde`, `${sum.gule} kun gule`)));
@@ -2648,14 +2654,15 @@ function buildReport() {
       root.append(pj);
     });
   }
-  root.append(E('div', { class: 'ft' }, E('span', { text: 'Fortroligt · NIRAS' }), E('span', { text: `Projektrapport PA ${o.pa} · ${F.date(new Date().toISOString())}` })));
+  root.append(E('div', { class: 'ft' }, E('span', { text: 'Fortroligt · NIRAS' }), E('span', { text: `Projektrapport · ${rpWho()} · ${F.date(new Date().toISOString())}` })));
   return root;
 }
 $('#rp-pdf').addEventListener('click', () => {
-  if (!S.ptd || !RP().pa) { toast('Indlæs data og vælg en PA først'); return; }
+  if (!S.ptd) { toast('Indlæs data først'); return; }
+  if (!rpSelected().length) { toast('Der er ingen projekter i rapporten. Ret filtrene øverst eller valgene her.'); return; }
   const pr = $('#print-root'); pr.replaceChildren(buildReport());
   const title = document.title;
-  document.title = `Projektrapport_PA-${RP().pa}_${S.ptd.key}`;
+  document.title = `Projektrapport_${rpWho().replace(/ og \d+ andre/, '-m-fl').replace(/[^\wæøåÆØÅ-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}_${S.ptd.key}`;
   document.body.classList.add('rp-print');
   const done = () => { document.body.classList.remove('rp-print'); document.title = title; pr.replaceChildren(); window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);
