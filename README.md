@@ -2,11 +2,15 @@
 
 Dashboard til månedsluk: projektstatus pr. måned og til dato, flag, risk log, kort og rapporter til projektansvarlige. Én HTML-fil, der kører i browseren.
 
+**Åbnes fra GitHub Pages:** https://nielselliotbrochner.github.io/NIRAS_DSGN_Projektstatus/
+
+Siden indeholder ingen data. Alle tal og noter hentes fra Supabase efter login, og kun e-mails i tabellen `adgang` har adgang.
+
 ## Indhold
 
 | Fil | Formål |
 |---|---|
-| `NIRAS_Projektstatus.html` | Dashboardet. Åbn filen i Chrome eller Edge. |
+| `index.html` | Dashboardet. Køres fra GitHub Pages (se nedenfor) eller som lokal fil i Chrome eller Edge. |
 | `supabase/schema.sql` | Databasen i Supabase: tabeller, visninger, triggere og adgang. Kan køres igen uden at skade data. |
 | `docs/database.md` | Overblik over databasen og relationerne. |
 
@@ -38,4 +42,4 @@ Har du noter eller udtræk i browseren, så flyt dem med knapperne under Indstil
 
 ## Kort
 
-Kortbaggrunden kommer fra CARTO og kræver en gratis nøgle (Indstillinger > Kort).
+Fra GitHub Pages bruges OpenStreetMap uden nøgle. Som lokal fil kræver kortbaggrunden en gratis CARTO-nøgle (Indstillinger > Kort).

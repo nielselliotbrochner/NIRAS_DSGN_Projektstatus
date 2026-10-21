@@ -1268,7 +1268,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </section>
     <section class="form">
       <p class="sec-h">Kort</p>
-      <p class="note">Kortbaggrunden hentes fra CARTO og kræver en gratis nøgle. Den bestilles uden konto på <a href="https://www.carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a> og kommer på mail. Erhvervsbrug er gratis op til 1 mio. kortfliser om måneden. Nøglen gemmes kun i denne browser.</p>
+      <p class="note">Åbnes dashboardet fra GitHub Pages, bruges OpenStreetMap uden nøgle. Fra en lokal fil hentes kortbaggrunden fra CARTO og kræver en gratis nøgle. Den bestilles uden konto på <a href="https://www.carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a> og kommer på mail. Erhvervsbrug er gratis op til 1 mio. kortfliser om måneden. Nøglen gemmes kun i denne browser.</p>
       <label>CARTO-nøgle<input id="carto-key" type="text" placeholder="Indsæt nøglen fra mailen"></label>
       <div class="chips"><button class="btn primary small" id="carto-save" type="button">Gem nøgle</button></div>
     </section>
@@ -2315,10 +2315,13 @@ $('#r-search').addEventListener('input', (e) => { S.rq = e.target.value.trim(); 
 /* ----- Kort ----- */
 let map = null, mLayer = null, tLayer = null, lastFit = '', tileErr = false;
 const cartoKey = () => ls.get('pd.cartoKey', '');
-const tileUrl = () => `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoKey())}`;
+const onWeb = /^https?:$/.test(location.protocol);
+// CARTO med nøgle virker overalt; fra en webadresse (fx GitHub Pages) kan OpenStreetMap bruges uden nøgle
+const tileSrc = () => (cartoKey() ? 'carto' : onWeb ? 'osm' : null);
+const tileUrl = () => (tileSrc() === 'carto' ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoKey())}` : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
 function kWarn() {
   const w = $('#k-warn');
-  const msg = !cartoKey() ? 'Kortbaggrunden mangler: indsæt en gratis CARTO-nøgle under Indstillinger > Kort. Prikkerne virker uden.'
+  const msg = !tileSrc() ? 'Kortbaggrunden mangler: åbn dashboardet fra GitHub Pages, eller indsæt en gratis CARTO-nøgle under Indstillinger > Kort. Prikkerne virker uden.'
     : tileErr ? 'Kortbaggrunden kunne ikke hentes. Tjek CARTO-nøglen under Indstillinger > Kort og din internetforbindelse.' : '';
   w.hidden = !msg; w.textContent = msg;
 }
@@ -2350,8 +2353,8 @@ function drawMap(rows) {
     map = L.map(box, { zoomControl: true, attributionControl: true }).setView([56.0, 10.6], 7);
     mLayer = L.layerGroup().addTo(map);
   }
-  if (cartoKey() && !tLayer) {
-    tLayer = L.tileLayer(tileUrl(), { maxZoom: 19, attribution: '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' });
+  if (tileSrc() && !tLayer) {
+    tLayer = L.tileLayer(tileUrl(), { maxZoom: 19, attribution: (tileSrc() === 'carto' ? '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> ' : '') + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' });
     tLayer.on('tileerror', () => { if (!tileErr) { tileErr = true; kWarn(); } });
     tLayer.on('tileload', () => { if (tileErr) { tileErr = false; kWarn(); } });
     tLayer.addTo(map); tLayer.bringToBack();
@@ -2995,7 +2998,7 @@ $('#sb-login').addEventListener('click', async () => {
 });
 $('#carto-save').addEventListener('click', () => {
   const k = $('#carto-key').value.trim(); ls.set('pd.cartoKey', k); tileErr = false;
-  if (tLayer) { if (k) tLayer.setUrl(tileUrl()); else { map.removeLayer(tLayer); tLayer = null; } }
+  if (tLayer) { map.removeLayer(tLayer); tLayer = null; }
   toast(k ? 'CARTO-nøgle gemt' : 'CARTO-nøgle fjernet'); render();
 });
 $('#sb-logout').addEventListener('click', async () => { Store.logout(); await loadData(); await reloadNotes(); fillSettings(); toast('Bruger browserens udtræk og noter'); });
