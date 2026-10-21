@@ -1376,9 +1376,11 @@ async function unzip(buf) {
   for (let i = 0; i < count; i++) {
     const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
     const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
-    const lho = dv.getUint32(p + 42, true);
+    const lho = dv.getUint32(p + 42, true), dt = dv.getUint16(p + 12, true), dd = dv.getUint16(p + 14, true);
     const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nlen));
-    files[name.replace(/^\//, '')] = { method, csize, lho };
+    // DOS-tidsstempel for filen i zip-arkivet (ERP-eksporten skriver hentetidspunktet i UTC; Excel skriver 1980)
+    const mtime = [(dd >> 9) + 1980, (dd >> 5) & 15, dd & 31, dt >> 11, (dt >> 5) & 63, (dt & 31) * 2];
+    files[name.replace(/^\//, '')] = { method, csize, lho, mtime };
     p += 46 + nlen + xlen + clen;
   }
   const read = async (name) => {
@@ -1406,7 +1408,14 @@ async function readXlsx(buf) {
   const sstTxt = await z.read('xl/sharedStrings.xml');
   const sst = sstTxt ? byTag(xml(sstTxt), 'si').map((si) => byTag(si, 't').map((t) => t.textContent).join('')) : [];
   const ws = xml(await z.read(target));
-  return byTag(ws, 'row').map((row) => {
+  const mt = z.files[target]?.mtime;
+  let stamp = null;
+  if (mt && mt[0] >= 2015 && mt[1] >= 1 && mt[1] <= 12) {
+    const d = new Date(Date.UTC(mt[0], mt[1] - 1, mt[2], mt[3], mt[4], mt[5]));
+    if (d.getTime() < Date.now() + 864e5) stamp = d.toISOString();
+  }
+  const edited = !!(await z.read('docProps/core.xml'));
+  const grid = byTag(ws, 'row').map((row) => {
     const out = [];
     let i = 0;
     byTag(row, 'c').forEach((c) => {
@@ -1425,7 +1434,12 @@ async function readXlsx(buf) {
     });
     return out;
   });
+  // En fil, der er gemt igen i fx Excel, har docProps og et nyt tidsstempel; så bruges det ikke som hentetidspunkt
+  grid.stamp = edited ? null : stamp; grid.edited = edited;
+  return grid;
 }
+const cphDate = (iso) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date(iso));
+const KILDE = { filter: 'udtrækkets filter', stempel: 'tidsstemplet i filen', etc: 'nyeste ETC-dato i filen', filnavn: 'filnavnet', filedato: 'filens ændringsdato' };
 const serialToISO = (v) => {
   if (v == null || v === '') return null;
   if (typeof v === 'number') return new Date(Date.UTC(1899, 11, 30) + Math.round(v * 864e5)).toISOString().slice(0, 10);
@@ -1495,9 +1509,13 @@ function parseRisk(grid, file) {
     const o = {}; idx.forEach((k, i) => { if (k) o[k] = g[i] ?? null; });
     const r = normRisk(o); if (r.projekt) rows.push(r);
   }
-  const m = /risklog_(\d{4})(\d{2})(\d{2})/i.exec(file.name);
-  const key = m ? `${m[1]}-${m[2]}-${m[3]}` : new Date(file.lastModified).toISOString().slice(0, 10);
-  return { kind: 'risiko', key, rows, recon: { ok: null, diff: [] }, file: file.name, loaded: new Date().toISOString() };
+  // Risk log har ingen dato i filteret ("CurrentMonth"); datoen er eksportens tidsstempel inde i filen
+  const m = /risklog_(\d{4})(\d{2})(\d{2})(?!\d)/i.exec(file.name);
+  let key, kilde;
+  if (grid.stamp) { key = cphDate(grid.stamp); kilde = 'stempel'; }
+  else if (m) { key = `${m[1]}-${m[2]}-${m[3]}`; kilde = 'filnavn'; }
+  else { key = new Date(file.lastModified).toISOString().slice(0, 10); kilde = 'filedato'; }
+  return { kind: 'risiko', key, kilde, udtrukket: grid.stamp, rows, recon: { ok: null, diff: [] }, file: file.name, loaded: new Date().toISOString() };
 }
 const aggRisk = (dato, rows) => {
   const m = new Map();
@@ -1547,22 +1565,27 @@ async function parseFile(file) {
     });
   }
   // Dato / periode
-  let key = null;
+  let key = null, kilde = null;
   if (kind === 'ptd') {
-    const m = /PTD_(\d{4})(\d{2})(\d{2})/i.exec(file.name);
-    key = m ? `${m[1]}-${m[2]}-${m[3]}` : new Date(file.lastModified).toISOString().slice(0, 10);
+    // Datoen læses inde i filen: først eksportens tidsstempel, så nyeste ETC-dato. Filnavnet er sidste udvej.
+    const etc = rows.map((r) => r.etc_dato).filter(Boolean).sort().pop();
+    const m = /PTD_(\d{4})(\d{2})(\d{2})(?!\d)/i.exec(file.name);
+    if (grid.stamp) { key = cphDate(grid.stamp); kilde = 'stempel'; }
+    else if (etc) { key = etc; kilde = 'etc'; }
+    else if (m) { key = `${m[1]}-${m[2]}-${m[3]}`; kilde = 'filnavn'; }
+    else { key = new Date(file.lastModified).toISOString().slice(0, 10); kilde = 'filedato'; }
   } else {
     // Måneden læses af udtrækkets eget filter (fx "Aug, 2026 (Month Name, Year)"). Filnavnet bruges kun som reserve
     // og kun ved præcis seks cifre (Monthly_ÅÅÅÅMM), så en udtræksdato som Monthly_20261021 ikke læses som oktober.
     const f = /([A-Za-zæøå]{3})[a-zæøå]*,?\s*(\d{4})\s*\(Month/i.exec(filterText);
-    if (f && MONTHS[f[1].toLowerCase()]) key = `${f[2]}-${String(MONTHS[f[1].toLowerCase()]).padStart(2, '0')}`;
+    if (f && MONTHS[f[1].toLowerCase()]) { key = `${f[2]}-${String(MONTHS[f[1].toLowerCase()]).padStart(2, '0')}`; kilde = 'filter'; }
     else {
       const m = /Monthly_(\d{4})(\d{2})(?!\d)/i.exec(file.name);
-      if (m && +m[2] >= 1 && +m[2] <= 12) key = `${m[1]}-${m[2]}`;
+      if (m && +m[2] >= 1 && +m[2] <= 12) { key = `${m[1]}-${m[2]}`; kilde = 'filnavn'; }
     }
     if (!key) throw new Error(`${file.name}: kunne ikke finde måneden i udtrækkets filter. Navngiv filen …Monthly_ÅÅÅÅMM.xlsx`);
   }
-  return { kind, key, rows, recon, file: file.name, loaded: new Date().toISOString() };
+  return { kind, key, kilde, udtrukket: grid.stamp, rows, recon, file: file.name, loaded: new Date().toISOString() };
 }
 
 /* ================= Lokal lagring af udtræk (IndexedDB) ================= */
@@ -1711,7 +1734,7 @@ const Store = {
       await this.sbFetch('/rest/v1/' + tbl, { method: 'POST', headers: min, body: JSON.stringify(rows.slice(i, i + 500)) });
       if (progress) progress(Math.min(rows.length, i + 500), rows.length);
     }
-    await this.sbFetch('/rest/v1/erp_upload', { method: 'POST', headers: min, body: JSON.stringify({ type: d.kind, noegle: d.key, filnavn: d.file, raekker: rows.length, afstemt: d.recon.ok, afvigelser: d.recon.diff.join(', ') || null }) });
+    await this.sbFetch('/rest/v1/erp_upload', { method: 'POST', headers: min, body: JSON.stringify({ type: d.kind, noegle: d.key, filnavn: d.file, raekker: rows.length, afstemt: d.recon.ok, afvigelser: d.recon.diff.join(', ') || null, udtrukket: d.udtrukket || null, noegle_kilde: d.kilde || null }) });
     return rows.length;
   },
   async loadErp() {
@@ -1726,10 +1749,10 @@ const Store = {
       ur ? this.fetchAll(`/rest/v1/erp_risiko?select=*&pr_dato=eq.${ur.noegle}&order=projekt`) : [],
       ur ? this.fetchAll(`/rest/v1/v_risiko_trend?select=*&pr_dato=gte.${since}&order=pr_dato`) : [],
     ]);
-    const wrap = (u, kind, rows) => (u ? { kind, key: u.noegle, rows: rows.map(normDbRow), recon: { ok: u.afstemt, diff: u.afvigelser ? String(u.afvigelser).split(', ') : [] }, file: u.filnavn, loaded: u.uploadet } : null);
+    const wrap = (u, kind, rows) => (u ? { kind, key: u.noegle, rows: rows.map(normDbRow), recon: { ok: u.afstemt, diff: u.afvigelser ? String(u.afvigelser).split(', ') : [] }, file: u.filnavn, loaded: u.uploadet, udtrukket: u.udtrukket, kilde: u.noegle_kilde } : null);
     return {
       ups, ptd: wrap(up, 'ptd', pr), month: wrap(um, 'maaned', mr),
-      risk: ur ? { kind: 'risiko', key: ur.noegle, rows: rr.map(normRisk), recon: { ok: null, diff: [] }, file: ur.filnavn, loaded: ur.uploadet } : null,
+      risk: ur ? { kind: 'risiko', key: ur.noegle, rows: rr.map(normRisk), recon: { ok: null, diff: [] }, file: ur.filnavn, loaded: ur.uploadet, udtrukket: ur.udtrukket, kilde: ur.noegle_kilde } : null,
       riskTrend: rt.map((t) => ({ dato: String(t.pr_dato).slice(0, 10), bu: t.bu, pl: t.pl, po: t.po, klasse: nn(t.klasse), n: num(t.n), vurderet: num(t.vurderet) })),
       trend: tr.map((t) => ({ periode: String(t.periode).slice(0, 7), bu: t.bu, pl: t.pl, po: t.po, oms: num(t.oms), db: num(t.db), loen: num(t.loen), aktive: num(t.aktive) })),
     };
@@ -1738,7 +1761,7 @@ const Store = {
     const u = (S.ups || []).find((x) => x.type === 'maaned' && String(x.noegle) === key);
     if (!u) return null;
     const rows = await this.fetchAll(`/rest/v1/erp_maaned?select=*&periode=eq.${key}-01&order=projekt`);
-    return { kind: 'maaned', key, rows: rows.map(normDbRow), recon: { ok: u.afstemt, diff: u.afvigelser ? String(u.afvigelser).split(', ') : [] }, file: u.filnavn, loaded: u.uploadet };
+    return { kind: 'maaned', key, rows: rows.map(normDbRow), recon: { ok: u.afstemt, diff: u.afvigelser ? String(u.afvigelser).split(', ') : [] }, file: u.filnavn, loaded: u.uploadet, udtrukket: u.udtrukket, kilde: u.noegle_kilde };
   },
   async projectHistory(projekt) {
     const r = await this.fetchAll(`/rest/v1/erp_ptd?select=pr_dato,poc,tfm,tfm_eac,oms,db,wip&projekt=eq.${encodeURIComponent(projekt)}&order=pr_dato`);
@@ -1973,13 +1996,13 @@ function render() {
 function drawStatus() {
   const bar = $('#statusbar'); bar.replaceChildren();
   const pill = (dot, text, title) => h('span', { class: 'pill', title }, h('span', { class: 'dot ' + dot }), text);
-  if (S.ptd) bar.append(pill(S.ptd.recon.ok === false ? 'bad' : 'ok', `Til dato pr. ${F.date(S.ptd.key)} · ${nf0.format(S.ptd.rows.length)} projekter · ${S.ptd.recon.ok === false ? 'afviger fra Total-linjen' : 'afstemt'}`, S.ptd.file));
+  if (S.ptd) bar.append(pill(S.ptd.recon.ok === false ? 'bad' : 'ok', `Til dato pr. ${F.date(S.ptd.key)} · ${nf0.format(S.ptd.rows.length)} projekter · ${S.ptd.recon.ok === false ? 'afviger fra Total-linjen' : 'afstemt'}`, srcTip(S.ptd)));
   else bar.append(pill('', 'Intet PTD-udtræk indlæst'));
   const pers = [...new Set(S.trend.map((t) => t.periode))].sort();
   const lm = S.months[S.periode];
-  if (pers.length) bar.append(pill(lm && lm.recon.ok === false ? 'bad' : 'ok', `${pers.length === 1 ? '1 måned' : pers.length + ' måneder'}: ${pers.length > 3 ? F.perS(pers[0]) + ' til ' + F.perS(pers[pers.length - 1]) : pers.map(F.perS).join(', ')}${lm && lm.recon.ok === false ? ' · seneste afviger fra Total-linjen' : ' · afstemt'}`));
+  if (pers.length) bar.append(pill(lm && lm.recon.ok === false ? 'bad' : 'ok', `${pers.length === 1 ? '1 måned' : pers.length + ' måneder'}: ${pers.length > 3 ? F.perS(pers[0]) + ' til ' + F.perS(pers[pers.length - 1]) : pers.map(F.perS).join(', ')}${lm && lm.recon.ok === false ? ' · seneste afviger fra Total-linjen' : ' · afstemt'}`, lm ? srcTip(lm) : null));
   else bar.append(pill('warn', 'Intet månedsudtræk indlæst'));
-  if (S.risk) { const nd = new Set(S.riskTrend.map((x) => x.dato)).size; bar.append(pill('ok', `Risk log pr. ${F.date(S.risk.key)} · ${nf0.format(S.risk.rows.length)} projekter${nd > 1 ? ' · ' + nd + ' udtræk' : ''}`, S.risk.file)); }
+  if (S.risk) { const nd = new Set(S.riskTrend.map((x) => x.dato)).size; bar.append(pill('ok', `Risk log pr. ${F.date(S.risk.key)} · ${nf0.format(S.risk.rows.length)} projekter${nd > 1 ? ' · ' + nd + ' udtræk' : ''}`, srcTip(S.risk))); }
   else bar.append(pill('warn', 'Ingen risk log indlæst'));
   bar.append(pill(Store.mode() === 'supabase' ? 'ok' : 'warn', Store.mode() === 'supabase' ? (S.ptd ? 'Udtræk: database' : 'Udtræk: databasen er tom endnu') : 'Udtræk: i denne browser'));
   bar.append(pill(Store.mode() === 'supabase' ? 'ok' : 'warn', 'Noter og fokus: ' + Store.label()));
@@ -2799,6 +2822,8 @@ window.addEventListener('dragenter', (e) => { if ([...(e.dataTransfer?.types || 
 window.addEventListener('dragleave', () => { dragN = Math.max(0, dragN - 1); if (!dragN) $('#veil').classList.remove('on'); });
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', (e) => { e.preventDefault(); dragN = 0; $('#veil').classList.remove('on'); const f = [...(e.dataTransfer?.files || [])].filter((x) => /\.xlsx$/i.test(x.name)); if (f.length) loadFiles(f); else toast('Træk .xlsx-filer ind'); });
+const hentet = (d) => (d && d.udtrukket ? 'hentet fra ERP ' + new Date(d.udtrukket).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+const srcTip = (d) => [d.file, hentet(d), d.kilde ? (d.kind === 'maaned' ? 'Måned' : 'Dato') + ' læst fra ' + KILDE[d.kilde] : ''].filter(Boolean).join(' · ');
 const dLabel = (d) => (d.kind === 'ptd' ? 'Til dato pr. ' + F.date(d.key) : d.kind === 'risiko' ? 'Risk log pr. ' + F.date(d.key) : 'Måned ' + F.per(d.key));
 async function saveLocal(d) {
   if (d.kind === 'ptd') {
@@ -2861,7 +2886,7 @@ async function loadFiles(files) {
   parsed.sort((a, b) => (a.kind === b.kind ? a.key.localeCompare(b.key) : ko[a.kind] - ko[b.kind]));
   for (const d of parsed) {
     if (Store.mode() !== 'supabase') { try { await saveLocal(d); } catch (e) { msgs.push('Kunne ikke gemme i browseren'); } }
-    msgs.push(`${dLabel(d)}: ${nf0.format(d.rows.length)} projekter${d.recon.ok === false ? ', AFVIGER fra Total-linjen i ' + d.recon.diff.join(', ') : d.recon.ok ? ', afstemt' : ''}`);
+    msgs.push(`${dLabel(d)} (fra ${KILDE[d.kilde] || 'filen'}${d.udtrukket ? ', ' + hentet(d) : ''}): ${nf0.format(d.rows.length)} projekter${d.recon.ok === false ? ', AFVIGER fra Total-linjen i ' + d.recon.diff.join(', ') : d.recon.ok ? ', afstemt' : ''}`);
   }
   if (Store.mode() === 'supabase' && parsed.length) {
     try { S.ups = await Store.uploads(); } catch (e) { msgs.push('Supabase: ' + e.message); }

@@ -63,6 +63,8 @@ create table if not exists public.erp_upload (
   uploadet_af  uuid default auth.uid(),
   unique (type, noegle)
 );
+alter table public.erp_upload add column if not exists udtrukket timestamptz;  -- hentet fra ERP (tidsstempel i xlsx-filen)
+alter table public.erp_upload add column if not exists noegle_kilde text;      -- filter, stempel, etc, filnavn eller filedato
 alter table public.erp_upload drop constraint if exists erp_upload_type_check;
 alter table public.erp_upload add constraint erp_upload_type_check check (type in ('ptd', 'maaned', 'risiko'));
 

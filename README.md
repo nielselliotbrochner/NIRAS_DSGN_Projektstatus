@@ -22,9 +22,13 @@ Siden indeholder ingen data. Den starter med en login-skærm; alle tal og noter 
 
 ## Brug hver måned
 
-1. Træk de tre udtræk ind i dashboardet: `data_26_PTD_ÅÅÅÅMMDD.xlsx`, `data_26_Monthly_ÅÅÅÅMM.xlsx` og `data_26_risklog_ÅÅÅÅMMDD.xlsx`.
+1. Træk de tre udtræk ind i dashboardet (PTD, måned og risk log). Filnavnene er ligegyldige; dashboardet genkender filerne indefra.
 2. Dashboardet afstemmer mod udtrækkenes Total-linje og gemmer dem med dato.
-   Måneden læses af filnavnet (`Monthly_ÅÅÅÅMM`). Ældre måneder kan indlæses når som helst; de overskriver ikke hinanden.
+   - Type: kolonnerne (POC = til dato, Actual Factor TFM = måned, RiskCategory/Mac Risk = risk log).
+   - Måned: udtrækkets filter nederst i filen, fx "Aug, 2026 (Month Name, Year)".
+   - Dato og hentetidspunkt for PTD og risk log: ERP-eksportens tidsstempel inde i filen. Er filen gemt igen i Excel, bruges nyeste ETC-dato.
+   - Filnavnet bruges kun, hvis filen ikke selv indeholder oplysningen.
+   Ældre måneder kan indlæses når som helst; de overskriver ikke hinanden.
    Vælg en tidligere måned i feltet **Måned** ved filtrene eller ved at klikke i grafen "Udvikling pr. måned". Til dato viser altid det seneste udtræk.
 3. Gennemgå flag, skriv noter og opfølgninger, og lav rapporter til hver PA under fanen Rapport.
 4. Eksportér dine egne data når som helst under "Mine data" (Excel eller JSON).
