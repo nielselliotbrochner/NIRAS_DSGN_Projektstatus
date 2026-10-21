@@ -278,7 +278,7 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .dlg-b { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 18px; overflow: auto; max-height: calc(90vh - 56px); }
 .dlg-b .form input { max-width: 100%; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 16px; border-radius: var(--r); font-size: 13px; z-index: 60; opacity: 0; transition: opacity .2s; pointer-events: none; }
-.toast.on { opacity: 1; }
+.toast.on { opacity: 1; pointer-events: auto; cursor: pointer; max-width: min(900px, calc(100vw - 32px)); }
 @media (max-width: 820px) { .hide-sm { display: none; } .wrap { padding: 16px; } .top { padding: 12px 16px; } }
 @media print { body:not(.rp-print) .top-actions, .controls, .tabs, .chips, .drawer, .statusbar { display: none !important; } .tablebox { max-height: none; overflow: visible; } }
 </style>
@@ -1357,7 +1357,12 @@ const s = (tag, attrs = {}, text) => {
   return e;
 };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2));
-const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3200); };
+// Beskeden bliver længere jo længere teksten er; sticky = bliver stående, til man klikker på den
+const toast = (msg, sticky = false) => {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t);
+  t.title = 'Klik for at lukke'; t.onclick = () => t.classList.remove('on');
+  if (!sticky) toast.t = setTimeout(() => t.classList.remove('on'), Math.max(3200, String(msg).length * 50));
+};
 const ls = {
   get: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
@@ -1552,6 +1557,9 @@ async function parseFile(file) {
       o[k] = v;
     });
     if (!o.bu) continue;
+    // ERP regner TFM af en løn på fx 0,000000000002 kr. og giver tal som 2,6e16. Det er meningsløst og for stort til databasen.
+    if (isNum(o.tfm) && (Math.abs(o.tfm) > 1e4 || Math.abs(num(o.loen)) < 1)) o.tfm = null;
+    ['tfm_eac', 'poc'].forEach((k) => { if (isNum(o[k]) && Math.abs(o[k]) > 1e4) o[k] = null; });
     rows.push(o);
   }
   // Afstemning mod Total-linjen
@@ -1726,7 +1734,9 @@ const Store = {
     }[d.kind];
     const { tbl, keyCol, keyVal, cols } = K;
     const src = K.src();
-    const rows = src.map((r) => { const o = { [keyCol]: keyVal }; cols.forEach((c) => { o[c] = r[c] ?? null; }); return o; });
+    // Sikkerhedsnet: tal uden for databasefelternes størrelse (numeric(14,6) og numeric(16,2)) sendes som tomme
+    const fit = (c, v) => (typeof v === 'number' ? (!isFinite(v) || Math.abs(v) >= (['tfm', 'tfm_eac', 'poc'].includes(c) ? 1e7 : 1e13) ? null : v) : v);
+    const rows = src.map((r) => { const o = { [keyCol]: keyVal }; cols.forEach((c) => { o[c] = fit(c, r[c] ?? null); }); return o; });
     const min = { Prefer: 'return=minimal' };
     await this.sbFetch(`/rest/v1/erp_upload?type=eq.${d.kind}&noegle=eq.${encodeURIComponent(d.key)}`, { method: 'DELETE', headers: min });
     await this.sbFetch(`/rest/v1/${tbl}?${keyCol}=eq.${keyVal}`, { method: 'DELETE', headers: min });
@@ -2897,7 +2907,9 @@ async function loadFiles(files) {
     }
   }
   await loadData();
-  rebuild(); render(); toast(msgs.join(' · '));
+  rebuild(); render();
+  const fejl = msgs.some((m) => /^Supabase|kunne ikke|AFVIGER|ikke sendt/i.test(m));
+  toast((fejl ? 'OBS: ' : '') + msgs.join(' · ') + (fejl ? ' (klik for at lukke)' : ''), fejl);
 }
 
 /* ----- eksport ----- */
