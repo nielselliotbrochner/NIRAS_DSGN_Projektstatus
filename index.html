@@ -58,7 +58,7 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .msel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 0 4px 0 10px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
 .msel:hover { border-color: var(--muted); }
 .msel.on { border-color: var(--deep); box-shadow: inset 0 0 0 1px var(--deep); }
-.controls .msel select { border: 0; background: transparent; padding: 6px 4px; font: inherit; color: inherit; cursor: pointer; }
+.controls .msel select, .msel.on-light select { border: 0; background: transparent; padding: 6px 4px; font: inherit; color: inherit; cursor: pointer; }
 .controls .msel select:focus-visible { outline: 2px solid var(--deep); outline-offset: 1px; }
 .ms-btn { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; max-width: 300px; }
 .ms-btn:hover { border-color: var(--muted); }
@@ -1163,10 +1163,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="card">
         <div class="phead">
           <div><h2>Kort</h2><p class="note" id="k-sub"></p></div>
-          <div class="seg" role="group" aria-label="Farvelæg efter">
-            <button type="button" data-kfarve="flag">Flag</button>
-            <button type="button" data-kfarve="risiko">Risikoklasse</button>
-          </div>
+          <label class="msel on-light"><span class="ms-k">Farve efter</span><select id="k-farve" aria-label="Farvelæg prikkerne efter">
+            <option value="flag">Flag</option>
+            <option value="risiko">Risikoklasse</option>
+            <option value="tfm">TFM i måneden</option>
+            <option value="oms">Omsætning til dato</option>
+          </select></label>
         </div>
         <div class="legend" id="k-legend"></div>
         <p class="note k-warn" id="k-warn" hidden></p>
@@ -2489,8 +2491,23 @@ function kWarn() {
 }
 const K_FLAG = [['#BA1223', 'Rødt flag'], ['#B7791F', 'Gult flag'], ['#9C918A', 'Ingen flag']];
 const K_RISK = { 1: ['#CDBBA9', 'Klasse 1'], 2: ['#E2B04A', 'Klasse 2'], 3: ['#BA1223', 'Klasse 3'], 4: ['#700B15', 'Klasse 4'], 0: ['#9C918A', 'Ikke i risk log'] };
-const kColor = (r) => (S.kfarve === 'risiko' ? (K_RISK[r.klasse] || K_RISK[0])[0] : K_FLAG[r.roede > 0 ? 0 : r.gule > 0 ? 1 : 2][0]);
-const kLevel = (r) => (S.kfarve === 'risiko' ? num(r.klasse) : r.roede > 0 ? 2 : r.gule > 0 ? 1 : 0);
+// TFM-grænser følger flagreglerne "TFM EAC lav" (rød) og "TFM EAC under mål" (gul)
+const kTfmG = () => [S.rules.find((x) => x.regel === 'tfm_eac_r')?.g ?? 1.2, S.rules.find((x) => x.regel === 'tfm_eac_y')?.g ?? 1.6];
+const K_TFM = () => { const [r, y] = kTfmG(); return [['#BA1223', `Under ${nf2.format(r)}`], ['#E2B04A', `${nf2.format(r)} til ${nf2.format(y)}`], ['#4E7D5B', `${nf2.format(y)} eller mere`], ['#9C918A', 'Ingen TFM i måneden']]; };
+const K_OMS = [['#E9D6C6', 'Under 1 mio.'], ['#D49A73', '1 til 5 mio.'], ['#BA1223', '5 til 20 mio.'], ['#700B15', '20 mio. eller mere'], ['#9C918A', 'Ingen omsætning']];
+const kTfmIdx = (r) => { const [rg, yg] = kTfmG(); return !isNum(r.m_tfm) || !(num(r.m_loen) > 0) ? 3 : r.m_tfm < rg ? 0 : r.m_tfm < yg ? 1 : 2; };
+const kOmsIdx = (r) => { const v = num(r.oms); return v <= 0 ? 4 : v < 1e6 ? 0 : v < 5e6 ? 1 : v < 2e7 ? 2 : 3; };
+const kColor = (r) => ({
+  risiko: () => (K_RISK[r.klasse] || K_RISK[0])[0],
+  tfm: () => K_TFM()[kTfmIdx(r)][0],
+  oms: () => K_OMS[kOmsIdx(r)][0],
+}[S.kfarve] || (() => K_FLAG[r.roede > 0 ? 0 : r.gule > 0 ? 1 : 2][0]))();
+// højere niveau tegnes øverst
+const kLevel = (r) => ({
+  risiko: () => num(r.klasse),
+  tfm: () => [3, 2, 1, 0][kTfmIdx(r)],
+  oms: () => [1, 2, 3, 4, 0][kOmsIdx(r)],
+}[S.kfarve] || (() => (r.roede > 0 ? 2 : r.gule > 0 ? 1 : 0)))();
 function kPopup(r, i) {
   const fl = r.hit.length ? r.hit.map((x) => x.navn).join(' · ') : 'Ingen flag';
   return h('div', { class: 'kpop' },
@@ -2498,6 +2515,7 @@ function kPopup(r, i) {
     h('span', { class: 'm', text: `${r.bu} · PL ${r.pl || '–'} · PA ${r.po || '–'}${isNum(r.klasse) ? ' · risikoklasse ' + r.klasse : ''}` }),
     i.adresse ? h('span', { text: '📍 ' + i.adresse }) : null,
     h('span', { text: `Baseline ${F.tkr(r.baseline) || '–'} t.kr. · POC ${F.pct(r.poc) || '–'} · TFM EAC ${F.tfm(r.tfm_eac) || '–'}` }),
+    h('span', { text: `Omsætning til dato ${F.mio(r.oms) || '–'} · TFM ${S.periode ? F.perS(S.periode) : 'måned'} ${F.tfm(r.m_tfm) || '–'}` }),
     h('span', { class: r.roede ? 'c-red' : r.gule ? 'c-amb' : 'm', text: fl }),
     h('div', { class: 'acts' },
       h('button', { class: 'btn small primary', type: 'button', text: 'Åbn projekt', onclick: () => openProject(r.projekt) }),
@@ -2505,11 +2523,13 @@ function kPopup(r, i) {
 }
 function drawMap(rows) {
   const box = $('#map');
-  $$('.seg [data-kfarve]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kfarve === S.kfarve)));
+  if (!['flag', 'risiko', 'tfm', 'oms'].includes(S.kfarve)) S.kfarve = 'flag';
+  $('#k-farve').value = S.kfarve;
   const pts = rows.map((r) => ({ r, i: S.info[r.projekt] })).filter((x) => x.i && isNum(x.i.lat) && isNum(x.i.lng));
   $('#k-sub').textContent = `${nf0.format(pts.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()} har koordinater. Lokation tilføjes i projektpanelet under "Om projektet".`;
-  const leg = S.kfarve === 'risiko' ? [1, 2, 3, 4, 0].map((k) => K_RISK[k]) : K_FLAG;
-  $('#k-legend').replaceChildren(...leg.map(([c, l]) => h('span', {}, h('span', { class: 'sw', style: 'background:' + c }), l)));
+  const leg = { risiko: () => [1, 2, 3, 4, 0].map((k) => K_RISK[k]), tfm: K_TFM, oms: () => K_OMS }[S.kfarve]?.() || K_FLAG;
+  const legTitle = { tfm: `TFM i ${S.periode ? F.per(S.periode) : 'seneste måned'}:`, oms: 'Omsætning til dato:' }[S.kfarve];
+  $('#k-legend').replaceChildren(...[legTitle ? h('span', { class: 'ms-k', text: legTitle }) : null, ...leg.map(([c, l]) => h('span', {}, h('span', { class: 'sw', style: 'background:' + c }), l))].filter(Boolean));
   if (!window.L) { box.replaceChildren(h('p', { class: 'empty', text: 'Kortbiblioteket kunne ikke indlæses.' })); return; }
   if (!map) {
     map = L.map(box, { zoomControl: true, attributionControl: true }).setView([56.0, 10.6], 7);
@@ -2538,7 +2558,7 @@ function drawMap(rows) {
     else if (pts.length > 1) map.fitBounds(pts.map((x) => [x.i.lat, x.i.lng]), { padding: [40, 40], maxZoom: 13 });
   }
 }
-$$('.seg [data-kfarve]').forEach((b) => b.addEventListener('click', () => { S.kfarve = b.dataset.kfarve; ls.set('pd.kfarve', S.kfarve); render(); }));
+$('#k-farve').addEventListener('change', (e) => { S.kfarve = e.target.value; ls.set('pd.kfarve', S.kfarve); render(); });
 
 /* ----- Rapport til PA ----- */
 const RP = () => S.rp;
