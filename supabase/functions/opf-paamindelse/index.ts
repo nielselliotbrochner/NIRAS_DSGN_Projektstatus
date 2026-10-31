@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     const ok = await db("/rest/v1/rpc/opf_cron_ok", { method: "POST", body: JSON.stringify({ s: req.headers.get("x-cron-secret") || "" }) });
     if (ok !== true) return json({ fejl: "Ikke tilladt" }, 401);
     const body = await req.json().catch(() => ({}));
-    const force = !!body.force, dry = !!body.dry;
+    const force = !!body.force, dry = !!body.dry, test = !!body.test; // test: sender, men markerer ikke som påmindet
     const now = cphParts();
     if (!force && now.hour !== "07") return json({ sprunget_over: true, klokken_i_kbh: now.hour });
     const today = `${now.year}-${now.month}-${now.day}`;
@@ -80,14 +80,14 @@ Deno.serve(async (req) => {
       const r = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: { "api-key": apiKey, "Content-Type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ sender: { email: sender, name: Deno.env.get("BREVO_SENDER_NAME") || "NIRAS Projektstatus" }, to: [{ email }], subject: m.subject, htmlContent: m.html, textContent: m.text, tags: ["opfoelgning"] }),
+        body: JSON.stringify({ sender: { email: sender, name: Deno.env.get("BREVO_SENDER_NAME") || "NIRAS Projektstatus" }, to: [{ email }], subject: (test ? "[Test] " : "") + m.subject, htmlContent: m.html, textContent: m.text, tags: ["opfoelgning"] }),
       });
       const t = await r.text();
       result.push({ email, antal: rs.length, status: r.status, svar: t.slice(0, 200) });
       if (r.ok) rs.forEach((x) => sentIds.add(x.id));
     }
-    if (sentIds.size) await db(`/rest/v1/projekt_noter?id=in.(${[...sentIds].join(",")})`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ paamindet: new Date().toISOString() }) });
-    return json({ frist: tomorrow, sendt: sentIds.size, mails: result });
+    if (sentIds.size && !test) await db(`/rest/v1/projekt_noter?id=in.(${[...sentIds].join(",")})`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ paamindet: new Date().toISOString() }) });
+    return json({ frist: tomorrow, sendt: sentIds.size, test, mails: result });
   } catch (e) {
     return json({ fejl: String((e as Error).message || e) }, 500);
   }
