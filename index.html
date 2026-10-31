@@ -244,6 +244,18 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .t tr.sel { background: var(--sand); }
 .t td.name { white-space: normal; min-width: 220px; }
 .t td.wrapc { white-space: normal; min-width: 200px; }
+.tbadge { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.t tr.od td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+.t tr.od { background: #FBEDEE; }
+.t tr.od:hover { background: #F7E0E2; }
+.t tr.closed td { color: var(--muted); }
+.t td.due { font-weight: 700; }
+#t-opf td.neg { color: var(--red); font-weight: 600; }
+.t td.onote { color: var(--muted); font-size: 12px; }
+.otag { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; white-space: nowrap; }
+.otag.od { background: var(--red); color: #fff; font-weight: 600; }
+.otag.op { background: var(--sand); color: var(--ink); }
+.otag.cl { background: #EEE9E5; color: var(--muted); }
 .t td.notec { white-space: normal; min-width: 160px; max-width: 320px; color: var(--muted); }
 .t td.fr { color: var(--red); font-weight: 700; } .t td.fy { color: var(--amber); font-weight: 700; } .t td.f0 { color: var(--grey); }
 .t td.star { color: var(--red); font-size: 14px; text-align: center; }
@@ -1035,6 +1047,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <button class="tab" role="tab" data-tab="risiko" aria-selected="false" type="button">Risiko</button>
         <button class="tab" role="tab" data-tab="kort" aria-selected="false" type="button">Kort</button>
         <button class="tab" role="tab" data-tab="rapport" aria-selected="false" type="button">Rapport</button>
+        <button class="tab" role="tab" data-tab="opf" aria-selected="false" type="button">Opfølgning<span class="tbadge" id="opf-badge" hidden></span></button>
         <button class="tab" role="tab" data-tab="regler" aria-selected="false" type="button">Regler</button>
       </nav>
     </div>
@@ -1229,6 +1242,24 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="card">
         <h2>Forhåndsvisning</h2>
         <div class="rp-preview" id="rp-preview"></div>
+      </div>
+    </section>
+
+    <!-- OPFØLGNING -->
+    <section class="page" id="opf" hidden>
+      <div class="card">
+        <div class="phead">
+          <div><h2>Opfølgning</h2><p class="note">Alle opfølgninger i projekterne i dit udvalg (BU, PL og PA øverst), sorteret efter frist. Overskredne står øverst. Klik på en kolonne for at sortere og på en linje for at åbne projektet, hvor noten kan redigeres.</p></div>
+        </div>
+        <div class="chips">
+          <button class="chip" type="button" data-ochip="aabne" aria-pressed="true">Åbne</button>
+          <button class="chip" type="button" data-ochip="over" aria-pressed="false">Overskredne</button>
+          <button class="chip" type="button" data-ochip="lukkede" aria-pressed="false">Lukkede</button>
+          <button class="chip" type="button" data-ochip="alle" aria-pressed="false">Alle</button>
+          <input class="search" id="opf-q" type="search" placeholder="Søg i opfølgning, note, projekt, PL eller PA" aria-label="Søg i opfølgninger">
+        </div>
+        <p class="note" id="opf-count"></p>
+        <div class="tablebox"><table class="t" id="t-opf"></table></div>
       </div>
     </section>
 
@@ -1867,7 +1898,7 @@ const S = {
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
-  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 } },
+  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '',
 };
 const buOk = (r) => S.bus.size === 0 || S.bus.has(r.bu);
 const inScope = (r) => buOk(r) && (S.pls.size === 0 || S.pls.has(r.pl || '?')) && (S.pas.size === 0 || S.pas.has(r.po || '?'));
@@ -2044,6 +2075,10 @@ function render() {
   if (S.tab === 'risiko') drawRisk();
   if (S.tab === 'kort') drawMap(rows);
   if (S.tab === 'rapport') drawReportTab();
+  const opf = opfRows();
+  const nOver = opf.filter((x) => x.over).length;
+  $('#opf-badge').hidden = !nOver; $('#opf-badge').textContent = nOver ? String(nOver) : ''; $('#opf-badge').title = nOver ? `${nOver} overskredne opfølgninger` : '';
+  if (S.tab === 'opf') drawOpf(opf);
   if (S.sel) drawDrawer();
 }
 
@@ -2234,7 +2269,7 @@ function table(el, cols, rows, opt = {}) {
   })));
   const tbody = h('tbody');
   rows.forEach((r) => {
-    const tr = h('tr', { class: opt.selKey && r[opt.selKey.k] === opt.selKey.v ? 'sel' : null });
+    const tr = h('tr', { class: [opt.selKey && r[opt.selKey.k] === opt.selKey.v ? 'sel' : '', opt.rowClass ? opt.rowClass(r) || '' : ''].join(' ').trim() || null });
     cols.forEach((c) => {
       const td = h('td', { class: [c.num ? 'num' : '', c.sec ? 'hide-sm' : '', c.cls || ''].join(' ').trim() || null });
       td.textContent = (c.f || F.txt)(r[c.k], r);
@@ -2565,6 +2600,56 @@ function drawMap(rows) {
   }
 }
 $('#k-farve').addEventListener('change', (e) => { S.kfarve = e.target.value; ls.set('pd.kfarve', S.kfarve); render(); });
+
+/* ----- Opfølgning: alle opfølgninger på tværs af projekter ----- */
+// Én række pr. note med opfølgning i projekter inden for filtrene øverst
+function opfRows() {
+  const today = cphDay(Date.now()), byP = new Map(S.P.map((r) => [r.projekt, r]));
+  return S.notes.filter((n) => n.opfoelgning).map((n) => {
+    const r = byP.get(n.projekt);
+    if (!r || !inScope(r)) return null;
+    const lukket = n.status === 'lukket', frist = n.frist ? String(n.frist).slice(0, 10) : '';
+    const over = !lukket && !!frist && frist < today;
+    return { n, id: n.id, projekt: n.projekt, navn: r.navn, pl: r.pl, po: r.po, opfoelgning: n.opfoelgning, note: n.note, frist, oprettet: n.oprettet,
+      lukket, over, dage: over ? Math.round((Date.parse(today) - Date.parse(frist)) / 864e5) : null, status: lukket ? 'Lukket' : over ? 'Overskredet' : 'Åben' };
+  }).filter(Boolean);
+}
+// Standardsortering: overskredne øverst (ældste frist først), så åbne efter frist, åbne uden frist efter skrivedato, til sidst lukkede
+const opfGroup = (x) => (x.over ? 0 : x.lukket ? 3 : x.frist ? 1 : 2);
+function opfSort(a, b) {
+  const { k, d } = S.sorts.opf;
+  if (k === 'frist') {
+    const g = opfGroup(a) - opfGroup(b); if (g) return g;
+    if (a.frist && b.frist && a.frist !== b.frist) return a.frist.localeCompare(b.frist) * d;
+    return String(a.oprettet).localeCompare(String(b.oprettet)) * d;
+  }
+  if (k === 'status') return (opfGroup(a) - opfGroup(b)) * d || String(a.frist || '9999').localeCompare(String(b.frist || '9999'));
+  return cmp(k, d)(a, b);
+}
+function drawOpf(all) {
+  $$('.chip[data-ochip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.ochip === S.ochip)));
+  const q = S.oq.toLowerCase();
+  const rows = all.filter((x) => (S.ochip === 'aabne' ? !x.lukket : S.ochip === 'over' ? x.over : S.ochip === 'lukkede' ? x.lukket : true)
+    && (!q || [x.opfoelgning, x.note, x.projekt, x.navn, x.pl, x.po].some((v) => String(v || '').toLowerCase().includes(q)))).sort(opfSort);
+  const nOpen = all.filter((x) => !x.lukket).length, nOver = all.filter((x) => x.over).length, nClosed = all.length - nOpen;
+  $('#opf-count').replaceChildren(`${nf0.format(nOpen)} åbne opfølgninger i ${scopeLabel()}`, nOver ? h('b', { class: 'c-red', text: `, heraf ${nf0.format(nOver)} overskredne` }) : '',
+    `. ${nf0.format(nClosed)} lukkede${S.ochip === 'aabne' || S.ochip === 'over' ? ' er skjult' : ''}. Viser ${nf0.format(rows.length)}.`);
+  const today = cphDay(Date.now());
+  table($('#t-opf'), [
+    { k: 'status', l: 'Status', cell: (td, x) => { td.replaceChildren(h('span', { class: 'otag ' + (x.over ? 'od' : x.lukket ? 'cl' : 'op'), text: x.over ? `Overskredet ${x.dage} ${x.dage === 1 ? 'dag' : 'dage'}` : x.status })); } },
+    { k: 'frist', l: 'Frist', f: (v) => (v ? F.date(v) : 'Ingen frist'), cell: (td, x) => { if (x.over) td.classList.add('neg'); if (x.frist === today && !x.lukket) td.classList.add('due'); } },
+    { k: 'opfoelgning', l: 'Opfølgning', cls: 'wrapc' },
+    { k: 'projekt', l: 'Projekt' },
+    { k: 'navn', l: 'Navn', cls: 'name', sec: 1 },
+    { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA', sec: 1 },
+    { k: 'note', l: 'Bemærkning', cls: 'wrapc onote', sec: 1, f: (v) => (v ? (v.length > 140 ? v.slice(0, 140) + ' …' : v) : '') },
+    { k: 'oprettet', l: 'Skrevet', f: (v) => F.date(v), sec: 1 },
+    { k: 'act', l: '', cell: (td, x) => { td.replaceChildren(h('button', { class: 'btn small', type: 'button', text: x.lukket ? 'Genåbn' : 'Luk', onclick: (e) => { e.stopPropagation(); act(() => Store.updateNote(x.id, { status: x.lukket ? 'åben' : 'lukket' }), x.lukket ? 'Opfølgningen er genåbnet' : 'Opfølgningen er lukket'); } })); } },
+  ], rows, { sortKey: 'opf', onClick: (x) => openProject(x.projekt), rowClass: (x) => (x.over ? 'od' : x.lukket ? 'closed' : '') });
+  if (!rows.length) $('#t-opf tbody').append(h('tr', {}, h('td', { colspan: 10, class: 'note', text: all.length ? 'Ingen opfølgninger matcher valget.' : 'Ingen opfølgninger i udvalget.' })));
+}
+$$('.chip[data-ochip]').forEach((b) => b.addEventListener('click', () => { S.ochip = b.dataset.ochip; render(); }));
+$('#opf-q').addEventListener('input', (e) => { S.oq = e.target.value.trim(); render(); });
 
 /* ----- Rapport til PA ----- */
 const RP = () => S.rp;
@@ -3294,7 +3379,7 @@ async function logOut() {
 
 /* ================= Start ================= */
 (async () => {
-  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'risiko', 'kort', 'rapport', 'regler'].includes(h0)) S.tab = h0;
+  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'risiko', 'kort', 'rapport', 'opf', 'regler'].includes(h0)) S.tab = h0;
   await ensureLogin();
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
