@@ -23,7 +23,8 @@ type Row = { id: string; projekt: string; navn: string | null; pl: string | null
 
 function mail(rows: Row[], frist: string) {
   const n = rows.length;
-  const subject = `Opfølgning i morgen: ${n} ${n === 1 ? "projekt" : "projekter"}`;
+  // Én opfølgning pr. mail: emnet starter med projektnummer og -navn
+  const subject = n === 1 ? `${rows[0].projekt} ${rows[0].navn || ""}`.trim() + " · Opfølgning i morgen" : `Opfølgning i morgen: ${n} projekter`;
   const items = rows.map((r) => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #EFE6DE;vertical-align:top;white-space:nowrap;font-weight:600;color:#700B15">${esc(r.projekt)}</td>
@@ -69,13 +70,15 @@ Deno.serve(async (req) => {
     for (const r of rows) {
       let to = r.email ? [r.email] : null;
       if (!to) { fallback ??= ((await db("/rest/v1/adgang?select=email")) as { email: string }[]).map((x) => x.email); to = fallback; }
-      for (const e of to) { const k = e.toLowerCase(); if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(r); }
+      // én mail pr. opfølgning og modtager
+      for (const e of to) { const k = e.toLowerCase() + "|" + r.id; if (!groups.has(k)) groups.set(k, []); groups.get(k)!.push(r); }
     }
-    if (dry) return json({ frist: tomorrow, test: true, modtagere: [...groups].map(([e, rs]) => ({ email: e, antal: rs.length, emne: mail(rs, tomorrow).subject })) });
+    if (dry) return json({ frist: tomorrow, test: true, mails: [...groups].map(([k, rs]) => ({ email: k.split("|")[0], emne: mail(rs, tomorrow).subject })) });
     const apiKey = Deno.env.get("BREVO_API_KEY"), sender = Deno.env.get("BREVO_SENDER");
     if (!apiKey || !sender) return json({ fejl: "BREVO_API_KEY og BREVO_SENDER mangler under Edge Functions > Secrets" }, 500);
     const result: unknown[] = [], sentIds = new Set<string>();
-    for (const [email, rs] of groups) {
+    for (const [key, rs] of groups) {
+      const email = key.split("|")[0];
       const m = mail(rs, tomorrow);
       const r = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
