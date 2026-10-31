@@ -49,3 +49,12 @@ Har du noter eller udtræk i browseren, så flyt dem med knapperne under Indstil
 ## Kort
 
 Fra GitHub Pages bruges OpenStreetMap uden nøgle. Som lokal fil kræver kortbaggrunden en gratis CARTO-nøgle (Indstillinger > Kort).
+
+## Påmindelser på e-mail
+
+Åbne opfølgninger giver en e-mail kl. 07 dagen før fristen til den, der skrev noten (via Brevo).
+- `supabase/06_opf_paamindelse.sql`: kolonne, funktioner og det daglige job (pg_cron).
+- `supabase/functions/opf-paamindelse`: edge-funktionen, der sender mailen.
+- Brevo-nøgle og afsender ligger under Supabase > Edge Functions > Secrets (`BREVO_API_KEY`, `BREVO_SENDER`).
+- Ændres fristen, eller genåbnes noten, sendes en ny påmindelse.
+
