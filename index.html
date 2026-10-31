@@ -278,7 +278,13 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .entry .meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .entry .txt { white-space: pre-wrap; }
 .entry .fu { font-size: 12px; }
-.entry .acts { display: flex; gap: 6px; }
+.entry .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.entry.editing { border-color: var(--deep); box-shadow: inset 0 0 0 1px var(--deep); gap: 8px; }
+.ne-l { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); flex: 1 1 140px; min-width: 0; }
+.ne-l textarea, .ne-l input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; color: var(--ink); background: #fff; width: 100%; box-sizing: border-box; }
+.ne-l textarea { resize: vertical; min-height: 80px; }
+.ne-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.entry > .ne-l { flex: none; }
 .hist td, .hist th { font-size: 12px; }
 .coming { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
 .coming span { display: inline-block; border: 1px dashed var(--sand-3); border-radius: 999px; padding: 2px 9px; margin: 3px 4px 0 0; }
@@ -2791,7 +2797,7 @@ function drawRules(rows) {
 }
 
 /* ----- projektdetalje ----- */
-function openProject(id) { if (S.sel !== id) { S.infoEdit = null; $('#d-info').dataset.form = ''; } S.sel = id; $('#drawer').classList.add('open'); $('#drawer').setAttribute('aria-hidden', 'false'); render(); }
+function openProject(id) { if (S.sel !== id) { S.infoEdit = null; S.noteEdit = null; $('#d-info').dataset.form = ''; } S.sel = id; $('#drawer').classList.add('open'); $('#drawer').setAttribute('aria-hidden', 'false'); render(); }
 function closeProject() { S.sel = null; $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden', 'true'); render(); }
 function drawDrawer() {
   const r = S.P.find((x) => x.projekt === S.sel);
@@ -2812,14 +2818,50 @@ function drawDrawer() {
   drawHist(r);
   drawRiskDetail(r);
   const log = [...r.noter].reverse();
-  $('#d-log').replaceChildren(...(log.length ? log.map((n) => h('div', { class: 'entry' + (n.status === 'lukket' ? ' closed' : '') },
-    h('div', { class: 'meta' }, h('span', { text: F.ts(n.oprettet) }), n.periode ? h('span', { text: 'Månedsluk ' + F.per(n.periode) }) : null, n.opfoelgning ? h('span', { text: n.status === 'lukket' ? 'Lukket' : 'Åben' }) : null),
+  if (S.noteEdit && !log.some((n) => n.id === S.noteEdit)) S.noteEdit = null;
+  // under redigering bevares formularen, så tekst og fokus ikke forsvinder ved en ny optegning (fx når mobilens tastatur åbner)
+  const open = $('#d-log .entry.editing');
+  if (S.noteEdit && open && open.dataset.id === S.noteEdit) return;
+  $('#d-log').replaceChildren(...(log.length ? log.map((n) => (n.id === S.noteEdit ? noteEditor(n) : h('div', { class: 'entry' + (n.status === 'lukket' ? ' closed' : '') },
+    h('div', { class: 'meta' }, h('span', { text: F.ts(n.oprettet) }), n.periode ? h('span', { text: 'Månedsluk ' + F.per(n.periode) }) : null, n.opfoelgning ? h('span', { text: n.status === 'lukket' ? 'Lukket' : 'Åben' }) : null, n.redigeret ? h('span', { title: F.ts(n.redigeret), text: 'Redigeret ' + F.date(n.redigeret) }) : null),
     n.note ? h('div', { class: 'txt', text: n.note }) : null,
     n.opfoelgning ? h('div', { class: 'fu', text: `Opfølgning: ${n.opfoelgning}${n.frist ? ' · frist ' + F.date(n.frist) : ''}` }) : null,
     h('div', { class: 'acts' },
+      h('button', { class: 'btn small', type: 'button', text: 'Redigér', onclick: () => { S.noteEdit = n.id; drawDrawer(); setTimeout(() => $('#ne-note')?.focus(), 0); } }),
       n.opfoelgning ? h('button', { class: 'btn small', type: 'button', text: n.status === 'lukket' ? 'Genåbn' : 'Luk opfølgning', onclick: () => act(() => Store.updateNote(n.id, { status: n.status === 'lukket' ? 'åben' : 'lukket' })) }) : null,
-      h('button', { class: 'btn small', type: 'button', text: 'Slet', onclick: () => { if (confirm('Slet noten?')) act(() => Store.deleteNote(n.id)); } }))))
+      h('button', { class: 'btn small', type: 'button', text: 'Slet', onclick: () => { if (confirm('Slet noten?')) act(() => Store.deleteNote(n.id)); } })))))
     : [h('p', { class: 'note', text: 'Ingen noter på projektet endnu.' })]));
+}
+// Redigering af en eksisterende note: tekst, opfølgning, frist og dato
+function noteEditor(n) {
+  const day = cphDay(n.oprettet);
+  const ta = h('textarea', { id: 'ne-note', rows: 4, 'aria-label': 'Bemærkning' }); ta.value = n.note || '';
+  const fu = h('input', { id: 'ne-fu', type: 'text', 'aria-label': 'Opfølgning', placeholder: 'Fx PL sender ny ETC' }); fu.value = n.opfoelgning || '';
+  const due = h('input', { id: 'ne-due', type: 'date', 'aria-label': 'Frist' }); due.value = n.frist ? String(n.frist).slice(0, 10) : '';
+  const dt = h('input', { id: 'ne-date', type: 'date', 'aria-label': 'Dato for noten', required: '' }); dt.value = day;
+  const cancel = () => { S.noteEdit = null; drawDrawer(); };
+  const save = () => {
+    const note = ta.value.trim(), f = fu.value.trim();
+    if (!note && !f) { toast('Skriv en bemærkning eller en opfølgning'); return; }
+    const patch = { note, opfoelgning: f || null, frist: due.value || null, redigeret: new Date().toISOString() };
+    // ny dato: behold klokkeslættet, så rækkefølgen inden for dagen bevares
+    if (dt.value && dt.value !== day) { const t = new Date(n.oprettet); const [y, m, d] = dt.value.split('-').map(Number); const nd = new Date(t); nd.setFullYear(y, m - 1, d); patch.oprettet = nd.toISOString(); }
+    if (f && !n.opfoelgning) patch.status = 'åben';
+    S.noteEdit = null;
+    act(() => Store.updateNote(n.id, patch), 'Noten er opdateret');
+  };
+  [ta, fu, due, dt].forEach((el) => el.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
+  }));
+  return h('div', { class: 'entry editing', 'data-id': n.id },
+    h('div', { class: 'meta' }, h('span', { text: 'Redigerer note fra ' + F.ts(n.oprettet) })),
+    h('label', { class: 'ne-l' }, 'Bemærkning', ta),
+    h('div', { class: 'ne-row' }, h('label', { class: 'ne-l' }, 'Opfølgning', fu), h('label', { class: 'ne-l' }, 'Frist', due), h('label', { class: 'ne-l' }, 'Dato', dt)),
+    h('div', { class: 'acts' },
+      h('button', { class: 'btn small primary', type: 'button', text: 'Gem ændringer', onclick: save }),
+      h('button', { class: 'btn small', type: 'button', text: 'Fortryd', onclick: cancel }),
+      h('span', { class: 'note', text: 'Ctrl/⌘ + Enter gemmer · Esc fortryder' })));
 }
 /* ----- Om projektet: beskrivelse og lokation ----- */
 // Læser koordinater fra et Google Maps-link (eller "55.67, 12.56"). Kortlinks (maps.app.goo.gl) har ingen koordinater.

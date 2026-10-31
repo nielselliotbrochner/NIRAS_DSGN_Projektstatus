@@ -188,6 +188,7 @@ create table if not exists public.projekt_noter (
   oprettet     timestamptz not null default now(),
   oprettet_af  uuid default auth.uid()
 );
+alter table public.projekt_noter add column if not exists redigeret timestamptz;  -- sidst redigeret i dashboardet
 create index if not exists projekt_noter_projekt_id_idx on public.projekt_noter (projekt_id);
 create index if not exists projekt_noter_projekt_idx on public.projekt_noter (projekt);
 
