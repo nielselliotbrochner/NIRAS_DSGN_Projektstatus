@@ -1040,6 +1040,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="ms" id="ms-bu"></div>
         <div class="ms" id="ms-pl"></div>
         <div class="ms" id="ms-pa"></div>
+        <label class="msel" id="psel" hidden title="Hvilket til dato-udtræk (PTD) der vises i overblik, tabeller, flag og rapport. Standard er det nyeste."><span class="ms-k">Til dato</span><select id="sel-ptd" aria-label="Vælg til dato-udtræk"></select></label>
         <label class="msel" id="msel" hidden title="Hvilken måned der vises i månedstal og månedsflag. Til dato er altid det seneste udtræk."><span class="ms-k">Måned</span><select id="sel-month" aria-label="Vælg måned"></select></label>
         <button class="btn" id="btn-reset" type="button">Nulstil</button>
       </div>
@@ -1845,6 +1846,12 @@ const Store = {
       trend: tr.map((t) => ({ periode: String(t.periode).slice(0, 7), bu: t.bu, pl: t.pl, po: t.po, oms: num(t.oms), db: num(t.db), loen: num(t.loen), aktive: num(t.aktive) })),
     };
   },
+  async loadPtd(key) {
+    const u = (S.ups || []).find((x) => x.type === 'ptd' && String(x.noegle) === key);
+    if (!u) return null;
+    const rows = await this.fetchAll(`/rest/v1/erp_ptd?select=*&pr_dato=eq.${key}&order=projekt`);
+    return { kind: 'ptd', key, rows: rows.map(normDbRow), recon: { ok: u.afstemt, diff: u.afvigelser ? String(u.afvigelser).split(', ') : [] }, file: u.filnavn, loaded: u.uploadet, udtrukket: u.udtrukket, kilde: u.noegle_kilde };
+  },
   async loadMonth(key) {
     const u = (S.ups || []).find((x) => x.type === 'maaned' && String(x.noegle) === key);
     if (!u) return null;
@@ -1899,7 +1906,7 @@ const S = {
   ptd: null, months: {}, notes: [], fokus: {}, info: {}, infoEdit: null, rules: loadRules(),
   risk: null, riskTrend: [], riskBy: new Map(), rhist: {}, rhistCache: {}, rchip: 'k2', rq: '', rp: { pa: null, manual: {}, intro: '', ...{ r: true, y: true, n: false, minb: 0, fokus: true, open: true, risk: true, riskmin: 3, sort: 'score', age: 90, openall: true, sec: { kpi: true, flag: true, open: true, table: true, pages: true, risk: true, desc: false } }, ...ls.get('pd.rp', {}) }, kfarve: ls.get('pd.kfarve', 'flag'),
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
-  P: [], periode: '', mSel: '', mLatest: '', bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
+  P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '',
 };
@@ -1992,6 +1999,41 @@ function drawMonthSel() {
   $('#msel').classList.toggle('on', !!S.periode && S.periode !== S.mLatest);
 }
 $('#sel-month').addEventListener('change', (e) => selectMonth(e.target.value));
+
+/* ----- PTD-vælger: vis et tidligere til dato-udtræk ----- */
+function ptdKeys() {
+  const k = new Set(Object.keys(S.ptds));
+  if (S.src === 'supabase') S.ups.filter((u) => u.type === 'ptd').forEach((u) => k.add(String(u.noegle)));
+  else S.localKeys.filter((x) => x.startsWith('p:')).forEach((x) => k.add(x.slice(2)));
+  return [...k].sort();
+}
+async function ensurePtd(key) {
+  if (!key || S.ptds[key]) return;
+  const d = S.src === 'supabase' ? await Store.loadPtd(key) : await idb.get('p:' + key);
+  if (!d) throw new Error('Udtrækket ' + F.date(key) + ' findes ikke');
+  S.ptds[key] = d;
+}
+// Sætter S.ptd ud fra valget; '' = nyeste
+function applyPtd() { S.ptd = (S.pSel && S.ptds[S.pSel]) || S.ptds[S.pLatest] || S.ptd; }
+async function selectPtd(key) {
+  const k = key === S.pLatest ? '' : key || '';
+  if (k === S.pSel) return;
+  const sel = $('#sel-ptd');
+  try {
+    if (k && !S.ptds[k]) { sel.disabled = true; toast('Henter til dato pr. ' + F.date(k) + ' …'); await ensurePtd(k); toast('Viser til dato pr. ' + F.date(k)); }
+    S.pSel = k;
+  } catch (e) { toast('Kunne ikke hente udtrækket: ' + e.message); }
+  sel.disabled = false;
+  applyPtd(); S.histCache = S.histCache || {}; rebuild(); render();
+}
+function drawPtdSel() {
+  const sel = $('#sel-ptd'), keys = ptdKeys().reverse();
+  $('#psel').hidden = keys.length < 2;
+  sel.replaceChildren(...keys.map((k, i) => h('option', { value: i === 0 ? '' : k, text: F.date(k) + (i === 0 ? ' (nyeste)' : '') })));
+  sel.value = S.pSel && S.ptds[S.pSel] ? S.pSel : '';
+  $('#psel').classList.toggle('on', !!S.pSel);
+}
+$('#sel-ptd').addEventListener('change', (e) => selectPtd(e.target.value));
 
 /* ================= Beregninger ================= */
 function rebuild() {
@@ -2101,6 +2143,7 @@ function drawStatus() {
 }
 
 function drawControls() {
+  drawPtdSel();
   drawMonthSel();
   const bus = Object.keys(countBy(S.P, 'bu'));
   if (S.bus.size && ![...S.bus].some((b) => bus.includes(b))) S.bus = new Set(bus.includes('DSGN') ? ['DSGN'] : []);
@@ -2111,7 +2154,7 @@ function drawControls() {
 }
 
 function drawHeader(rows, sum) {
-  $('#subline').textContent = `Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · ' + mWord() + ': ' + F.per(S.periode) : ''} · ${scopeLabel()}`;
+  $('#subline').textContent = `Til dato pr. ${F.date(S.ptd.key)}${S.pSel ? ' (ældre udtræk)' : ''}${S.periode ? ' · ' + mWord() + ': ' + F.per(S.periode) : ''} · ${scopeLabel()}`;
   const cnt = {}; rows.forEach((r) => r.hit.forEach((x) => { cnt[x.navn] = (cnt[x.navn] || 0) + 1; }));
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   const t = $('#takeaway'); t.replaceChildren(
@@ -3032,7 +3075,7 @@ async function reloadNotes() { const d = await Store.load(); S.notes = d.notes; 
 /* ================= Hændelser ================= */
 function show(id) { S.tab = id; $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id))); $$('main > .page[id]').forEach((p) => { p.hidden = p.id !== id; }); try { history.replaceState(null, '', '#' + id); } catch (e) { /* file:// */ } render(); }
 $$('.tab').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
-$('#btn-reset').addEventListener('click', () => { S.bus = new Set(S.P.some((r) => r.bu === 'DSGN') ? ['DSGN'] : []); S.pls = new Set(); S.pas = new Set(); S.chip = 'alle'; S.regel = null; S.q = ''; $('#search').value = ''; if (S.mSel) { S.mSel = ''; rebuild(); } render(); });
+$('#btn-reset').addEventListener('click', () => { S.bus = new Set(S.P.some((r) => r.bu === 'DSGN') ? ['DSGN'] : []); S.pls = new Set(); S.pas = new Set(); S.chip = 'alle'; S.regel = null; S.q = ''; $('#search').value = ''; if (S.mSel || S.pSel) { S.mSel = ''; S.pSel = ''; applyPtd(); rebuild(); } render(); });
 $$('.chip[data-chip]').forEach((b) => b.addEventListener('click', () => { S.chip = b.dataset.chip; render(); }));
 $$('.chip[data-role]').forEach((b) => b.addEventListener('click', () => { S.pRole = b.dataset.role; render(); }));
 $('#chip-rule').addEventListener('click', () => { S.regel = null; render(); });
@@ -3090,6 +3133,7 @@ async function loadFromLocal() {
     S.localKeys = keys;
     const lp = keys.filter((k) => k.startsWith('p:')).pop(), lm = keys.filter((k) => k.startsWith('m:')).pop();
     if (lp) S.ptd = await idb.get(lp);
+    S.ptds = S.ptd ? { [S.ptd.key]: S.ptd } : {}; S.pLatest = S.ptd ? S.ptd.key : '';
     if (lm) { const m = await idb.get(lm); S.months[m.key] = m; }
     for (const k of keys.filter((x) => x.startsWith('t:'))) S.trend.push(...((await idb.get(k)) || []));
     S.hist = (await idb.get('hist')) || {};
@@ -3103,7 +3147,7 @@ async function loadFromSupabase() {
   const r = await Store.loadErp();
   S.ups = r.ups; S.histCache = {};
   if (!r.ptd) { await loadFromLocal(); if (S.ptd) toast('Supabase har endnu ingen udtræk. Viser browserens udtræk; send dem under Indstillinger.'); return; }
-  S.src = 'supabase'; S.ptd = r.ptd; S.months = r.month ? { [r.month.key]: r.month } : {}; S.trend = r.trend; S.risk = r.risk; S.riskTrend = r.riskTrend; S.rhistCache = {};
+  S.src = 'supabase'; S.ptd = r.ptd; S.ptds = { [r.ptd.key]: r.ptd }; S.pLatest = r.ptd.key; S.months = r.month ? { [r.month.key]: r.month } : {}; S.trend = r.trend; S.risk = r.risk; S.riskTrend = r.riskTrend; S.rhistCache = {};
 }
 async function loadData() {
   let ok = false;
@@ -3112,6 +3156,8 @@ async function loadData() {
   }
   if (!ok) await loadFromLocal();
   if (S.mSel) { if (monthKeys().includes(S.mSel)) await ensureMonth(S.mSel).catch(() => { S.mSel = ''; }); else S.mSel = ''; }
+  if (S.pSel) { if (ptdKeys().includes(S.pSel) && S.pSel !== S.pLatest) await ensurePtd(S.pSel).catch(() => { S.pSel = ''; }); else S.pSel = ''; }
+  applyPtd();
 }
 async function loadFiles(files) {
   const msgs = [], parsed = [];
