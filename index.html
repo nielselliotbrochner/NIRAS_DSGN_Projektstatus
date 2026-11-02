@@ -1024,7 +1024,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   <section class="drop" id="empty">
     <h2>Træk dine ERP-udtræk herind</h2>
-    <div>PTD-filen (til dato), månedsfilen og risk log-filen. Flere udtræk kan indlæses på én gang og gemmes som historik.</div>
+    <div>PTD-filen, månedsfilen og risk log-filen. Flere udtræk kan indlæses på én gang og gemmes som historik.</div>
     <div>Filerne afstemmes her i browseren og gemmes derefter med dato i databasen bag login.</div>
     <button class="btn primary" type="button" id="btn-upload2">Vælg filer</button>
   </section>
@@ -1040,8 +1040,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="ms" id="ms-bu"></div>
         <div class="ms" id="ms-pl"></div>
         <div class="ms" id="ms-pa"></div>
-        <label class="msel" id="psel" hidden title="Hvilket til dato-udtræk (PTD) der vises i overblik, tabeller, flag og rapport. Standard er det nyeste."><span class="ms-k">Til dato</span><select id="sel-ptd" aria-label="Vælg til dato-udtræk"></select></label>
-        <label class="msel" id="msel" hidden title="Hvilken måned der vises i månedstal og månedsflag. Til dato er altid det seneste udtræk."><span class="ms-k">Måned</span><select id="sel-month" aria-label="Vælg måned"></select></label>
+        <label class="msel" id="psel" hidden title="Hvilket PTD-udtræk der vises i overblik, tabeller, flag og rapport. Standard er det nyeste."><span class="ms-k">PTD</span><select id="sel-ptd" aria-label="Vælg PTD-udtræk"></select></label>
+        <label class="msel" id="msel" hidden title="Hvilken måned der vises i månedstal og månedsflag. PTD vælges i feltet PTD."><span class="ms-k">Måned</span><select id="sel-month" aria-label="Vælg måned"></select></label>
         <button class="btn" id="btn-reset" type="button">Nulstil</button>
       </div>
       <nav class="tabs" role="tablist">
@@ -1104,7 +1104,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <div class="seg" role="group" aria-label="Visning">
             <button type="button" data-pview="begge">Begge</button>
             <button type="button" data-pview="maaned">Måned</button>
-            <button type="button" data-pview="ptd">Til dato</button>
+            <button type="button" data-pview="ptd">PTD</button>
           </div>
         </div>
         <div class="chips">
@@ -1118,7 +1118,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <p class="note" id="count"></p>
         <div class="tablebox"><table class="t t2" id="t-proj"></table></div>
-        <p class="note">Beløb i t.kr. Røde tal er negative beløb eller TFM under den røde grænse.</p>
+        <p class="note">Beløb i tDKK Røde tal er negative beløb eller TFM under den røde grænse.</p>
       </div>
     </section>
 
@@ -1126,13 +1126,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <section class="page" id="pers" hidden>
       <div class="card">
         <h2>Nøgletal pr. person</h2>
-        <p class="note">Til dato og seneste måned i den valgte BU. Klik på en person for at se vedkommendes projekter.</p>
+        <p class="note">PTD og seneste måned i den valgte BU. Klik på en person for at se vedkommendes projekter.</p>
         <div class="chips">
           <button class="chip" type="button" data-role="pl" aria-pressed="true">Projektledere (PL)</button>
           <button class="chip" type="button" data-role="po" aria-pressed="false">Projektansvarlige (PA)</button>
         </div>
         <div class="tablebox"><table class="t" id="t-pers"></table></div>
-        <p class="note">Beløb i t.kr. TFM er summen af omsætning delt med summen af løn.</p>
+        <p class="note">Beløb i tDKK TFM er summen af omsætning delt med summen af løn.</p>
       </div>
     </section>
 
@@ -1170,7 +1170,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
           </div>
           <p class="note" id="r-count"></p>
           <div class="tablebox"><table class="t t2 rt" id="t-risk"></table></div>
-          <p class="note">"Mangler vurdering" er projekter i klasse 2 eller højere uden udfyldte risikofaktorer. WIP og AR +90 dage er i t.kr. som i risk log.</p>
+          <p class="note">"Mangler vurdering" er projekter i klasse 2 eller højere uden udfyldte risikofaktorer. WIP og AR +90 dage er i tDKK som i risk log.</p>
         </div>
         <div class="card">
           <h2>Udvikling i risikoklasser</h2>
@@ -1190,7 +1190,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <option value="flag">Flag</option>
             <option value="risiko">Risikoklasse</option>
             <option value="tfm">TFM i måneden</option>
-            <option value="oms">Omsætning til dato</option>
+            <option value="oms">Omsætning PTD</option>
           </select></label>
         </div>
         <div class="legend" id="k-legend"></div>
@@ -1212,7 +1212,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
               <label class="ck"><input type="checkbox" id="rp-r"> Røde flag</label>
               <label class="ck"><input type="checkbox" id="rp-y"> Kun gule flag</label>
               <label class="ck"><input type="checkbox" id="rp-n"> Uden flag</label>
-              <label>Mindste baseline (t.kr.)<input type="number" id="rp-minb" min="0" step="100"></label>
+              <label>Mindste baseline (tDKK)<input type="number" id="rp-minb" min="0" step="100"></label>
               <p class="note">Altid med, uanset filtrene ovenfor:</p>
               <label class="ck"><input type="checkbox" id="rp-fokus"> Fokusprojekter</label>
               <label class="ck"><input type="checkbox" id="rp-open"> Projekter med åben opfølgning</label>
@@ -1310,7 +1310,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <p class="sec-h">Om projektet</p>
     <div id="d-info"></div>
     <div class="kv" id="d-kv"></div>
-    <p class="sec-h">Udvikling i til dato-udtræk</p>
+    <p class="sec-h">Udvikling i PTD-udtræk</p>
     <div id="d-hist"></div>
     <p class="sec-h">Noter og opfølgning</p>
     <div class="form">
@@ -1407,7 +1407,7 @@ const nf2 = new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFr
 const isNum = (v) => v != null && v !== '' && Number.isFinite(Number(v));
 const num = (v) => (isNum(v) ? Number(v) : 0);
 const F = {
-  mio: (kr) => (!isNum(kr) ? '—' : Number(kr) === 0 ? '0' : Math.abs(kr) >= 1e6 ? nf1.format(kr / 1e6) + ' mio.' : nf0.format(kr / 1e3) + ' t.'),
+  mio: (kr) => (!isNum(kr) ? '—' : Number(kr) === 0 ? '0' : Math.abs(kr) >= 1e6 ? nf1.format(kr / 1e6) + ' mDKK' : nf0.format(kr / 1e3) + ' tDKK'),
   tkr: (kr) => (!isNum(kr) ? '' : nf0.format(Math.round(kr / 1e3) || 0)),
   pct: (v) => (!isNum(v) ? '' : nf0.format(v * 100) + ' %'),
   tfm: (v) => (!isNum(v) ? '' : nf2.format(v)),
@@ -1569,7 +1569,7 @@ const FACTORS = RISK_F.filter((f) => f[0].startsWith('r_'));
 const RISK_COLS = ['projekt', 'navn', 'selskab', 'bu', 'pl', 'po', 'valuta', 'land', 'kunde', 'mac_klasse', ...RISK_F.map((f) => f[0]), 'link_pmdash', 'link_risklog'];
 const CAT_LV = { '<0.5M': 1, '0.5-10M': 2, '10-50M': 3, '>50M': 4, '<0.1M': 1, '0.1-0.5M': 2, '0.5-5M': 3, '>5M': 4 };
 const catLevel = (v) => { if (!v) return null; const t = String(v).replace(/\s|DKK|=/g, ''); return CAT_LV[t] ?? (t.startsWith('<') ? 1 : t.startsWith('>') ? 4 : null); };
-const catTxt = (v) => (v ? String(v).replace(/^DKK\s*/, '').replace(/^=\s*/, '').replace(/(\d)\.(\d)/g, '$1,$2').replace(/M$/, ' mio.') : '');
+const catTxt = (v) => (v ? String(v).replace(/^DKK\s*/, '').replace(/^=\s*/, '').replace(/(\d)\.(\d)/g, '$1,$2').replace(/M$/, ' mDKK') : '');
 function normRisk(r) {
   const o = {};
   RISK_COLS.forEach((c) => { o[c] = r[c] ?? null; });
@@ -1636,7 +1636,7 @@ async function parseFile(file) {
       o[k] = v;
     });
     if (!o.bu) continue;
-    // ERP regner TFM af en løn på fx 0,000000000002 kr. og giver tal som 2,6e16. Det er meningsløst og for stort til databasen.
+    // ERP regner TFM af en løn på fx 0,000000000002 DKK og giver tal som 2,6e16. Det er meningsløst og for stort til databasen.
     if (isNum(o.tfm) && (Math.abs(o.tfm) > 1e4 || Math.abs(num(o.loen)) < 1)) o.tfm = null;
     ['tfm_eac', 'poc'].forEach((k) => { if (isNum(o[k]) && Math.abs(o[k]) > 1e4) o[k] = null; });
     rows.push(o);
@@ -1879,22 +1879,22 @@ const Store = {
 
 /* ================= Flagregler ================= */
 const RULES_DEFAULT = [
-  { regel: 'db_neg', niveau: 'rød', navn: 'Negativt DB til dato', tekst: (g) => `Dækningsbidrag til dato under ${nf0.format(g)} kr.`, g: 0, enhed: 'kr.' },
+  { regel: 'db_neg', niveau: 'rød', navn: 'Negativt DB PTD', tekst: (g) => `Dækningsbidrag PTD under ${nf0.format(g)} DKK`, g: 0, enhed: 'DKK' },
   { regel: 'tfm_eac_r', niveau: 'rød', navn: 'TFM EAC lav', tekst: (g) => `TFM EAC under ${nf2.format(g)}`, g: 1.2, enhed: 'TFM' },
   { regel: 'poc_r', niveau: 'rød', navn: 'POC højt', tekst: (g) => `Indtægtsført mere end ${nf0.format(g * 100)} % af baseline`, g: 1.2, enhed: 'andel' },
-  { regel: 'wip_r', niveau: 'rød', navn: 'Stor ufaktureret WIP', tekst: (g) => `WIP over ${nf0.format(g)} kr.`, g: 1000000, enhed: 'kr.' },
-  { regel: 'ar_r', niveau: 'rød', navn: 'Stort forfaldent beløb', tekst: (g) => `Forfaldent tilgodehavende over ${nf0.format(g)} kr.`, g: 250000, enhed: 'kr.' },
+  { regel: 'wip_r', niveau: 'rød', navn: 'Stor ufaktureret WIP', tekst: (g) => `WIP over ${nf0.format(g)} DKK`, g: 1000000, enhed: 'DKK' },
+  { regel: 'ar_r', niveau: 'rød', navn: 'Stort forfaldent beløb', tekst: (g) => `Forfaldent tilgodehavende over ${nf0.format(g)} DKK`, g: 250000, enhed: 'DKK' },
   { regel: 'tfm_eac_y', niveau: 'gul', navn: 'TFM EAC under mål', tekst: (g) => `TFM EAC under ${nf2.format(g)} (men over rød grænse)`, g: 1.6, enhed: 'TFM' },
   { regel: 'poc_y', niveau: 'gul', navn: 'POC over 100 %', tekst: (g) => `Indtægtsført mere end ${nf0.format(g * 100)} % af baseline (men under rød grænse)`, g: 1.05, enhed: 'andel' },
-  { regel: 'over_bl', niveau: 'gul', navn: 'Faktureret over baseline', tekst: (g) => `Faktureret mere end ${nf0.format(g)} kr. over baseline`, g: 50000, enhed: 'kr.' },
-  { regel: 'wip_y', niveau: 'gul', navn: 'Ufaktureret WIP', tekst: (g) => `WIP over ${nf0.format(g)} kr. (men under rød grænse)`, g: 250000, enhed: 'kr.' },
-  { regel: 'wip_neg', niveau: 'gul', navn: 'Stor forudfakturering', tekst: (g) => `WIP under −${nf0.format(g)} kr.`, g: 1000000, enhed: 'kr.' },
-  { regel: 'ar_y', niveau: 'gul', navn: 'Forfaldent beløb', tekst: (g) => `Forfaldent tilgodehavende over ${nf0.format(g)} kr. (men under rød grænse)`, g: 50000, enhed: 'kr.' },
-  { regel: 'tbi', niveau: 'gul', navn: 'Klar til fakturering', tekst: (g) => `Mere end ${nf0.format(g)} kr. klar til fakturering`, g: 250000, enhed: 'kr.' },
+  { regel: 'over_bl', niveau: 'gul', navn: 'Faktureret over baseline', tekst: (g) => `Faktureret mere end ${nf0.format(g)} DKK over baseline`, g: 50000, enhed: 'DKK' },
+  { regel: 'wip_y', niveau: 'gul', navn: 'Ufaktureret WIP', tekst: (g) => `WIP over ${nf0.format(g)} DKK (men under rød grænse)`, g: 250000, enhed: 'DKK' },
+  { regel: 'wip_neg', niveau: 'gul', navn: 'Stor forudfakturering', tekst: (g) => `WIP under −${nf0.format(g)} DKK`, g: 1000000, enhed: 'DKK' },
+  { regel: 'ar_y', niveau: 'gul', navn: 'Forfaldent beløb', tekst: (g) => `Forfaldent tilgodehavende over ${nf0.format(g)} DKK (men under rød grænse)`, g: 50000, enhed: 'DKK' },
+  { regel: 'tbi', niveau: 'gul', navn: 'Klar til fakturering', tekst: (g) => `Mere end ${nf0.format(g)} DKK klar til fakturering`, g: 250000, enhed: 'DKK' },
   { regel: 'etc', niveau: 'gul', navn: 'ETC ikke opdateret', tekst: (g) => `Løn i måneden, men seneste ETC er over ${nf0.format(g)} dage gammel`, g: 90, enhed: 'dage' },
-  { regel: 'tfm_gap', niveau: 'gul', navn: 'Faktisk TFM under EAC', tekst: (g) => `Faktisk TFM til dato mere end ${nf2.format(g)} under TFM EAC`, g: 0.2, enhed: 'TFM' },
-  { regel: 'm_db', niveau: 'gul', navn: 'Negativt DB i måneden', tekst: (g) => `DB i måneden under −${nf0.format(g)} kr.`, g: 25000, enhed: 'kr.' },
-  { regel: 'm_tfm', niveau: 'gul', navn: 'Lav TFM i måneden', tekst: (g, g2) => `TFM under ${nf2.format(g)} i måneden, hvor løn er over ${nf0.format(g2)} kr.`, g: 1.2, g2: 50000, enhed: 'TFM' },
+  { regel: 'tfm_gap', niveau: 'gul', navn: 'Faktisk TFM under EAC', tekst: (g) => `Faktisk TFM PTD mere end ${nf2.format(g)} under TFM EAC`, g: 0.2, enhed: 'TFM' },
+  { regel: 'm_db', niveau: 'gul', navn: 'Negativt DB i måneden', tekst: (g) => `DB i måneden under −${nf0.format(g)} DKK`, g: 25000, enhed: 'DKK' },
+  { regel: 'm_tfm', niveau: 'gul', navn: 'Lav TFM i måneden', tekst: (g, g2) => `TFM under ${nf2.format(g)} i måneden, hvor løn er over ${nf0.format(g2)} DKK`, g: 1.2, g2: 50000, enhed: 'TFM' },
   { regel: 'risk_hi', niveau: 'gul', navn: 'Høj risikoklasse', tekst: (g) => `Risikoklasse ${nf0.format(g)} eller højere i risk log`, g: 3, enhed: 'klasse' },
   { regel: 'risk_noass', niveau: 'gul', navn: 'Risikovurdering mangler', tekst: (g) => `Risikoklasse ${nf0.format(g)} eller højere, men ingen risikofaktorer er vurderet`, g: 3, enhed: 'klasse' },
 ];
@@ -2000,7 +2000,7 @@ function drawMonthSel() {
 }
 $('#sel-month').addEventListener('change', (e) => selectMonth(e.target.value));
 
-/* ----- PTD-vælger: vis et tidligere til dato-udtræk ----- */
+/* ----- PTD-vælger: vis et tidligere PTD-udtræk ----- */
 function ptdKeys() {
   const k = new Set(Object.keys(S.ptds));
   if (S.src === 'supabase') S.ups.filter((u) => u.type === 'ptd').forEach((u) => k.add(String(u.noegle)));
@@ -2020,7 +2020,7 @@ async function selectPtd(key) {
   if (k === S.pSel) return;
   const sel = $('#sel-ptd');
   try {
-    if (k && !S.ptds[k]) { sel.disabled = true; toast('Henter til dato pr. ' + F.date(k) + ' …'); await ensurePtd(k); toast('Viser til dato pr. ' + F.date(k)); }
+    if (k && !S.ptds[k]) { sel.disabled = true; toast('Henter PTD pr. ' + F.date(k) + ' …'); await ensurePtd(k); toast('Viser PTD pr. ' + F.date(k)); }
     S.pSel = k;
   } catch (e) { toast('Kunne ikke hente udtrækket: ' + e.message); }
   sel.disabled = false;
@@ -2130,7 +2130,7 @@ function render() {
 function drawStatus() {
   const bar = $('#statusbar'); bar.replaceChildren();
   const pill = (dot, text, title) => h('span', { class: 'pill', title }, h('span', { class: 'dot ' + dot }), text);
-  if (S.ptd) bar.append(pill(S.ptd.recon.ok === false ? 'bad' : 'ok', `Til dato pr. ${F.date(S.ptd.key)} · ${nf0.format(S.ptd.rows.length)} projekter · ${S.ptd.recon.ok === false ? 'afviger fra Total-linjen' : 'afstemt'}`, srcTip(S.ptd)));
+  if (S.ptd) bar.append(pill(S.ptd.recon.ok === false ? 'bad' : 'ok', `PTD pr. ${F.date(S.ptd.key)} · ${nf0.format(S.ptd.rows.length)} projekter · ${S.ptd.recon.ok === false ? 'afviger fra Total-linjen' : 'afstemt'}`, srcTip(S.ptd)));
   else bar.append(pill('', 'Intet PTD-udtræk indlæst'));
   const pers = [...new Set(S.trend.map((t) => t.periode))].sort();
   const lm = S.months[S.periode];
@@ -2154,7 +2154,7 @@ function drawControls() {
 }
 
 function drawHeader(rows, sum) {
-  $('#subline').textContent = `Til dato pr. ${F.date(S.ptd.key)}${S.pSel ? ' (ældre udtræk)' : ''}${S.periode ? ' · ' + mWord() + ': ' + F.per(S.periode) : ''} · ${scopeLabel()}`;
+  $('#subline').textContent = `PTD pr. ${F.date(S.ptd.key)}${S.pSel ? ' (ældre udtræk)' : ''}${S.periode ? ' · ' + mWord() + ': ' + F.per(S.periode) : ''} · ${scopeLabel()}`;
   const cnt = {}; rows.forEach((r) => r.hit.forEach((x) => { cnt[x.navn] = (cnt[x.navn] || 0) + 1; }));
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   const t = $('#takeaway'); t.replaceChildren(
@@ -2225,7 +2225,7 @@ function drawScatter(rows) {
   const col = ['#B9AFA8', '#B7791F', '#BA1223'];
   [...pts].sort((a, b) => lvl(a) - lvl(b) || num(b.baseline) - num(a.baseline)).forEach((d) => {
     const c = s('circle', { cx: x(d.tfm_eac), cy: y(d.poc), r: rr(d.baseline), fill: col[lvl(d)], 'fill-opacity': lvl(d) ? 0.82 : 0.5, stroke: '#fff', 'stroke-width': 1, style: 'cursor:pointer' });
-    c.addEventListener('pointermove', (ev) => { c.setAttribute('stroke', '#221B18'); showTip(box, t, [`${d.projekt} · ${d.navn}`, `TFM EAC ${F.tfm(d.tfm_eac)} · POC ${F.pct(d.poc)}`, `Baseline ${F.tkr(d.baseline)} t.kr. · PL ${d.pl || '—'}`, d.flagtekst || 'Ingen flag'], ev); });
+    c.addEventListener('pointermove', (ev) => { c.setAttribute('stroke', '#221B18'); showTip(box, t, [`${d.projekt} · ${d.navn}`, `TFM EAC ${F.tfm(d.tfm_eac)} · POC ${F.pct(d.poc)}`, `Baseline ${F.tkr(d.baseline)} tDKK · PL ${d.pl || '—'}`, d.flagtekst || 'Ingen flag'], ev); });
     c.addEventListener('pointerleave', () => { c.setAttribute('stroke', '#fff'); t.hidden = true; });
     c.addEventListener('click', () => openProject(d.projekt));
     svg.append(c);
@@ -2336,7 +2336,7 @@ const PCOLS = [
   { k: 'gule', l: 'Gule', num: 1, f: F.int, cell: flagCell('gule') },
   { k: 'baseline', l: 'Baseline', num: 1, f: F.tkr, sec: 1 },
   { k: 'poc', l: 'POC', num: 1, f: F.pct },
-  { k: 'oms', l: 'Oms. til dato', num: 1, f: F.tkr },
+  { k: 'oms', l: 'Oms. PTD', num: 1, f: F.tkr },
   { k: 'dg', l: 'DG', num: 1, f: F.pct },
   { k: 'tfm', l: 'TFM', num: 1, f: F.tfm, sec: 1 },
   { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: F.tfm },
@@ -2361,20 +2361,20 @@ const PT = {
     { k: 'klasse', l: 'Risiko', title: 'Risikoklasse (Management decision) fra risk log' },
   ],
   m: [
-    { k: 'm_oms', l: 'Omsætning', u: 't.kr.', f: F.tkr, c: negCls },
-    { k: 'm_db', l: 'DB', u: 't.kr.', f: F.tkr, c: negCls },
+    { k: 'm_oms', l: 'Omsætning', u: 'tDKK', f: F.tkr, c: negCls },
+    { k: 'm_db', l: 'DB', u: 'tDKK', f: F.tkr, c: negCls },
     { k: 'm_dg', l: 'DG', f: F.pct, c: negCls },
     { k: 'm_tfm', l: 'TFM', f: F.tfm, c: tfmCls },
   ],
   ptd: [
-    { k: 'baseline', l: 'Baseline', u: 't.kr.', f: F.tkr },
-    { k: 'oms', l: 'Omsætning', u: 't.kr.', f: F.tkr, c: negCls },
-    { k: 'db', l: 'DB', u: 't.kr.', f: F.tkr, c: negCls },
+    { k: 'baseline', l: 'Baseline', u: 'tDKK', f: F.tkr },
+    { k: 'oms', l: 'Omsætning', u: 'tDKK', f: F.tkr, c: negCls },
+    { k: 'db', l: 'DB', u: 'tDKK', f: F.tkr, c: negCls },
     { k: 'dg', l: 'DG', f: F.pct, c: negCls },
     { k: 'poc', l: 'POC', f: F.pct },
     { k: 'tfm_eac', l: 'TFM EAC', f: F.tfm, c: tfmCls },
-    { k: 'wip', l: 'WIP', u: 't.kr.', f: F.tkr, c: negCls },
-    { k: 'forfalden', l: 'Forfalden', u: 't.kr.', f: (v) => (num(v) ? F.tkr(v) : '–') },
+    { k: 'wip', l: 'WIP', u: 'tDKK', f: F.tkr, c: negCls },
+    { k: 'forfalden', l: 'Forfalden', u: 'tDKK', f: (v) => (num(v) ? F.tkr(v) : '–') },
     { k: 'etc_dato', l: 'ETC-dato', f: F_dmy, title: 'Seneste ETC-opdatering' },
   ],
 };
@@ -2388,7 +2388,7 @@ function drawProjTable(rows) {
   $$('.seg [data-pview]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pview === S.pview)));
   const groups = [['id', '', PT.id]];
   if (S.pview !== 'ptd') groups.push(['m', S.periode ? F.per(S.periode) : 'Måned (intet udtræk)', PT.m]);
-  if (S.pview !== 'maaned') groups.push(['ptd', 'Til dato ' + F_dmy(S.ptd.key), PT.ptd]);
+  if (S.pview !== 'maaned') groups.push(['ptd', 'PTD ' + F_dmy(S.ptd.key), PT.ptd]);
   groups.push(['note', 'Noter', [{ k: 'note', l: 'Seneste note', title: 'Seneste note på projektet. Antal åbne opfølgninger i parentes.' }]]);
   const sort = S.sorts.proj;
   const tr1 = h('tr'), tr2 = h('tr');
@@ -2543,7 +2543,7 @@ function drawRiskDetail(p) {
     kids.push(h('div', { class: 'rgrid' }, ...FACTORS.filter((f) => isNum(r[f[0]])).map((f) => chip(f[2], String(r[f[0]]), r[f[0]])),
       r.honorar ? chip('Honorar', catTxt(r.honorar), catLevel(r.honorar)) : null, r.tabsrisiko ? chip('Tabsrisiko', catTxt(r.tabsrisiko), catLevel(r.tabsrisiko)) : null));
   }
-  kids.push(h('p', { class: 'note', style: 'margin:0', text: `Kunde: ${r.kunde || '–'} · Land: ${r.land || '–'} · WIP ${isNum(r.wip_tkr) ? nf0.format(r.wip_tkr) : '–'} t.kr. · AR +90 dage ${isNum(r.ar90_tkr) ? nf0.format(r.ar90_tkr) : '–'} t.kr.${r.reserve ? ' · Reserve ' + r.reserve : ''}` }));
+  kids.push(h('p', { class: 'note', style: 'margin:0', text: `Kunde: ${r.kunde || '–'} · Land: ${r.land || '–'} · WIP ${isNum(r.wip_tkr) ? nf0.format(r.wip_tkr) : '–'} tDKK · AR +90 dage ${isNum(r.ar90_tkr) ? nf0.format(r.ar90_tkr) : '–'} tDKK${r.reserve ? ' · Reserve ' + r.reserve : ''}` }));
   if (r.kommentar) kids.push(h('div', { class: 'entry' }, h('div', { class: 'meta', text: 'Kommentar i risk log' }), h('div', { class: 'txt', text: r.kommentar })));
   const links = h('div', { class: 'rlinks' });
   if (r.link_risklog) links.append(h('a', { href: r.link_risklog, target: '_blank', rel: 'noopener', text: 'Åbn i risk log ↗' }));
@@ -2581,7 +2581,7 @@ const K_RISK = { 1: ['#CDBBA9', 'Klasse 1'], 2: ['#E2B04A', 'Klasse 2'], 3: ['#B
 // TFM-grænser følger flagreglerne "TFM EAC lav" (rød) og "TFM EAC under mål" (gul)
 const kTfmG = () => [S.rules.find((x) => x.regel === 'tfm_eac_r')?.g ?? 1.2, S.rules.find((x) => x.regel === 'tfm_eac_y')?.g ?? 1.6];
 const K_TFM = () => { const [r, y] = kTfmG(); return [['#BA1223', `Under ${nf2.format(r)}`], ['#E2B04A', `${nf2.format(r)} til ${nf2.format(y)}`], ['#4E7D5B', `${nf2.format(y)} eller mere`], ['#9C918A', 'Ingen TFM i måneden']]; };
-const K_OMS = [['#E9D6C6', 'Under 1 mio.'], ['#D49A73', '1 til 5 mio.'], ['#BA1223', '5 til 20 mio.'], ['#700B15', '20 mio. eller mere'], ['#9C918A', 'Ingen omsætning']];
+const K_OMS = [['#E9D6C6', 'Under 1 mDKK'], ['#D49A73', '1 til 5 mDKK'], ['#BA1223', '5 til 20 mDKK'], ['#700B15', '20 mDKK eller mere'], ['#9C918A', 'Ingen omsætning']];
 const kTfmIdx = (r) => { const [rg, yg] = kTfmG(); return !isNum(r.m_tfm) || !(num(r.m_loen) > 0) ? 3 : r.m_tfm < rg ? 0 : r.m_tfm < yg ? 1 : 2; };
 const kOmsIdx = (r) => { const v = num(r.oms); return v <= 0 ? 4 : v < 1e6 ? 0 : v < 5e6 ? 1 : v < 2e7 ? 2 : 3; };
 const kColor = (r) => ({
@@ -2601,8 +2601,8 @@ function kPopup(r, i) {
     h('b', { text: `${r.projekt} · ${r.navn || ''}` }),
     h('span', { class: 'm', text: `${r.bu} · PL ${r.pl || '–'} · PA ${r.po || '–'}${isNum(r.klasse) ? ' · risikoklasse ' + r.klasse : ''}` }),
     i.adresse ? h('span', { text: '📍 ' + i.adresse }) : null,
-    h('span', { text: `Baseline ${F.tkr(r.baseline) || '–'} t.kr. · POC ${F.pct(r.poc) || '–'} · TFM EAC ${F.tfm(r.tfm_eac) || '–'}` }),
-    h('span', { text: `Omsætning til dato ${F.mio(r.oms) || '–'} · TFM ${S.periode ? F.perS(S.periode) : 'måned'} ${F.tfm(r.m_tfm) || '–'}` }),
+    h('span', { text: `Baseline ${F.tkr(r.baseline) || '–'} tDKK · POC ${F.pct(r.poc) || '–'} · TFM EAC ${F.tfm(r.tfm_eac) || '–'}` }),
+    h('span', { text: `Omsætning PTD ${F.mio(r.oms) || '–'} · TFM ${S.periode ? F.perS(S.periode) : 'måned'} ${F.tfm(r.m_tfm) || '–'}` }),
     h('span', { class: r.roede ? 'c-red' : r.gule ? 'c-amb' : 'm', text: fl }),
     h('div', { class: 'acts' },
       h('button', { class: 'btn small primary', type: 'button', text: 'Åbn projekt', onclick: () => openProject(r.projekt) }),
@@ -2615,7 +2615,7 @@ function drawMap(rows) {
   const pts = rows.map((r) => ({ r, i: S.info[r.projekt] })).filter((x) => x.i && isNum(x.i.lat) && isNum(x.i.lng));
   $('#k-sub').textContent = `${nf0.format(pts.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()} har koordinater. Lokation tilføjes i projektpanelet under "Om projektet".`;
   const leg = { risiko: () => [1, 2, 3, 4, 0].map((k) => K_RISK[k]), tfm: K_TFM, oms: () => K_OMS }[S.kfarve]?.() || K_FLAG;
-  const legTitle = { tfm: `TFM i ${S.periode ? F.per(S.periode) : 'seneste måned'}:`, oms: 'Omsætning til dato:' }[S.kfarve];
+  const legTitle = { tfm: `TFM i ${S.periode ? F.per(S.periode) : 'seneste måned'}:`, oms: 'Omsætning PTD:' }[S.kfarve];
   $('#k-legend').replaceChildren(...[legTitle ? h('span', { class: 'ms-k', text: legTitle }) : null, ...leg.map(([c, l]) => h('span', {}, h('span', { class: 'sw', style: 'background:' + c }), l))].filter(Boolean));
   if (!window.L) { box.replaceChildren(h('p', { class: 'empty', text: 'Kortbiblioteket kunne ikke indlæses.' })); return; }
   if (!map) {
@@ -2776,7 +2776,7 @@ function buildReport() {
   // hoved
   root.append(E('div', { class: 'rh' },
     E('div', {}, E('div', { class: 'mk', text: 'NIRAS' }), E('h1', { text: `Projektrapport · ${rpWho()}` }),
-      E('div', { class: 'meta', text: `${rpBu()} · Til dato pr. ${F.date(S.ptd.key)}${S.periode ? ' · Måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
+      E('div', { class: 'meta', text: `${rpBu()} · PTD pr. ${F.date(S.ptd.key)}${S.periode ? ' · Måned ' + F.per(S.periode) : ''}${S.risk ? ' · Risk log pr. ' + F.date(S.risk.key) : ''}` })),
     E('div', { class: 'meta', style: 'text-align:right;white-space:pre-line', text: `Udarbejdet ${F.date(new Date().toISOString())}\n${nf0.format(sel.length)} af ${nf0.format(all.length)} projekter` })));
   if (o.intro && o.intro.trim()) root.append(E('div', { class: 'intro', text: o.intro.trim() }));
   if (sel.some((r) => rpNotes(r).length)) root.append(E('p', { class: 'meta' }, E('span', { class: 'hl-key', text: 'Gul markering' }), ' = seneste note på projektet.'));
@@ -2784,7 +2784,7 @@ function buildReport() {
   if (o.sec.kpi) {
     const k = (l, v, sub) => E('div', {}, E('span', { class: 'l', text: l }), E('span', { class: 'v', text: v }), sub ? E('span', { class: 's', text: sub }) : null);
     root.append(E('h2', { text: `Nøgletal for alle ${nf0.format(all.length)} projekter i udvalget` }), E('div', { class: 'kp' },
-      k('Omsætning til dato', F.mio(sum.oms)), k('DB til dato', F.mio(sum.db), 'DG ' + (F.pct(sum.dg) || '–')), k('TFM til dato', F.tfm(sum.tfm) || '–'),
+      k('Omsætning PTD', F.mio(sum.oms)), k('DB PTD', F.mio(sum.db), 'DG ' + (F.pct(sum.dg) || '–')), k('TFM PTD', F.tfm(sum.tfm) || '–'),
       k('Omsætning ' + (S.periode ? F.perS(S.periode) : 'måned'), F.mio(sum.mOms)), k('DB i måneden', F.mio(sum.mDb), 'DG ' + (F.pct(sum.mDg) || '–')), k('TFM i måneden', F.tfm(sum.mTfm) || '–'),
       k('Ufaktureret WIP', F.mio(sum.wipPos)), k('Forfaldent', F.mio(sum.forfalden)), k('Flag', `${sum.roede} røde`, `${sum.gule} kun gule`)));
   }
@@ -2819,7 +2819,7 @@ function buildReport() {
       E('tbody', {}, ...sel.map((r) => E('tr', {}, td(r.projekt), td((r.fokus ? '★ ' : '') + (r.navn || '')), td(r.pl), td(isNum(r.klasse) ? r.klasse : ''),
         E('td', {}, r.roede ? E('span', { class: 'fr', text: r.roede + ' ' }) : null, r.gule ? E('span', { class: 'fy', text: String(r.gule) }) : null),
         td(F.tkr(r.m_oms), negc(r.m_oms)), td(F.tfm(r.m_tfm), 'n'), td(F.tkr(r.baseline), 'n'), td(F.pct(r.poc), 'n'), td(F.pct(r.dg), negc(r.dg)), td(F.tfm(r.tfm_eac), 'n'), td(F.tkr(r.wip), negc(r.wip)), td(num(r.forfalden) ? F.tkr(r.forfalden) : '', 'n'))))));
-    root.append(E('p', { class: 'meta', text: 'Beløb i t.kr. Oms. md. og TFM md. er seneste måned; øvrige tal til dato.' }));
+    root.append(E('p', { class: 'meta', text: 'Beløb i tDKK Oms. md. og TFM md. er seneste måned; øvrige tal PTD.' }));
   }
   // projektsider
   if (o.sec.pages && sel.length) {
@@ -2832,8 +2832,8 @@ function buildReport() {
         E('div', { class: 'pj-h' }, E('h3', { text: `${r.fokus ? '★ ' : ''}${r.projekt} · ${r.navn || ''}` }), E('span', { class: 'meta', text: `PL ${r.pl || '–'}${isNum(r.klasse) ? ' · Risikoklasse ' + r.klasse : ''} · ETC ${F.date(r.etc_dato) || '–'}` })),
         r.hit.length ? E('div', {}, ...r.hit.map((x) => E('span', { class: 'chip ' + (x.niveau === 'rød' ? 'r' : 'y'), text: x.navn }))) : E('div', { class: 'meta', text: 'Ingen flag' }),
         E('div', { class: 'pj-cols' },
-          kvt([['', S.periode ? F.perS(S.periode) : 'Måned', 'Til dato'], ['Omsætning (t.kr.)', F.tkr(r.m_oms), F.tkr(r.oms)], ['DB (t.kr.)', F.tkr(r.m_db), F.tkr(r.db)], ['DG', F.pct(r.m_dg), F.pct(r.dg)], ['TFM', F.tfm(r.m_tfm), F.tfm(r.tfm)]]),
-          kvt([['Baseline (t.kr.)', F.tkr(r.baseline)], ['POC', F.pct(r.poc)], ['TFM EAC', F.tfm(r.tfm_eac)], ['WIP (t.kr.)', F.tkr(r.wip)], ['Forfalden (t.kr.)', num(r.forfalden) ? F.tkr(r.forfalden) : '']])));
+          kvt([['', S.periode ? F.perS(S.periode) : 'Måned', 'PTD'], ['Omsætning (tDKK)', F.tkr(r.m_oms), F.tkr(r.oms)], ['DB (tDKK)', F.tkr(r.m_db), F.tkr(r.db)], ['DG', F.pct(r.m_dg), F.pct(r.dg)], ['TFM', F.tfm(r.m_tfm), F.tfm(r.tfm)]]),
+          kvt([['Baseline (tDKK)', F.tkr(r.baseline)], ['POC', F.pct(r.poc)], ['TFM EAC', F.tfm(r.tfm_eac)], ['WIP (tDKK)', F.tkr(r.wip)], ['Forfalden (tDKK)', num(r.forfalden) ? F.tkr(r.forfalden) : '']])));
       if (o.sec.risk && rk) {
         const high = FACTORS.filter((f) => num(rk[f[0]]) >= 3).map((f) => `${f[2]} ${rk[f[0]]}`);
         pj.append(E('p', { class: 'meta', style: 'margin:6px 0 0', text: `Risiko: klasse ${rk.klasse ?? '–'} (Maconomy ${rk.mac_klasse ?? '–'}) · ${rk.vurderet ? (high.length ? 'Høje faktorer: ' + high.join(', ') : 'Ingen faktorer over 2') : 'Ikke risikovurderet'}${rk.tabsrisiko ? ' · Tabsrisiko ' + catTxt(rk.tabsrisiko) : ''}` }));
@@ -2869,7 +2869,7 @@ function drawTop(rows) {
   table($('#t-top'), [
     { k: 'stjerne', l: '★', cls: 'star' }, { k: 'projekt', l: 'Projekt' }, { k: 'navn', l: 'Navn', cls: 'name' }, { k: 'pl', l: 'PL' },
     { k: 'roede', l: 'Røde', num: 1, f: F.int, cell: flagCell('roede') }, { k: 'gule', l: 'Gule', num: 1, f: F.int, cell: flagCell('gule') },
-    { k: 'oms', l: 'Oms. t.kr.', num: 1, f: F.tkr, sec: 1 }, { k: 'flagtekst', l: 'Flag', cls: 'wrapc' },
+    { k: 'oms', l: 'Oms. tDKK', num: 1, f: F.tkr, sec: 1 }, { k: 'flagtekst', l: 'Flag', cls: 'wrapc' },
   ], top, { onClick: (r) => openProject(r.projekt) });
 }
 let viewRows = [];
@@ -2902,7 +2902,7 @@ function drawPersons() {
   const maxO = Math.max(1, ...rows.map((r) => r.oms));
   table($('#t-pers'), [
     { k: 'person', l: 'Person' }, { k: 'n', l: 'Projekter', num: 1, f: F.int },
-    { k: 'oms', l: 'Oms. til dato', num: 1, f: F.tkr, cls: 'bar', cell: (td, r) => { const txt = td.textContent; td.replaceChildren(h('span', { class: 'bf', style: `width:${Math.max(0, 100 * r.oms / maxO).toFixed(1)}%` }), h('span', { class: 'bt', text: txt })); } },
+    { k: 'oms', l: 'Oms. PTD', num: 1, f: F.tkr, cls: 'bar', cell: (td, r) => { const txt = td.textContent; td.replaceChildren(h('span', { class: 'bf', style: `width:${Math.max(0, 100 * r.oms / maxO).toFixed(1)}%` }), h('span', { class: 'bt', text: txt })); } },
     { k: 'dg', l: 'DG', num: 1, f: F.pct }, { k: 'tfm', l: 'TFM', num: 1, f: F.tfm },
     { k: 'mOms', l: 'Oms. måned', num: 1, f: F.tkr, sec: 1 }, { k: 'mTfm', l: 'TFM måned', num: 1, f: F.tfm, sec: 1 },
     { k: 'wipPos', l: 'WIP+', num: 1, f: F.tkr, sec: 1 }, { k: 'forfalden', l: 'Forfalden', num: 1, f: F.tkr, sec: 1 },
@@ -2940,12 +2940,12 @@ function drawDrawer() {
   $('#d-flags').replaceChildren(...(r.hit.length ? r.hit.map((x) => h('span', { class: 'flag ' + (x.niveau === 'rød' ? 'r' : 'y'), title: x.tekst(x.g, x.g2), text: x.navn })) : [h('span', { class: 'note', text: 'Ingen flag' })]));
   const kv = (l, a, b) => [h('span', { text: l }), h('span', { class: 'v', text: a || '—' }), h('span', { class: 'v', text: b == null ? '' : (b || '—') })];
   $('#d-kv').replaceChildren(
-    h('span', { class: 'h' }), h('span', { class: 'h v', text: 'Til dato' }), h('span', { class: 'h v', text: S.periode ? F.per(S.periode) : 'Måned' }),
-    ...kv('Omsætning (t.kr.)', F.tkr(r.oms), F.tkr(r.m_oms)), ...kv('Dækningsbidrag (t.kr.)', F.tkr(r.db), F.tkr(r.m_db)),
-    ...kv('Løn (t.kr.)', F.tkr(r.loen), F.tkr(r.m_loen)), ...kv('TFM', F.tfm(r.tfm), F.tfm(r.m_tfm)),
-    ...kv('TFM EAC', F.tfm(r.tfm_eac)), ...kv('DG', F.pct(r.dg)), ...kv('Baseline (t.kr.)', F.tkr(r.baseline)), ...kv('POC', F.pct(r.poc)),
-    ...kv('Eksterne omk. (t.kr.)', F.tkr(r.ext)), ...kv('Faktureret (t.kr.)', F.tkr(r.faktureret)), ...kv('Faktureret over baseline (t.kr.)', F.tkr(r.over_baseline)),
-    ...kv('WIP (t.kr.)', F.tkr(r.wip)), ...kv('Klar til fakturering (t.kr.)', F.tkr(r.til_fakt)), ...kv('Forfalden (t.kr.)', F.tkr(r.forfalden)));
+    h('span', { class: 'h' }), h('span', { class: 'h v', text: 'PTD' }), h('span', { class: 'h v', text: S.periode ? F.per(S.periode) : 'Måned' }),
+    ...kv('Omsætning (tDKK)', F.tkr(r.oms), F.tkr(r.m_oms)), ...kv('Dækningsbidrag (tDKK)', F.tkr(r.db), F.tkr(r.m_db)),
+    ...kv('Løn (tDKK)', F.tkr(r.loen), F.tkr(r.m_loen)), ...kv('TFM', F.tfm(r.tfm), F.tfm(r.m_tfm)),
+    ...kv('TFM EAC', F.tfm(r.tfm_eac)), ...kv('DG', F.pct(r.dg)), ...kv('Baseline (tDKK)', F.tkr(r.baseline)), ...kv('POC', F.pct(r.poc)),
+    ...kv('Eksterne omk. (tDKK)', F.tkr(r.ext)), ...kv('Faktureret (tDKK)', F.tkr(r.faktureret)), ...kv('Faktureret over baseline (tDKK)', F.tkr(r.over_baseline)),
+    ...kv('WIP (tDKK)', F.tkr(r.wip)), ...kv('Klar til fakturering (tDKK)', F.tkr(r.til_fakt)), ...kv('Forfalden (tDKK)', F.tkr(r.forfalden)));
   drawInfo(r);
   drawHist(r);
   drawRiskDetail(r);
@@ -3065,7 +3065,7 @@ function drawHist(r) {
   const t = h('table', { class: 't hist' });
   t.append(h('thead', {}, h('tr', {}, ['Udtræk', 'POC', 'TFM EAC', 'TFM', 'Oms.', 'DB', 'WIP'].map((l, i) => h('th', { class: i ? 'num' : null }, h('button', { type: 'button', text: l }))))));
   t.append(h('tbody', {}, rows.map((x) => h('tr', {}, h('td', { text: F.date(x.d) }), h('td', { class: 'num', text: F.pct(x.poc) }), h('td', { class: 'num', text: F.tfm(x.tfm_eac) }), h('td', { class: 'num', text: F.tfm(x.tfm) }), h('td', { class: 'num', text: F.tkr(x.oms) }), h('td', { class: 'num', text: F.tkr(x.db) }), h('td', { class: 'num', text: F.tkr(x.wip) })))));
-  box.replaceChildren(h('div', { class: 'tablebox', style: 'max-height:260px' }, t), h('p', { class: 'note', text: 'Beløb i t.kr., nyeste øverst' }));
+  box.replaceChildren(h('div', { class: 'tablebox', style: 'max-height:260px' }, t), h('p', { class: 'note', text: 'Beløb i tDKK, nyeste øverst' }));
 }
 async function act(fn, ok) {
   try { await fn(); await reloadNotes(); if (ok) toast(ok); } catch (e) { toast(e.message); console.error(e); }
@@ -3101,7 +3101,7 @@ window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', (e) => { e.preventDefault(); dragN = 0; $('#veil').classList.remove('on'); const f = [...(e.dataTransfer?.files || [])].filter((x) => /\.xlsx$/i.test(x.name)); if (f.length) loadFiles(f); else toast('Træk .xlsx-filer ind'); });
 const hentet = (d) => (d && d.udtrukket ? 'hentet fra ERP ' + new Date(d.udtrukket).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 const srcTip = (d) => [d.file, hentet(d), d.kilde ? (d.kind === 'maaned' ? 'Måned' : 'Dato') + ' læst fra ' + KILDE[d.kilde] : ''].filter(Boolean).join(' · ');
-const dLabel = (d) => (d.kind === 'ptd' ? 'Til dato pr. ' + F.date(d.key) : d.kind === 'risiko' ? 'Risk log pr. ' + F.date(d.key) : 'Måned ' + F.per(d.key));
+const dLabel = (d) => (d.kind === 'ptd' ? 'PTD pr. ' + F.date(d.key) : d.kind === 'risiko' ? 'Risk log pr. ' + F.date(d.key) : 'Måned ' + F.per(d.key));
 async function saveLocal(d) {
   if (d.kind === 'ptd') {
     await idb.put('p:' + d.key, d);
@@ -3186,7 +3186,7 @@ async function loadFiles(files) {
 $('#btn-export').addEventListener('click', () => {
   if (!S.ptd) { toast('Indlæs data først'); return; }
   const rows = S.tab === 'proj' ? viewRows : S.P.filter(inScope).sort(cmp('score', -1));
-  const cols = [['projekt', 'Projekt'], ['navn', 'Navn'], ['bu', 'BU'], ['pl', 'PL'], ['po', 'PA'], ['klasse', 'Risikoklasse'], ['stjerne', 'Fokus'], ['roede', 'Røde flag'], ['gule', 'Gule flag'], ['flagtekst', 'Flag'], ['baseline', 'Baseline'], ['poc', 'POC'], ['oms', 'Omsætning til dato'], ['db', 'DB til dato'], ['dg', 'DG'], ['loen', 'Løn til dato'], ['tfm', 'TFM'], ['tfm_eac', 'TFM EAC'], ['wip', 'WIP'], ['faktureret', 'Faktureret'], ['til_fakt', 'Klar til fakturering'], ['forfalden', 'Forfalden'], ['m_oms', 'Omsætning måned'], ['m_db', 'DB måned'], ['m_tfm', 'TFM måned'], ['etc_dato', 'Seneste ETC'], ['etc_dage', 'ETC dage'], ['note', 'Seneste note']];
+  const cols = [['projekt', 'Projekt'], ['navn', 'Navn'], ['bu', 'BU'], ['pl', 'PL'], ['po', 'PA'], ['klasse', 'Risikoklasse'], ['stjerne', 'Fokus'], ['roede', 'Røde flag'], ['gule', 'Gule flag'], ['flagtekst', 'Flag'], ['baseline', 'Baseline'], ['poc', 'POC'], ['oms', 'Omsætning PTD'], ['db', 'DB PTD'], ['dg', 'DG'], ['loen', 'Løn PTD'], ['tfm', 'TFM'], ['tfm_eac', 'TFM EAC'], ['wip', 'WIP'], ['faktureret', 'Faktureret'], ['til_fakt', 'Klar til fakturering'], ['forfalden', 'Forfalden'], ['m_oms', 'Omsætning måned'], ['m_db', 'DB måned'], ['m_tfm', 'TFM måned'], ['etc_dato', 'Seneste ETC'], ['etc_dage', 'ETC dage'], ['note', 'Seneste note']];
   const cell = (v) => { if (v == null) return ''; if (typeof v === 'number') return String(Math.round(v * 10000) / 10000).replace('.', ','); const t = String(v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
   const csv = '﻿' + [cols.map((c) => c[1]).join(';'), ...rows.map((r) => cols.map((c) => cell(r[c[0]])).join(';'))].join('\r\n');
   const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: `Projektstatus_${scopeLabel().replace(/[^\wæøåÆØÅ-]+/g, '_')}_${S.ptd.key}.csv` });
@@ -3199,10 +3199,10 @@ const dlg = $('#dlg');
 function fillSettings() {
   $('#carto-key').value = cartoKey();
   const lp = S.localKeys.filter((k) => k.startsWith('p:')).map((k) => k.slice(2)), lm = S.localKeys.filter((k) => k.startsWith('m:')).map((k) => k.slice(2)), lr = S.localKeys.filter((k) => k.startsWith('r:')).map((k) => k.slice(2));
-  let txt = lp.length || lm.length || lr.length ? `I browseren: ${lp.length} til dato-udtræk${lp.length ? ' (' + lp.map(F.date).join(', ') + ')' : ''}, ${lm.length} måneder${lm.length ? ' (' + lm.map(F.perS).join(', ') + ')' : ''} og ${lr.length} risk log-udtræk${lr.length ? ' (' + lr.map(F.date).join(', ') + ')' : ''}.` : 'Ingen udtræk i browseren.';
+  let txt = lp.length || lm.length || lr.length ? `I browseren: ${lp.length} PTD-udtræk${lp.length ? ' (' + lp.map(F.date).join(', ') + ')' : ''}, ${lm.length} måneder${lm.length ? ' (' + lm.map(F.perS).join(', ') + ')' : ''} og ${lr.length} risk log-udtræk${lr.length ? ' (' + lr.map(F.date).join(', ') + ')' : ''}.` : 'Ingen udtræk i browseren.';
   if (Store.mode() === 'supabase') {
     const up = S.ups.filter((u) => u.type === 'ptd'), um = S.ups.filter((u) => u.type === 'maaned');
-    txt += ` I Supabase: ${up.length} til dato-udtræk, ${um.length} måneder${um.length ? ' (' + F.perS(um[0].noegle) + ' til ' + F.perS(um[um.length - 1].noegle) + ')' : ''} og ${S.ups.filter((u) => u.type === 'risiko').length} risk log-udtræk.`;
+    txt += ` I Supabase: ${up.length} PTD-udtræk, ${um.length} måneder${um.length ? ' (' + F.perS(um[0].noegle) + ' til ' + F.perS(um[um.length - 1].noegle) + ')' : ''} og ${S.ups.filter((u) => u.type === 'risiko').length} risk log-udtræk.`;
   }
   $('#set-data').textContent = txt;
   $('#btn-push-local').hidden = !(Store.mode() === 'supabase' && (lp.length || lm.length || lr.length));
@@ -3326,7 +3326,7 @@ function ownDataSheets(D) {
   sheets.push({ name: 'Flagregler', cols: [{ l: 'Regel', t: 'txt', w: 14 }, { l: 'Niveau', t: 'txt', w: 8 }, { l: 'Navn', t: 'txt', w: 30 }, { l: 'Betingelse', t: 'txt', w: 60 }, { l: 'Grænse', t: 'num', w: 12 }, { l: 'Grænse 2', t: 'num', w: 12 }, { l: 'Standard', t: 'num', w: 12 }], rows: D.regler.map((r) => [r.regel, r.niveau, r.navn, r.betingelse, r.graense, r.graense2, r.standard]) });
   const counts = [...EX_SHEETS.map(([name, key]) => [name, D[key].length]), ['Tilbud og egne projekter', D.projekter.length]];
   sheets.push({ name: 'Om eksporten', cols: [{ l: 'Felt', t: 'txt', w: 30 }, { l: 'Værdi', t: 'txt', w: 60 }], rows: [
-    ['Eksporteret', F.ts(D.eksporteret)], ['Kilde', D.kilde], ['Udvalg', D.udvalg], ['Til dato-udtræk i dashboardet', S.ptd ? F.date(S.ptd.key) : '–'],
+    ['Eksporteret', F.ts(D.eksporteret)], ['Kilde', D.kilde], ['Udvalg', D.udvalg], ['PTD-udtræk i dashboardet', S.ptd ? F.date(S.ptd.key) : '–'],
     ...counts.map(([n, c]) => ['Antal: ' + n, nf0.format(c)]),
     ['Bemærk', 'Kun egne registreringer. Tal fra ERP-udtræk og risk log er ikke med; projektnavn, BU, PL og PA er tilføjet for læsbarhed.']] });
   return sheets;

@@ -41,7 +41,7 @@ Mindst ét af projektnummer, salgsnummer eller arbejdstitel skal være udfyldt.
 | Tabel | Nøgle | Indhold |
 |---|---|---|
 | `erp_upload` | unik (type, noegle) | Log over uploads; dashboardet bruger kun udtræk, der står her |
-| `erp_ptd` | (pr_dato, projekt) | Til dato-øjebliksbillede |
+| `erp_ptd` | (pr_dato, projekt) | PTD-øjebliksbillede |
 | `erp_maaned` | (periode, projekt) | Månedens bevægelser |
 | `erp_risiko` | (pr_dato, projekt) | Risk log |
 

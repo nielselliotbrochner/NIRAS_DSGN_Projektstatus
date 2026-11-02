@@ -1,6 +1,6 @@
 # NIRAS DSGN Projektstatus
 
-Dashboard til månedsluk: projektstatus pr. måned og til dato, flag, risk log, kort og rapporter til projektansvarlige. Én HTML-fil, der kører i browseren.
+Dashboard til månedsluk: projektstatus pr. måned og PTD, flag, risk log, kort og rapporter til projektansvarlige. Én HTML-fil, der kører i browseren.
 
 **Åbnes fra GitHub Pages:** https://nielselliotbrochner.github.io/NIRAS_DSGN_Projektstatus/
 
@@ -29,7 +29,7 @@ Siden indeholder ingen data. Den starter med en login-skærm; alle tal og noter 
    - Dato og hentetidspunkt for PTD og risk log: ERP-eksportens tidsstempel inde i filen. Er filen gemt igen i Excel, bruges nyeste ETC-dato.
    - Filnavnet bruges kun, hvis filen ikke selv indeholder oplysningen.
    Ældre måneder kan indlæses når som helst; de overskriver ikke hinanden.
-   Vælg en tidligere måned i feltet **Måned** ved filtrene eller ved at klikke i grafen "Udvikling pr. måned". Til dato viser altid det seneste udtræk.
+   Vælg en tidligere måned i feltet **Måned** ved filtrene eller ved at klikke i grafen "Udvikling pr. måned". PTD vælges i feltet PTD.
 3. Gennemgå flag, skriv noter og opfølgninger, og lav rapporter til hver PA under fanen Rapport.
 4. Eksportér dine egne data når som helst under "Mine data" (Excel eller JSON).
 
