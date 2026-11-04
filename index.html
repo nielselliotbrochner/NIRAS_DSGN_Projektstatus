@@ -146,6 +146,7 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .gate-h { font-family: var(--serif); font-weight: 400; font-size: 28px; margin: 0; }
 .gate-msg { margin: 0; font-size: 13px; color: var(--red); min-height: 1em; }
 .rp-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); align-items: start; }
+@media (min-width: 1100px) { .grid.rp-grid { grid-template-columns: minmax(340px, 400px) minmax(0, 1fr); } }
 .rp-fs { border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px 10px; display: grid; gap: 6px; margin: 0; }
 .rp-fs legend { font-size: 12px; font-weight: 700; color: var(--deep); padding: 0 4px; text-transform: uppercase; letter-spacing: .05em; }
 .rp-form label.ck { flex-direction: row; align-items: center; gap: 8px; color: var(--ink); font-size: 13px; }
@@ -252,6 +253,8 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .t tr.od { background: #FBEDEE; }
 .t tr.od:hover { background: #F7E0E2; }
 .t tr.closed td { color: var(--muted); }
+#rp-list tr.off td:not(.ckc) { color: var(--muted); }
+#rp-list th .u { color: var(--muted); font-weight: 400; font-size: 11px; }
 .t td.due { font-weight: 700; }
 #t-opf td.neg { color: var(--red); font-weight: 600; }
 .t td.onote { color: var(--muted); font-size: 12px; }
@@ -1217,7 +1220,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
               <label class="ck"><input type="checkbox" id="rp-fokus"> Fokusprojekter</label>
               <label class="ck"><input type="checkbox" id="rp-open"> Projekter med åben opfølgning</label>
               <label class="ck"><input type="checkbox" id="rp-risk"> Risikoklasse <select id="rp-riskmin" aria-label="Mindste risikoklasse"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select> eller højere</label>
-              <label>Sortering<select id="rp-sort"><option value="score">Flest flag først</option><option value="m_oms">Største omsætning i måneden først</option><option value="baseline">Største baseline først</option><option value="projekt">Projektnummer</option></select></label>
             </fieldset>
             <fieldset class="rp-fs"><legend>Noter</legend>
               <label>Noter skrevet inden for<select id="rp-age"><option value="30">30 dage</option><option value="60">60 dage</option><option value="90">90 dage</option><option value="180">180 dage</option><option value="365">1 år</option><option value="0">Alle</option></select></label>
@@ -1239,7 +1241,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="card">
           <h2>Projekter i rapporten</h2>
           <p class="note" id="rp-count"></p>
-          <div class="chips"><button class="btn small" id="rp-auto" type="button">Følg filtrene igen</button><span class="note">Sæt eller fjern flueben for at tilføje eller udelade enkelte projekter.</span></div>
+          <div class="chips">
+            <button class="chip" type="button" data-rpchip="alle" aria-pressed="true">Alle</button>
+            <button class="chip" type="button" data-rpchip="roede" aria-pressed="false">Røde flag</button>
+            <button class="chip" type="button" data-rpchip="gule" aria-pressed="false">Kun gule</button>
+            <button class="chip" type="button" data-rpchip="fokus" aria-pressed="false">Fokus</button>
+            <button class="chip" type="button" data-rpchip="aaben" aria-pressed="false">Åben opfølgning</button>
+            <input class="search" id="rp-q" type="search" placeholder="Søg nummer, navn, PL eller PA" aria-label="Søg i rapportens projekter">
+          </div>
+          <div class="chips"><button class="btn small" id="rp-auto" type="button">Følg filtrene igen</button><span class="note">Rapporten har samme rækkefølge som listen: klik på en kolonne for at sortere. Sæt eller fjern flueben for at tilføje eller udelade enkelte projekter.</span></div>
           <div class="tablebox"><table class="t" id="rp-list"></table></div>
         </div>
       </div>
@@ -1908,7 +1918,7 @@ const S = {
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
-  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '',
+  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
 };
 const buOk = (r) => S.bus.size === 0 || S.bus.has(r.bu);
 const inScope = (r) => buOk(r) && (S.pls.size === 0 || S.pls.has(r.pl || '?')) && (S.pas.size === 0 || S.pas.has(r.po || '?'));
@@ -2701,7 +2711,8 @@ $('#opf-q').addEventListener('input', (e) => { S.oq = e.target.value.trim(); ren
 const RP = () => S.rp;
 const saveRP = () => { const { pa, manual, intro, scopeKey, ...rest } = S.rp; ls.set('pd.rp', rest); };
 // Rapporten følger filtrene øverst (BU, PL og PA, gerne flere navne)
-const rpCandidates = () => S.P.filter(inScope);
+const rpCandidates = () => S.P.filter((r) => inScope(r) && projFilter(r, S.rpChip, null, S.rpQ));
+const rpSortFn = () => { const { k, d } = S.sorts.rp; return (a, b) => cmp(k, d)(a, b) || num(b.oms) - num(a.oms); };
 const rpNames = (set) => { const a = [...set].sort((x, y) => x.localeCompare(y, 'da')); return a.length <= 6 ? a.join(', ') : a.slice(0, 5).join(', ') + ` og ${a.length - 5} andre`; };
 const rpWho = () => [S.pls.size ? 'PL ' + rpNames(S.pls) : '', S.pas.size ? 'PA ' + rpNames(S.pas) : ''].filter(Boolean).join(' · ') || (S.bus.size ? rpNames(S.bus) : 'Alle BU') + ', alle projekter';
 const rpBu = () => (S.bus.size ? rpNames(S.bus) : 'Alle BU');
@@ -2715,9 +2726,7 @@ function rpAuto(r) {
 }
 const rpIncluded = (r) => (r.projekt in RP().manual ? RP().manual[r.projekt] : rpAuto(r));
 function rpSelected() {
-  const o = RP(), sel = rpCandidates().filter(rpIncluded);
-  const k = o.sort;
-  return sel.sort(k === 'projekt' ? cmp('projekt', 1) : (a, b) => num(b[k]) - num(a[k]) || num(b.oms) - num(a.oms));
+  return rpCandidates().filter(rpIncluded).sort(rpSortFn());
 }
 function rpNotes(r) {
   const o = RP(), cutoff = o.age ? Date.now() - o.age * 864e5 : 0;
@@ -2732,7 +2741,8 @@ const isLatest = (r, n) => r.noter.length > 0 && r.noter[r.noter.length - 1] ===
 const RPF = { r: '#rp-r', y: '#rp-y', n: '#rp-n', fokus: '#rp-fokus', open: '#rp-open', risk: '#rp-risk', openall: '#rp-openall' };
 Object.entries(RPF).forEach(([k, sel]) => $(sel).addEventListener('change', (e) => { S.rp[k] = e.target.checked; saveRP(); drawReportTab(); }));
 [['#rp-minb', 'minb'], ['#rp-riskmin', 'riskmin'], ['#rp-age', 'age']].forEach(([sel, k]) => $(sel).addEventListener('change', (e) => { S.rp[k] = Number(e.target.value) || 0; saveRP(); drawReportTab(); }));
-$('#rp-sort').addEventListener('change', (e) => { S.rp.sort = e.target.value; saveRP(); drawReportTab(); });
+$$('.chip[data-rpchip]').forEach((b) => b.addEventListener('click', () => { S.rpChip = b.dataset.rpchip; drawReportTab(); }));
+$('#rp-q').addEventListener('input', (e) => { S.rpQ = e.target.value.trim(); clearTimeout(drawReportTab.q); drawReportTab.q = setTimeout(drawReportTab, 200); });
 $$('[data-rps]').forEach((c) => c.addEventListener('change', () => { S.rp.sec[c.dataset.rps] = c.checked; saveRP(); drawReportTab(); }));
 $('#rp-intro').addEventListener('input', (e) => { S.rp.intro = e.target.value; clearTimeout(drawReportTab.t); drawReportTab.t = setTimeout(drawPreview, 300); });
 $('#rp-auto').addEventListener('click', () => { S.rp.manual = {}; drawReportTab(); });
@@ -2742,25 +2752,54 @@ function drawReportTab() {
   const key = [[...S.bus].sort(), [...S.pls].sort(), [...S.pas].sort()].map((x) => x.join(',')).join('|');
   if (o.scopeKey !== key) { o.scopeKey = key; o.manual = {}; }
   Object.entries(RPF).forEach(([k, sel]) => { $(sel).checked = !!o[k]; });
-  $('#rp-minb').value = String(o.minb || 0); $('#rp-riskmin').value = String(o.riskmin); $('#rp-age').value = String(o.age); $('#rp-sort').value = o.sort;
+  $('#rp-minb').value = String(o.minb || 0); $('#rp-riskmin').value = String(o.riskmin); $('#rp-age').value = String(o.age);
+  $$('.chip[data-rpchip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rpchip === S.rpChip)));
   $$('[data-rps]').forEach((c) => { c.checked = !!o.sec[c.dataset.rps]; });
   if ($('#rp-intro') !== document.activeElement) $('#rp-intro').value = o.intro || '';
   const noOne = !S.pls.size && !S.pas.size;
   $('#rp-scope').replaceChildren(...[
     h('span', { class: 'ms-k', text: 'Rapport for' }), h('b', { text: rpWho() }), h('span', { class: 'note', text: `${rpBu()} · ${nf0.format(rpCandidates().length)} projekter i udvalget` }),
     noOne ? h('p', { class: 'note warn', text: 'Ingen person valgt. Vælg en eller flere PL eller PA i filtrene øverst, ellers kommer alle projekter i BU med.' }) : null].filter(Boolean));
-  const cand = rpCandidates().sort((a, b) => b.score - a.score || num(b.oms) - num(a.oms));
-  const n = cand.filter(rpIncluded).length;
-  $('#rp-count').textContent = `${nf0.format(n)} af ${nf0.format(cand.length)} projekter er med${Object.keys(o.manual).length ? ` (${Object.keys(o.manual).length} valgt manuelt)` : ''}.`;
+  const cand = rpCandidates().sort(rpSortFn());
+  const n = cand.filter(rpIncluded).length, allN = S.P.filter(inScope).length;
+  $('#rp-count').textContent = `${nf0.format(n)} af ${nf0.format(cand.length)} projekter er med${Object.keys(o.manual).length ? ` (${Object.keys(o.manual).length} valgt manuelt)` : ''}.${cand.length < allN ? ` ${nf0.format(allN - cand.length)} er skjult af filteret ovenfor.` : ''}`;
+  // Samme kolonner og sortering som under Projekter; rapporten følger listens rækkefølge
+  const RPC = [
+    { k: 'med', l: '✓', title: 'Med i rapporten', sortable: false },
+    { k: 'stjerne', l: '★', title: 'Fokusprojekt' },
+    { k: 'score', l: 'Flag', title: 'Røde og gule flag. Sorterer efter vægt (rødt 3, gult 1)' },
+    { k: 'projekt', l: 'Projekt' }, { k: 'navn', l: 'Navn' }, { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA' },
+    { k: 'klasse', l: 'Risiko' }, { k: 'aabne', l: 'Åbne', num: 1, title: 'Åbne opfølgninger' },
+    { k: 'm_oms', l: 'Oms. md.', u: 'tDKK', num: 1, f: F.tkr, c: negCls },
+    { k: 'baseline', l: 'Baseline', u: 'tDKK', num: 1, f: F.tkr },
+    { k: 'oms', l: 'Oms. PTD', u: 'tDKK', num: 1, f: F.tkr, c: negCls },
+    { k: 'dg', l: 'DG', num: 1, f: F.pct, c: negCls },
+    { k: 'poc', l: 'POC', num: 1, f: F.pct },
+    { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: F.tfm, c: tfmCls },
+    { k: 'wip', l: 'WIP', u: 'tDKK', num: 1, f: F.tkr, c: negCls },
+  ];
+  const sort = S.sorts.rp;
   const t = $('#rp-list');
-  t.replaceChildren(h('thead', {}, h('tr', {}, ['', 'Projekt', 'Navn', 'Flag', 'Risiko', 'Åbne', 'Baseline'].map((l, i) => h('th', { class: i >= 5 ? 'num' : null }, h('button', { type: 'button', text: l }))))),
+  t.replaceChildren(h('thead', {}, h('tr', {}, RPC.map((c) => {
+    const th = h('th', { class: c.num ? 'num' : null, title: c.title || null, 'aria-sort': c.sortable === false ? null : sort.k === c.k ? (sort.d > 0 ? 'ascending' : 'descending') : 'none' });
+    th.append(h('button', { type: 'button', onclick: c.sortable === false ? null : () => { S.sorts.rp = { k: c.k, d: sort.k === c.k ? -sort.d : (c.num || c.k === 'score' || c.k === 'stjerne' || c.k === 'klasse' ? -1 : 1) }; drawReportTab(); } }, c.l, c.u ? h('span', { class: 'u', text: ' ' + c.u }) : null));
+    return th;
+  }))),
     h('tbody', {}, cand.map((r) => {
       const cb = h('input', { type: 'checkbox', 'aria-label': 'Medtag ' + r.projekt }); cb.checked = rpIncluded(r);
       cb.addEventListener('change', () => { if (cb.checked === rpAuto(r)) delete o.manual[r.projekt]; else o.manual[r.projekt] = cb.checked; drawReportTab(); });
-      return h('tr', { class: r.projekt in o.manual ? 'man' : null },
-        h('td', { class: 'ckc' }, cb), h('td', { class: 'pn', text: r.projekt }), h('td', { class: 'name', text: (r.fokus ? '★ ' : '') + (r.navn || '') }),
-        h('td', {}, flagNode(r)), h('td', { class: isNum(r.klasse) ? 'hc hc' + r.klasse : null, text: isNum(r.klasse) ? String(r.klasse) : '' }),
-        h('td', { class: 'num', text: r.aabne ? String(r.aabne) : '' }), h('td', { class: 'num', text: F.tkr(r.baseline) }));
+      return h('tr', { class: [r.projekt in o.manual ? 'man' : '', rpIncluded(r) ? '' : 'off'].join(' ').trim() || null },
+        ...RPC.map((c) => {
+          if (c.k === 'med') return h('td', { class: 'ckc' }, cb);
+          if (c.k === 'stjerne') return h('td', { class: 'st' + (r.fokus ? ' on' : ''), text: r.fokus ? '★' : '' });
+          if (c.k === 'score') return h('td', {}, flagNode(r));
+          if (c.k === 'klasse') return h('td', { class: isNum(r.klasse) ? 'hc hc' + r.klasse : null, text: isNum(r.klasse) ? String(r.klasse) : '' });
+          if (c.k === 'aabne') return h('td', { class: 'num', text: r.aabne ? String(r.aabne) : '' });
+          if (c.k === 'projekt') return h('td', { class: 'pn', text: r.projekt });
+          if (c.k === 'navn') return h('td', { class: 'name', title: r.navn || null, text: r.navn || '' });
+          if (!c.f) return h('td', { text: F.txt(r[c.k]) });
+          return h('td', { class: ['num', c.c ? c.c(r[c.k]) : ''].join(' ').trim(), text: c.f(r[c.k]) });
+        }));
     })));
   drawPreview();
 }
@@ -2873,20 +2912,22 @@ function drawTop(rows) {
   ], top, { onClick: (r) => openProject(r.projekt) });
 }
 let viewRows = [];
+// Samme filtre bruges under Projekter og Rapport
+function projFilter(r, chip, rule, q) {
+  if (chip === 'roede' && !(r.roede > 0)) return false;
+  if (chip === 'gule' && !(r.roede === 0 && r.gule > 0)) return false;
+  if (chip === 'fokus' && !r.fokus) return false;
+  if (chip === 'aaben' && !(r.aabne > 0)) return false;
+  if (rule && !r.hit.includes(rule)) return false;
+  q = String(q || '').toLowerCase();
+  if (q && ![r.projekt, r.navn, r.pl, r.po].some((v) => String(v || '').toLowerCase().includes(q))) return false;
+  return true;
+}
 function drawProjects(rows) {
   $$('.chip[data-chip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.chip === S.chip)));
   const rc = $('#chip-rule'); const rule = S.rules.find((x) => x.regel === S.regel);
   rc.hidden = !rule; rc.textContent = rule ? `Regel: ${rule.navn} ×` : '';
-  const q = S.q.toLowerCase();
-  viewRows = rows.filter((r) => {
-    if (S.chip === 'roede' && !(r.roede > 0)) return false;
-    if (S.chip === 'gule' && !(r.roede === 0 && r.gule > 0)) return false;
-    if (S.chip === 'fokus' && !r.fokus) return false;
-    if (S.chip === 'aaben' && !(r.aabne > 0)) return false;
-    if (rule && !r.hit.includes(rule)) return false;
-    if (q && ![r.projekt, r.navn, r.pl, r.po].some((v) => String(v || '').toLowerCase().includes(q))) return false;
-    return true;
-  }).sort(cmp(S.sorts.proj.k, S.sorts.proj.d));
+  viewRows = rows.filter((r) => projFilter(r, S.chip, rule, S.q)).sort(cmp(S.sorts.proj.k, S.sorts.proj.d));
   $('#count').textContent = `Viser ${nf0.format(viewRows.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()}`;
   drawProjTable(viewRows);
 }
