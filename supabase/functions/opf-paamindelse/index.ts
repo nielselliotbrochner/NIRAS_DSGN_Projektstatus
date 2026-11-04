@@ -17,7 +17,8 @@ const db = async (path: string, init: RequestInit = {}) => {
 };
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 const cphParts = (d = new Date()) => Object.fromEntries(new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(d).map((p) => [p.type, p.value]));
-const daLong = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+// fx "fredag 13/11/2026"
+const daLong = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("da-DK", { weekday: "long", timeZone: "UTC" }) + " " + iso.slice(8, 10) + "/" + iso.slice(5, 7) + "/" + iso.slice(0, 4);
 
 type Row = { id: string; projekt: string; navn: string | null; pl: string | null; po: string | null; opfoelgning: string; note: string | null; frist: string; email: string | null };
 

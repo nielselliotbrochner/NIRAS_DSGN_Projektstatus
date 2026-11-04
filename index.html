@@ -302,6 +302,12 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .ne-l textarea, .ne-l input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; color: var(--ink); background: #fff; width: 100%; box-sizing: border-box; }
 .ne-l textarea { resize: vertical; min-height: 80px; }
 .ne-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.dmyf { position: relative; display: flex; align-items: stretch; gap: 0; width: 100%; }
+.dmyf input.dmy { flex: 1 1 auto; min-width: 0; border: 1px solid var(--line); border-radius: 6px 0 0 6px; padding: 6px 8px; font: inherit; color: var(--ink); background: #fff; }
+.dmyf input.dmy.bad { border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+.dmyf .dmy-btn { border: 1px solid var(--line); border-left: 0; border-radius: 0 6px 6px 0; background: var(--sand-2); padding: 0 8px; cursor: pointer; font-size: 14px; line-height: 1; }
+.dmyf .dmy-btn:hover { background: var(--sand); }
+.dmyf .dmy-pick { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
 .entry > .ne-l { flex: none; }
 .hist td, .hist th { font-size: 12px; }
 .coming { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
@@ -1327,7 +1333,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <label>Bemærkning<textarea id="n-note" rows="3" placeholder="Hvad ser du, og hvad har du aftalt?"></textarea></label>
       <div class="row">
         <label>Opfølgning<input id="n-fu" type="text" placeholder="Fx PL sender ny ETC"></label>
-        <label>Frist<input id="n-due" type="date"></label>
+        <label>Frist<span id="n-due-slot"></span></label>
       </div>
       <div><button class="btn primary" id="n-save" type="button">Gem note</button></div>
     </div>
@@ -1411,6 +1417,39 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* ================= Hjælpere ================= */
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+// Dansk tid til datoer og klokkeslæt
+const DK = {
+  day: (d) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date(d)),
+  time: (d) => new Intl.DateTimeFormat('da-DK', { timeZone: 'Europe/Copenhagen', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(d)).replace(':', '.'),
+};
+// dd/mm/åååå <-> ÅÅÅÅ-MM-DD. Accepterer også 1/2/2026, 01-02-2026, 01.02.26 og 01022026.
+const toDMY = (iso) => (iso ? String(iso).slice(8, 10) + '/' + String(iso).slice(5, 7) + '/' + String(iso).slice(0, 4) : '');
+function parseDMY(t) {
+  t = String(t || '').trim(); if (!t) return { ok: true, iso: null };
+  let m = /^(\d{1,2})[\/.\-\s](\d{1,2})[\/.\-\s](\d{2}|\d{4})$/.exec(t) || /^(\d{2})(\d{2})(\d{4})$/.exec(t);
+  if (!m) return { ok: false };
+  let [, d, mo, y] = m; if (y.length === 2) y = '20' + y;
+  const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const x = new Date(iso + 'T12:00:00Z');
+  if (isNaN(x) || x.getUTCDate() !== Number(d) || x.getUTCMonth() + 1 !== Number(mo)) return { ok: false };
+  return { ok: true, iso };
+}
+// Datofelt i dd/mm/åååå: tekstfelt + kalenderknap (browserens egen kalender åbnes skjult)
+function dmyField(id, iso, label, required) {
+  const txt = h('input', { id, type: 'text', class: 'dmy', inputmode: 'numeric', placeholder: 'dd/mm/åååå', autocomplete: 'off', 'aria-label': label, required: required ? '' : null }); txt.value = toDMY(iso);
+  const pick = h('input', { type: 'date', class: 'dmy-pick', tabindex: '-1', 'aria-hidden': 'true' });
+  const btn = h('button', { type: 'button', class: 'dmy-btn', title: 'Vælg dato i kalender', 'aria-label': 'Vælg dato i kalender', text: '📅' });
+  btn.addEventListener('click', () => { const p = parseDMY(txt.value); pick.value = p.ok && p.iso ? p.iso : ''; try { pick.showPicker(); } catch (e) { pick.focus(); pick.click(); } });
+  pick.addEventListener('change', () => { txt.value = toDMY(pick.value); txt.classList.remove('bad'); txt.dispatchEvent(new Event('change')); });
+  txt.addEventListener('blur', () => { const p = parseDMY(txt.value); txt.classList.toggle('bad', !p.ok); if (p.ok) txt.value = toDMY(p.iso); });
+  return h('span', { class: 'dmyf' }, txt, btn, pick);
+}
+// Læser et datofelt; viser fejl ved ugyldig dato
+function readDMY(id, label) {
+  const el = $('#' + id), p = parseDMY(el ? el.value : '');
+  if (!p.ok) { el?.classList.add('bad'); el?.focus(); toast(`${label}: skriv datoen som dd/mm/åååå`); }
+  return p;
+}
 const nf0 = new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat('da-DK', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const nf2 = new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1424,8 +1463,9 @@ const F = {
   int: (v) => (!isNum(v) ? '' : nf0.format(v)),
   per: (p) => (p ? new Date(p + '-01T00:00:00Z').toLocaleDateString('da-DK', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : ''),
   perS: (p) => (p ? new Date(p + '-01T00:00:00Z').toLocaleDateString('da-DK', { month: 'short', year: '2-digit', timeZone: 'UTC' }) : ''),
-  date: (d) => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00Z').toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : ''),
-  ts: (d) => (d ? new Date(d).toLocaleString('da-DK', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
+  // Datoer vises altid dd/mm/åååå. Rene datoer (ÅÅÅÅ-MM-DD) bruges som de er; tidsstempler omregnes til dansk tid.
+  date: (d) => { if (!d) return ''; const t = String(d); const iso = t.length > 10 ? DK.day(t) : t.slice(0, 10); return iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4); },
+  ts: (d) => (d ? F.date(d) + ' kl. ' + DK.time(d) : ''),
   txt: (v) => (v == null ? '' : String(v)),
 };
 const h = (tag, props = {}, ...kids) => {
@@ -2357,7 +2397,7 @@ const PCOLS = [
   { k: 'etc_dage', l: 'ETC dage', num: 1, f: F.int, sec: 1 },
   { k: 'note', l: 'Seneste note', cls: 'notec', sec: 1 },
 ];
-const F_dmy = (d) => (d ? String(d).slice(8, 10) + '.' + String(d).slice(5, 7) + '.' + String(d).slice(0, 4) : '–');
+const F_dmy = (d) => (d ? F.date(d) : '–');
 const negCls = (v) => (isNum(v) && Number(v) < 0 ? 'neg' : '');
 const tfmCls = (v) => (isNum(v) && Number(v) < (S.rules.find((x) => x.regel === 'tfm_eac_r')?.g ?? 1.2) ? 'neg' : '');
 const PT = {
@@ -3010,15 +3050,18 @@ function noteEditor(n) {
   const day = cphDay(n.oprettet);
   const ta = h('textarea', { id: 'ne-note', rows: 4, 'aria-label': 'Bemærkning' }); ta.value = n.note || '';
   const fu = h('input', { id: 'ne-fu', type: 'text', 'aria-label': 'Opfølgning', placeholder: 'Fx PL sender ny ETC' }); fu.value = n.opfoelgning || '';
-  const due = h('input', { id: 'ne-due', type: 'date', 'aria-label': 'Frist' }); due.value = n.frist ? String(n.frist).slice(0, 10) : '';
-  const dt = h('input', { id: 'ne-date', type: 'date', 'aria-label': 'Dato for noten', required: '' }); dt.value = day;
+  const due = dmyField('ne-due', n.frist ? String(n.frist).slice(0, 10) : '', 'Frist');
+  const dt = dmyField('ne-date', day, 'Dato for noten', true);
   const cancel = () => { S.noteEdit = null; drawDrawer(); };
   const save = () => {
     const note = ta.value.trim(), f = fu.value.trim();
     if (!note && !f) { toast('Skriv en bemærkning eller en opfølgning'); return; }
-    const patch = { note, opfoelgning: f || null, frist: due.value || null, redigeret: new Date().toISOString() };
+    const pf = readDMY('ne-due', 'Frist'); if (!pf.ok) return;
+    const pdt = readDMY('ne-date', 'Dato'); if (!pdt.ok) return;
+    if (!pdt.iso) { toast('Dato: noten skal have en dato'); $('#ne-date').focus(); return; }
+    const patch = { note, opfoelgning: f || null, frist: pf.iso, redigeret: new Date().toISOString() };
     // ny dato: behold klokkeslættet, så rækkefølgen inden for dagen bevares
-    if (dt.value && dt.value !== day) { const t = new Date(n.oprettet); const [y, m, d] = dt.value.split('-').map(Number); const nd = new Date(t); nd.setFullYear(y, m - 1, d); patch.oprettet = nd.toISOString(); }
+    if (pdt.iso !== day) { const t = new Date(n.oprettet); const [y, m, d] = pdt.iso.split('-').map(Number); const nd = new Date(t); nd.setFullYear(y, m - 1, d); patch.oprettet = nd.toISOString(); }
     if (f && !n.opfoelgning) patch.status = 'åben';
     S.noteEdit = null;
     act(() => Store.updateNote(n.id, patch), 'Noten er opdateret');
@@ -3124,11 +3167,13 @@ $('#search').addEventListener('input', (e) => { S.q = e.target.value.trim(); ren
 $('#d-close').addEventListener('click', closeProject);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.sel && !$('#dlg').open) closeProject(); });
 $('#d-focus').addEventListener('click', () => { const r = S.P.find((x) => x.projekt === S.sel); if (r) act(() => Store.setFokus(r.projekt, !r.fokus), r.fokus ? 'Fokus fjernet' : 'Markeret som fokusprojekt'); });
+$('#n-due-slot').replaceWith(dmyField('n-due', '', 'Frist'));
 $('#n-save').addEventListener('click', () => {
-  const note = $('#n-note').value.trim(), fu = $('#n-fu').value.trim(), due = $('#n-due').value || null;
+  const pd = readDMY('n-due', 'Frist'); if (!pd.ok) return;
+  const note = $('#n-note').value.trim(), fu = $('#n-fu').value.trim(), due = pd.iso;
   if (!note && !fu) { toast('Skriv en bemærkning eller en opfølgning'); return; }
   const n = { id: uid(), projekt: S.sel, periode: S.periode || null, note, opfoelgning: fu || null, frist: due, status: 'åben', oprettet: new Date().toISOString() };
-  act(async () => { await Store.addNote(n); $('#n-note').value = ''; $('#n-fu').value = ''; $('#n-due').value = ''; }, 'Note gemt');
+  act(async () => { await Store.addNote(n); $('#n-note').value = ''; $('#n-fu').value = ''; $('#n-due').value = ''; $('#n-due').classList.remove('bad'); }, 'Note gemt');
 });
 
 /* ----- upload ----- */
@@ -3140,7 +3185,7 @@ window.addEventListener('dragenter', (e) => { if ([...(e.dataTransfer?.types || 
 window.addEventListener('dragleave', () => { dragN = Math.max(0, dragN - 1); if (!dragN) $('#veil').classList.remove('on'); });
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', (e) => { e.preventDefault(); dragN = 0; $('#veil').classList.remove('on'); const f = [...(e.dataTransfer?.files || [])].filter((x) => /\.xlsx$/i.test(x.name)); if (f.length) loadFiles(f); else toast('Træk .xlsx-filer ind'); });
-const hentet = (d) => (d && d.udtrukket ? 'hentet fra ERP ' + new Date(d.udtrukket).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+const hentet = (d) => (d && d.udtrukket ? 'hentet fra ERP ' + F.ts(d.udtrukket) : '');
 const srcTip = (d) => [d.file, hentet(d), d.kilde ? (d.kind === 'maaned' ? 'Måned' : 'Dato') + ' læst fra ' + KILDE[d.kilde] : ''].filter(Boolean).join(' · ');
 const dLabel = (d) => (d.kind === 'ptd' ? 'PTD pr. ' + F.date(d.key) : d.kind === 'risiko' ? 'Risk log pr. ' + F.date(d.key) : 'Måned ' + F.per(d.key));
 async function saveLocal(d) {
@@ -3308,7 +3353,7 @@ function buildXlsx(sheets) {
   const dn = sheets.map((sh, i) => (sh.rows.length ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${xesc(sh.name.slice(0, 31))}'!$A$1:$${colName(sh.cols.length - 1)}$${sh.rows.length + 1}</definedName>` : '')).join('');
   const wb = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((sh, i) => `<sheet name="${xesc(sh.name.slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets>${dn ? `<definedNames>${dn}</definedNames>` : ''}</workbook>`;
   const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((sh, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
-  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="dd-mm-yyyy"/><numFmt numFmtId="165" formatCode="dd-mm-yyyy hh:mm"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Aptos"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF700B15"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="6"><xf/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="165" applyNumberFormat="1"/><xf numFmtId="4" applyNumberFormat="1"/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/><xf applyAlignment="1"><alignment wrapText="0" vertical="top"/></xf></cellXfs></styleSheet>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="dd\/mm\/yyyy"/><numFmt numFmtId="165" formatCode="dd\/mm\/yyyy hh:mm"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Aptos"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF700B15"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="6"><xf/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="165" applyNumberFormat="1"/><xf numFmtId="4" applyNumberFormat="1"/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/><xf applyAlignment="1"><alignment wrapText="0" vertical="top"/></xf></cellXfs></styleSheet>`;
   const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((sh, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`;
   const root = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
   return zipStore([
