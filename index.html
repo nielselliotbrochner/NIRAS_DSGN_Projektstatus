@@ -248,6 +248,7 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .t tr.sel { background: var(--sand); }
 .t td.name { white-space: normal; min-width: 220px; }
 .t td.wrapc { white-space: normal; min-width: 200px; }
+.t td.notec .nd { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 2px; }
 .tbadge { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 .t tr.od td:first-child { box-shadow: inset 3px 0 0 var(--red); }
 .t tr.od { background: #FBEDEE; }
@@ -2132,7 +2133,7 @@ function rebuild() {
       m_oms: m ? m.oms : null, m_db: m ? m.db : null, m_loen: m ? m.loen : null, m_tfm: m ? m.tfm : null, m_dg: m && num(m.oms) > 0 ? num(m.db) / num(m.oms) : null,
       fokus: !!S.fokus[r.projekt]?.fokus, stjerne: S.fokus[r.projekt]?.fokus ? '★' : '',
       klasse: rk ? rk.klasse : null, mac_klasse: rk ? rk.mac_klasse : null, r_vurderet: rk ? rk.vurderet : null,
-      note: last ? last.note : '', aabne: log.filter((n) => n.status !== 'lukket' && n.opfoelgning).length, noter: log,
+      note: last ? last.note : '', note_ts: last ? last.oprettet : null, aabne: log.filter((n) => n.status !== 'lukket' && n.opfoelgning).length, noter: log,
     };
   });
 }
@@ -2439,7 +2440,7 @@ function drawProjTable(rows) {
   const groups = [['id', '', PT.id]];
   if (S.pview !== 'ptd') groups.push(['m', S.periode ? F.per(S.periode) : 'Måned (intet udtræk)', PT.m]);
   if (S.pview !== 'maaned') groups.push(['ptd', 'PTD ' + F_dmy(S.ptd.key), PT.ptd]);
-  groups.push(['note', 'Noter', [{ k: 'note', l: 'Seneste note', title: 'Seneste note på projektet. Antal åbne opfølgninger i parentes.' }]]);
+  groups.push(['note', 'Noter', [{ k: 'note_ts', l: 'Seneste note', title: 'Seneste note på projektet med dato. Antal åbne opfølgninger i parentes. Sortér for at se de nyeste noter øverst.' }]]);
   const sort = S.sorts.proj;
   const tr1 = h('tr'), tr2 = h('tr');
   groups.forEach(([g, label, cols]) => {
@@ -2447,7 +2448,7 @@ function drawProjTable(rows) {
     cols.forEach((c, i) => {
       const num_ = (g === 'm' || g === 'ptd') && c.k !== 'etc_dato';
       const th = h('th', { class: [num_ ? 'num' : '', i === 0 && g !== 'id' ? 'gs' : ''].join(' ').trim() || null, title: c.title || null, 'aria-sort': sort.k === c.k ? (sort.d > 0 ? 'ascending' : 'descending') : 'none' });
-      th.append(h('button', { type: 'button', onclick: () => { S.sorts.proj = { k: c.k, d: sort.k === c.k ? -sort.d : (num_ || c.k === 'score' || c.k === 'stjerne' ? -1 : 1) }; render(); } }, c.l, c.u ? h('span', { class: 'u', text: c.u }) : null));
+      th.append(h('button', { type: 'button', onclick: () => { S.sorts.proj = { k: c.k, d: sort.k === c.k ? -sort.d : (num_ || c.k === 'score' || c.k === 'stjerne' || c.k === 'note_ts' ? -1 : 1) }; render(); } }, c.l, c.u ? h('span', { class: 'u', text: c.u }) : null));
       tr2.append(th);
     });
   });
@@ -2462,7 +2463,7 @@ function drawProjTable(rows) {
         td.addEventListener('click', (e) => { e.stopPropagation(); act(() => Store.setFokus(r.projekt, !r.fokus), r.fokus ? 'Fokus fjernet' : 'Markeret som fokusprojekt'); });
       } else if (c.k === 'score') td = h('td', {}, flagNode(r));
       else if (c.k === 'klasse') { td = h('td', { class: isNum(r.klasse) ? 'hc hc' + r.klasse : null, title: isNum(r.klasse) ? `Risikoklasse ${r.klasse}${r.r_vurderet ? ', risikovurderet' : ''}` : 'Ikke i risk log', text: isNum(r.klasse) ? String(r.klasse) : '' }); }
-      else if (g === 'note') td = h('td', { class: 'notec gs', title: r.note || null, text: (r.note || '') + (r.aabne ? ` (${r.aabne} åben${r.aabne > 1 ? 'e' : ''})` : '') });
+      else if (g === 'note') td = h('td', { class: 'notec gs', title: r.note ? F.date(r.note_ts) + ': ' + r.note : null }, r.note_ts ? h('span', { class: 'nd', text: F.date(r.note_ts) + ' ' }) : '', (r.note || '') + (r.aabne ? ` (${r.aabne} åben${r.aabne > 1 ? 'e' : ''})` : ''));
       else if (g === 'id') td = h('td', { class: c.k === 'projekt' ? 'pn' : c.k === 'navn' ? 'name' : null, title: c.k === 'navn' ? r.navn : null, text: F.txt(r[c.k]) });
       else td = h('td', { class: [c.k === 'etc_dato' ? '' : 'num', gs, c.c ? c.c(r[c.k]) : ''].join(' ').trim() || null, text: (c.f || F.txt)(r[c.k]) });
       tr.append(td);
@@ -2810,6 +2811,7 @@ function drawReportTab() {
     { k: 'score', l: 'Flag', title: 'Røde og gule flag. Sorterer efter vægt (rødt 3, gult 1)' },
     { k: 'projekt', l: 'Projekt' }, { k: 'navn', l: 'Navn' }, { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA' },
     { k: 'klasse', l: 'Risiko' }, { k: 'aabne', l: 'Åbne', num: 1, title: 'Åbne opfølgninger' },
+    { k: 'note_ts', l: 'Seneste note', title: 'Dato for seneste note. Sortér for at se de nyeste først.', desc: 1 },
     { k: 'm_oms', l: 'Oms. md.', u: 'tDKK', num: 1, f: F.tkr, c: negCls },
     { k: 'baseline', l: 'Baseline', u: 'tDKK', num: 1, f: F.tkr },
     { k: 'oms', l: 'Oms. PTD', u: 'tDKK', num: 1, f: F.tkr, c: negCls },
@@ -2822,7 +2824,7 @@ function drawReportTab() {
   const t = $('#rp-list');
   t.replaceChildren(h('thead', {}, h('tr', {}, RPC.map((c) => {
     const th = h('th', { class: c.num ? 'num' : null, title: c.title || null, 'aria-sort': c.sortable === false ? null : sort.k === c.k ? (sort.d > 0 ? 'ascending' : 'descending') : 'none' });
-    th.append(h('button', { type: 'button', onclick: c.sortable === false ? null : () => { S.sorts.rp = { k: c.k, d: sort.k === c.k ? -sort.d : (c.num || c.k === 'score' || c.k === 'stjerne' || c.k === 'klasse' ? -1 : 1) }; drawReportTab(); } }, c.l, c.u ? h('span', { class: 'u', text: ' ' + c.u }) : null));
+    th.append(h('button', { type: 'button', onclick: c.sortable === false ? null : () => { S.sorts.rp = { k: c.k, d: sort.k === c.k ? -sort.d : (c.num || c.desc || c.k === 'score' || c.k === 'stjerne' || c.k === 'klasse' ? -1 : 1) }; drawReportTab(); } }, c.l, c.u ? h('span', { class: 'u', text: ' ' + c.u }) : null));
     return th;
   }))),
     h('tbody', {}, cand.map((r) => {
@@ -2835,6 +2837,7 @@ function drawReportTab() {
           if (c.k === 'score') return h('td', {}, flagNode(r));
           if (c.k === 'klasse') return h('td', { class: isNum(r.klasse) ? 'hc hc' + r.klasse : null, text: isNum(r.klasse) ? String(r.klasse) : '' });
           if (c.k === 'aabne') return h('td', { class: 'num', text: r.aabne ? String(r.aabne) : '' });
+          if (c.k === 'note_ts') return h('td', { title: r.note || null, text: r.note_ts ? F.date(r.note_ts) : '' });
           if (c.k === 'projekt') return h('td', { class: 'pn', text: r.projekt });
           if (c.k === 'navn') return h('td', { class: 'name', title: r.navn || null, text: r.navn || '' });
           if (!c.f) return h('td', { text: F.txt(r[c.k]) });
