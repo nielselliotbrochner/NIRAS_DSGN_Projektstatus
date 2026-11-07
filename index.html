@@ -346,6 +346,11 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .plistbox { display: flex; flex-direction: column; gap: 10px; }
 .plist-h { margin: 8px 0 0; font-family: var(--serif); font-weight: 400; font-size: 20px; color: var(--deep); }
 .t.plist td { white-space: normal; vertical-align: top; } .t.plist td:first-child { font-weight: 600; min-width: 180px; }
+#t-pipe th:first-child, #t-pipe td:first-child { position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: 1px 0 0 var(--line); max-width: 260px; }
+#t-pipe thead th:first-child { z-index: 2; background: var(--sand-2); }
+.pcolsel { margin: 4px 0 8px; } .pcolsel summary { cursor: pointer; font-size: 13px; color: var(--deep); font-weight: 600; }
+.pcolsel-b { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 0; font-size: 13px; align-items: center; }
+.pcolsel-b label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
 #pdlg .pf-pair { display: flex; gap: 6px; } #pdlg .pf-pair input { min-width: 0; }
 .t td .ptag { margin: 0; }
 #pdlg { width: min(820px, 94vw); }
@@ -1345,6 +1350,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <p class="note" id="pipe-count"></p>
         <div class="pboard" id="pipe-board"></div>
+        <div id="pipe-colsel" hidden></div>
         <div class="tablebox" id="pipe-tblbox" hidden><table class="t" id="t-pipe"></table></div>
         <div class="plistbox" id="pipe-list" hidden></div>
       </div>
@@ -1918,7 +1924,8 @@ const Store = {
   /* ----- Pipeline: leads, PQ, tilbud og rammeaftaler ----- */
   async pipeLoad() {
     if (this.mode() !== 'supabase') return [];
-    return this.fetchAll('/rest/v1/projekt_pipeline?select=*,p:projekt_id(id,projektnummer,salgsnummer,arbejdstitel,titel,bu,pl,po,kunde,status)&order=oprettet');
+    const q = (bid) => `/rest/v1/projekt_pipeline?select=*,p:projekt_id(id,projektnummer,salgsnummer,arbejdstitel,titel,bu,pl,po,kunde,status${bid ? ',bid:projekt_bid(id,beslutning,beslutningsdato,oprettet)' : ''})&order=oprettet`;
+    try { return await this.fetchAll(q(true)); } catch (e) { console.warn('Bid/no bid kunne ikke hentes med pipelinen', e); return this.fetchAll(q(false)); }
   },
   // Gemmer stamdata i projekt og pipeline-felterne i projekt_pipeline. Nyt lead: opretter projektet først.
   async pipeSave(id, projektId, prj, pipe) {
@@ -1935,6 +1942,12 @@ const Store = {
       throw e;
     }
     return pid;
+  },
+  // Seneste bid/no bid pr. projekt: rettes, eller oprettes hvis der ikke er en
+  pipeBid(projektId, bidId, beslutning, dato) {
+    const body = JSON.stringify({ beslutning, beslutningsdato: dato || null });
+    return bidId ? this.sbFetch('/rest/v1/projekt_bid?id=eq.' + bidId, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body })
+      : this.sbFetch('/rest/v1/projekt_bid', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ projekt_id: projektId, beslutning, beslutningsdato: dato || null }) });
   },
   pipePatch(id, patch) { return this.sbFetch('/rest/v1/projekt_pipeline?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) }); },
   pipeWon(projektId, nummer) { return this.sbFetch('/rest/v1/rpc/pipeline_vundet', { method: 'POST', body: JSON.stringify({ p_id: projektId, p_nummer: nummer || null }) }); },
@@ -2055,7 +2068,7 @@ const S = {
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
-  pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30),
+  pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30), pipeColsOpen: false,
 };
 const buOk = (r) => S.bus.size === 0 || S.bus.has(r.bu);
 const inScope = (r) => buOk(r) && (S.pls.size === 0 || S.pls.has(r.pl || '?')) && (S.pas.size === 0 || S.pas.has(r.po || '?'));
@@ -2885,11 +2898,25 @@ function pipeRows() {
     const vaerdi = pValue(x), chance = nn(x.vinderchance);
     const aktiv = ramme && x.fase === 'vundet' && (!x.aftale_slut || pDay(x.aftale_slut) >= today);
     const rest = ramme && vaerdi != null ? Math.max(0, vaerdi - (won.get(x.id) || 0)) : null;
-    // Afleveret: venter på svar, ingen overskredet frist
-    const afl = x.fase === 'pq' ? pDay(x.pq_afleveret) : x.fase === 'tilbud' ? pDay(x.tilbud_afleveret) : '';
-    const venter = aaben && !!afl, ventDage = venter ? pDays(afl, today) : null;
-    const frist = !aaben || venter ? '' : pDay(x.fase === 'tilbud' ? x.tilbudsfrist : x.pq_frist || x.tilbudsfrist);
-    const fristL = !frist ? '' : x.fase !== 'tilbud' && x.pq_frist ? 'PQ' : 'Tilbud';
+    // Næste handling: spørgefrist, bid/no bid-beslutning, PQ-frist, tilbudsfrist eller revideret tilbud, der ikke er afleveret
+    const Dd = (k) => pDay(x[k]) || null;
+    const bid = (p.bid || []).slice().sort((a, b) => String(b.oprettet || '').localeCompare(String(a.oprettet || '')))[0] || null;
+    const rev = Dd('revideret_tilbud');
+    const kand = [];
+    if (aaben) {
+      if (Dd('sporgefrist') && Dd('sporgefrist') >= today) kand.push(['spoerg', Dd('sporgefrist'), false]);
+      if (bid && bid.beslutning === 'afventer' && bid.beslutningsdato) kand.push(['bid', pDay(bid.beslutningsdato), true]);
+      if ((x.fase === 'lead' || x.fase === 'pq') && Dd('pq_frist') && !Dd('pq_afleveret')) kand.push(['pq', Dd('pq_frist'), true]);
+      if ((x.fase === 'tilbud' || (x.fase === 'lead' && !Dd('pq_frist'))) && Dd('tilbudsfrist') && !Dd('tilbud_afleveret')) kand.push(['tilbud', Dd('tilbudsfrist'), true]);
+      if (x.fase === 'tilbud' && rev && rev >= today) kand.push(['rev', rev, true]);
+    }
+    kand.sort((a, b) => a[1].localeCompare(b[1]));
+    const next = kand[0] || null;
+    // Afleveret og ingen frist tilbage: venter på svar. Et passeret revideret tilbud regnes som afleveret.
+    const afl = x.fase === 'pq' ? Dd('pq_afleveret') || '' : x.fase === 'tilbud' ? [Dd('tilbud_afleveret'), rev && rev < today ? rev : null].filter(Boolean).sort().pop() || '' : '';
+    const venter = aaben && !!afl && !kand.some((k) => k[2]), ventDage = venter ? pDays(afl, today) : null;
+    const forventet = Dd('forventet_afgoerelse');
+    const frist = next ? next[1] : '', fristL = next ? next[0] : '';
     const dage = frist ? pDays(today, frist) : null;
     const rp = x.ramme_id ? byId.get(x.ramme_id) : null;
     return {
@@ -2901,10 +2928,13 @@ function pipeRows() {
       ramme_vaerdi: nn(x.ramme_vaerdi), antal_vindere: nn(x.antal_vindere), rest: aktiv ? rest : null, restAlle: rest, aktiv,
       udloebet: ramme && x.fase === 'vundet' && !aktiv, kids: kids.get(x.id) || [], vundetMini: won.get(x.id) || 0,
       ramme_id: x.ramme_id, ramme: rp ? pTitle(rp.p) : '',
-      frist, fristL, dage, over: dage != null && dage < 0, snart: dage != null && dage >= 0 && dage <= 7,
-      venter, afl, ventDage, gammel: venter && ventDage > PVENT, prak: pDay(x.prakvalificeret),
+      frist, fristL, dage, over: dage != null && dage < 0 && !!next?.[2], snart: dage != null && dage >= 0 && dage <= 7,
+      venter, afl, ventDage, gammel: venter && (forventet ? forventet < today : ventDage > PVENT), prak: pDay(x.prakvalificeret), forventet,
+      sporgefrist: Dd('sporgefrist'), pq_frist: Dd('pq_frist'), pq_afl: Dd('pq_afleveret'), tilbudsfrist: Dd('tilbudsfrist'), tilbud_afl: Dd('tilbud_afleveret'), revideret: rev,
+      aftale_start: Dd('aftale_start'), aftale_slut: Dd('aftale_slut'), oprettet: x.oprettet ? DK.day(x.oprettet) : null,
+      bid, bid_beslutning: bid?.beslutning || '', bid_dato: bid?.beslutningsdato ? pDay(bid.beslutningsdato) : null,
       opstart: pDay(x.forventet_opstart), resultat: pDay(x.resultat_dato), tabt_i: x.tabt_i || '', bemaerkning: x.bemaerkning || '',
-      status: aaben ? (venter ? `Afventer svar (${ventDage} d)` : PFASE[x.fase]) : `${PFASE[x.fase]}${x.tabt_i && x.fase !== 'vundet' ? ' i ' + (PFASE[x.tabt_i] || x.tabt_i) : ''}`,
+      status: aaben ? (venter ? `Afventer svar (${ventDage} d)` : bid?.beslutning === 'afventer' ? `${PFASE[x.fase]}, bid/no bid afventer` : PFASE[x.fase]) : `${PFASE[x.fase]}${x.tabt_i && x.fase !== 'vundet' ? ' i ' + (PFASE[x.tabt_i] || x.tabt_i) : ''}`,
     };
   });
 }
@@ -2920,6 +2950,8 @@ function pipeFilter(rows) {
     && (!q || [r.nr, r.navn, r.kunde, r.pl, r.po, r.kilde, r.ramme, r.udbud, r.partnere, r.ansvarlige, r.stoerrelse].some((v) => String(v || '').toLowerCase().includes(q))));
 }
 const pipeSum = (rows, k) => rows.reduce((a, r) => a + num(r[k]), 0);
+const PFRIST = { spoerg: 'Spørgefrist', bid: 'Bid/no bid-beslutning', pq: 'PQ-frist', tilbud: 'Tilbudsfrist', rev: 'Revideret tilbud' };
+const PFRIST_K = { spoerg: 'Spørgefrist', bid: 'Bid/no bid', pq: 'PQ', tilbud: 'Tilbud', rev: 'Rev. tilbud' };
 function drawPipe() {
   $$('.chip[data-pchip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pchip === S.pipeChip)));
   $$('.seg [data-pipeview]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pipeview === S.pipeView)));
@@ -2949,6 +2981,7 @@ function drawPipe() {
     : `Viser ${nf0.format(rows.length)} af ${nf0.format(all.length)} i ${scopeLabel()}.` + (S.pipeView === 'tavle' ? ' Træk et kort til en anden fase for at flytte det.' : ' Klik på en kolonne for at sortere.');
   $('#pipe-board').hidden = S.pipeView !== 'tavle';
   $('#pipe-tblbox').hidden = S.pipeView !== 'tabel';
+  $('#pipe-colsel').hidden = S.pipeView !== 'tabel';
   $('#pipe-list').hidden = S.pipeView !== 'liste';
   $('#pipe-filters').hidden = S.pipeView === 'liste';
   if (S.pipeView === 'tavle') drawPipeBoard(rows); else if (S.pipeView === 'tabel') drawPipeTable(rows); else drawPipeList(all);
@@ -2978,8 +3011,9 @@ function pipeCard(r) {
     r.type === 'miniudbud' && r.ramme ? h('div', { class: 'pc-s', text: 'Under ' + r.ramme }) : null,
     ...val,
     r.prak && r.aaben ? h('div', { class: 'pc-s ok', text: `Prækvalificeret ${F.date(r.prak)}` }) : null,
-    r.venter ? h('div', { class: 'pc-f' + (r.gammel ? ' snart' : ''), text: `${r.fase === 'pq' ? 'PQ' : 'Tilbud'} afleveret ${F.date(r.afl)} · afventer svar i ${r.ventDage} ${r.ventDage === 1 ? 'dag' : 'dage'}` }) : null,
-    r.frist ? h('div', { class: 'pc-f' + (r.over ? ' over' : r.snart ? ' snart' : ''), text: `${r.fristL}-frist ${F.date(r.frist)}${r.over ? ` (${-r.dage} ${r.dage === -1 ? 'dag' : 'dage'} over)` : r.dage === 0 ? ' (i dag)' : ''}` }) : null,
+    r.venter ? h('div', { class: 'pc-f' + (r.gammel ? ' snart' : ''), text: `${r.fase === 'pq' ? 'PQ' : 'Tilbud'} afleveret ${F.date(r.afl)} · afventer svar i ${r.ventDage} ${r.ventDage === 1 ? 'dag' : 'dage'}${r.forventet ? (r.gammel ? ` · svar ventet ${F.date(r.forventet)}` : ` · svar forventet ${F.date(r.forventet)}`) : ''}` }) : null,
+    r.frist ? h('div', { class: 'pc-f' + (r.over ? ' over' : r.snart ? ' snart' : ''), text: `${PFRIST[r.fristL]} ${F.date(r.frist)}${r.over ? ` (${-r.dage} ${r.dage === -1 ? 'dag' : 'dage'} over)` : r.dage === 0 ? ' (i dag)' : ''}` }) : null,
+    r.aaben && r.bid_beslutning === 'afventer' && !r.bid_dato ? h('div', { class: 'pc-f snart', text: 'Bid/no bid afventer' }) : null,
     !r.aaben ? h('div', { class: 'pc-s', text: `${r.status}${r.resultat ? ' ' + F.date(r.resultat) : ''}` }) : null,
     ...kids);
   card.addEventListener('click', () => pipeEdit(r.x));
@@ -3005,30 +3039,63 @@ function drawPipeBoard(rows) {
     return col;
   }));
 }
+// Datokolonner, der kan slås til og fra i Tabel
+const PDCOLS = [
+  { k: 'frist', l: 'Næste frist', f: (v, r) => (v ? `${PFRIST_K[r.fristL]} ${F.date(v)}` : r.venter ? `Afventer svar${r.forventet ? ', forv. ' + F.date(r.forventet) : ''}` : ''), cell: (td, r) => { if (r.over) td.classList.add('neg'); else if (r.gammel) td.classList.add('c-amb'); } },
+  { k: 'sporgefrist', l: 'Spørgefrist' },
+  { k: 'bid_dato', l: 'Bid/no bid', f: (v, r) => [r.bid_beslutning === 'no bid' ? 'No bid' : r.bid_beslutning === 'bid' ? 'Bid' : r.bid_beslutning === 'afventer' ? 'Afventer' : '', v ? F.date(v) : ''].filter(Boolean).join(' ') },
+  { k: 'pq_frist', l: 'PQ-frist' },
+  { k: 'pq_afl', l: 'PQ afleveret' },
+  { k: 'prak', l: 'Prækvalificeret' },
+  { k: 'tilbudsfrist', l: 'Tilbudsfrist' },
+  { k: 'tilbud_afl', l: 'Tilbud afleveret' },
+  { k: 'revideret', l: 'Revideret tilbud' },
+  { k: 'forventet', l: 'Forventet afgørelse', cell: (td, r) => { if (r.gammel && r.forventet) td.classList.add('c-amb'); } },
+  { k: 'resultat', l: 'Resultat', f: (v, r) => (v ? `${F.date(v)}` : '') },
+  { k: 'opstart', l: 'Opstart' },
+  { k: 'aftale_start', l: 'Aftaleperiode', f: (v, r) => (v || r.aftale_slut ? `${v ? F.date(v) : '?'} – ${r.aftale_slut ? F.date(r.aftale_slut) : '?'}` : '') },
+  { k: 'oprettet', l: 'Oprettet' },
+];
+const PDCOLS_STD = ['frist', 'pq_frist', 'tilbudsfrist', 'forventet', 'resultat'];
+function pipeDateCols() { const v = ls.get('pd.pipecols', null); return Array.isArray(v) ? v : PDCOLS_STD; }
+function drawPipeColSel() {
+  const on = new Set(pipeDateCols());
+  const box = h('details', { class: 'pcolsel' }, h('summary', { text: `Datokolonner (${on.size})` }),
+    h('div', { class: 'pcolsel-b' }, ...PDCOLS.map((c) => {
+      const cb = h('input', { type: 'checkbox' }); cb.checked = on.has(c.k);
+      cb.addEventListener('change', () => { const v = PDCOLS.map((x) => x.k).filter((k) => (k === c.k ? cb.checked : on.has(k))); ls.set('pd.pipecols', v); S.pipeColsOpen = true; render(); });
+      return h('label', {}, cb, ' ' + c.l);
+    }), h('button', { class: 'btn small', type: 'button', text: 'Standard', onclick: () => { ls.set('pd.pipecols', PDCOLS_STD); S.pipeColsOpen = true; render(); } })));
+  if (S.pipeColsOpen) box.open = true;
+  box.addEventListener('toggle', () => { S.pipeColsOpen = box.open; });
+  $('#pipe-colsel').replaceChildren(box);
+}
 function drawPipeTable(rows) {
+  drawPipeColSel();
   const k = S.sorts.pipe;
-  const fk = (r) => r.frist || (r.venter ? r.afl : '');
+  const fk = (r) => r.frist || (r.venter ? '9' + (r.forventet || r.afl) : '');
   const sorted = [...rows].sort(k.k === 'frist'
     ? (a, b) => (fk(a) && fk(b) ? fk(a).localeCompare(fk(b)) * k.d : fk(a) ? -1 : fk(b) ? 1 : 0) || a.faseN - b.faseN
     : (a, b) => cmp(k.k, k.d)(a, b) || a.faseN - b.faseN);
+  const on = new Set(pipeDateCols());
+  const dcols = PDCOLS.filter((c) => on.has(c.k)).map((c) => ({ f: (v) => (v ? F.date(v) : ''), ...c }));
   table($('#t-pipe'), [
+    { k: 'navn', l: 'Titel', cls: 'name' },
     { k: 'typeL', l: 'Type', cell: (td, r) => { td.replaceChildren(h('span', { class: 'ptag' + (r.type === 'rammeaftale' ? ' ramme' : ''), text: r.typeL })); } },
     { k: 'faseN', l: 'Status', f: (v, r) => r.status, cell: (td, r) => { if (r.gammel) td.classList.add('c-amb'); } },
-    { k: 'udbud', l: 'Udbud', sec: 1 },
-    { k: 'navn', l: 'Titel', cls: 'name' },
     { k: 'kunde', l: 'Kunde', sec: 1 },
     { k: 'rolle', l: 'Rolle' },
-    { k: 'partnere', l: 'Partnere', sec: 1 },
     { k: 'ansvarlige', l: 'Ansvarlige' },
     { k: 'vaerdi', l: 'NIRAS-værdi (tDKK)', num: 1, f: F.tkr, title: 'Honorar × NIRAS-andel. Rammeaftale: aftalens værdi × teamets andel × NIRAS-andel' },
     { k: 'chance', l: 'Chance', num: 1, f: F.pct },
     { k: 'vaegtet', l: 'Vægtet (tDKK)', num: 1, f: F.tkr },
-    { k: 'frist', l: 'Frist / afleveret', f: (v, r) => (v ? `${r.fristL} ${F.date(v)}` : r.venter ? `Afleveret ${F.date(r.afl)}` : ''), cell: (td, r) => { if (r.over) td.classList.add('neg'); } },
+    ...dcols,
+    { k: 'udbud', l: 'Udbud', sec: 1 },
+    { k: 'partnere', l: 'Partnere', sec: 1 },
     { k: 'rest', l: 'Rammerest (tDKK)', num: 1, f: F.tkr, title: 'Rest på vundne, aktive rammeaftaler: vores andel minus vundne miniudbud', sec: 1 },
     { k: 'ramme', l: 'Under rammeaftale', sec: 1 },
-    { k: 'nr', l: 'Nummer', sec: 1 },
   ], sorted, { sortKey: 'pipe', onClick: (r) => pipeEdit(r.x), rowClass: (r) => (r.aaben ? '' : 'closed') });
-  if (!sorted.length) $('#t-pipe tbody').append(h('tr', {}, h('td', { colspan: 15, class: 'note', text: 'Ingen punkter matcher valget.' })));
+  if (!sorted.length) $('#t-pipe tbody').append(h('tr', {}, h('td', { colspan: 30, class: 'note', text: 'Ingen punkter matcher valget.' })));
 }
 /* ----- Liste "Tilbud og PQ'er pr. dato" og PowerPoint ----- */
 const pDM = (d) => (d ? new Date(d + 'T12:00:00Z').toLocaleDateString('da-DK', { day: 'numeric', month: 'short', timeZone: 'UTC' }).replace('.', '') : '');
@@ -3043,9 +3110,11 @@ function pSize(x) {
 const pPartner = (r) => [r.partnere, r.rolle ? (r.rolle === 'Eneste rådgiver' ? 'NIRAS eneste rådgiver' : `NIRAS er ${r.rolle}`) : ''].filter(Boolean).join(', ');
 function pDateCell(r, art) {
   const d = art === 'pq' ? pDay(r.x.pq_frist) : pDay(r.x.tilbudsfrist);
+  const rev = art === 'tilbud' && r.revideret ? `rev. ${pDM(r.revideret)}` : '';
+  const svar = r.venter && r.forventet ? `svar ${pDM(r.forventet)}` : '';
   const st = r.fase === 'vundet' ? 'VUNDET' : r.fase === 'tabt' ? 'Tabt' : r.fase === 'annulleret' ? 'ANNULLERET' : r.fase === 'no bid' ? 'No bid'
     : art === 'pq' && r.prak ? 'Prækvalificeret' : r.venter ? 'afleveret' : r.prak ? 'prækvalificeret ' + pDM(r.prak) : '';
-  return [d ? pDM(d) : 'Dato ukendt', st].filter(Boolean).join(', ');
+  return [d ? pDM(d) : 'Dato ukendt', rev, st, svar].filter(Boolean).join(', ');
 }
 function pipeListData(all) {
   const today = cphDay(Date.now()), fra = new Date(Date.parse(today) - S.pipeListDays * 864e5).toISOString().slice(0, 10);
@@ -3135,6 +3204,7 @@ function pFaseSkift(x, fase, extra = {}) {
   const patch = { fase, resultat_dato: pOpen(fase) ? null : (x.fase === fase && x.resultat_dato) || today, tabt_i: null };
   if (['tabt', 'no bid', 'annulleret'].includes(fase)) patch.tabt_i = pOpen(x.fase) ? x.fase : x.tabt_i || null;
   if (x.fase === 'pq' && fase === 'tilbud' && !x.prakvalificeret && !extra.prakvalificeret) patch.prakvalificeret = today;
+  if (x.fase === 'pq' && fase === 'tilbud' && !(extra.forventet && extra.forventet !== pDay(x.forventet_afgoerelse))) patch.forventet_afgoerelse = null;
   return patch;
 }
 // Træk og slip mellem faser. Vundet åbner formularen, så ERP-nummeret kan skrives.
@@ -3183,6 +3253,8 @@ function pipeEdit(x, preset = {}) {
   const fAndel = pctIn('pf-andel', v.andel);
   const fErp = inp('pf-erp', '', { inputmode: 'numeric', placeholder: 'fx 10431234' });
   const fNote = h('textarea', { id: 'pf-note', rows: 3 }); fNote.value = v.bemaerkning || '';
+  const bid0 = (p.bid || []).slice().sort((a, b) => String(b.oprettet || '').localeCompare(String(a.oprettet || '')))[0] || null;
+  const fBid = h('select', { id: 'pf-bid' }, [['', 'Ikke vurderet'], ['afventer', 'Afventer'], ['bid', 'Bid'], ['no bid', 'No bid']].map(([k, l]) => { const o = h('option', { value: k, text: l }); if (k === (bid0?.beslutning || '')) o.selected = true; return o; }));
   const sum = h('div', { class: 'pf-sum', 'aria-live': 'polite' });
   const g = {
     opgave: h('div', { class: 'pf-grid' }, L('Teamets honorar (tDKK)', fHon)),
@@ -3226,7 +3298,9 @@ function pipeEdit(x, preset = {}) {
   const save = async () => {
     const titel = fTitel.value.trim();
     if (!titel) { fTitel.focus(); toast('Skriv en arbejdstitel'); return; }
-    const t = fType.value, f = fFase.value;
+    const t = fType.value;
+    // No bid i bid/no bid-feltet lukker et åbent punkt som no bid
+    const f = fBid.value === 'no bid' && pOpen(fFase.value) && (bid0?.beslutning || '') !== 'no bid' ? 'no bid' : fFase.value;
     const nums = { chance: parseN(fChance.value), niras: parseN(fNiras.value), hon: parseN(fHon.value), anl: parseN(fAnl.value), rv: parseN(fRv.value), vind: parseN(fVind.value), andel: parseN(fAndel.value) };
     if (Object.values(nums).some((n) => Number.isNaN(n))) { toast('Tal skal skrives som fx 1.250 eller 12,5'); return; }
     for (const [k, el, lab] of [['chance', fChance, 'Vinderchancen'], ['niras', fNiras, 'NIRAS-andelen'], ['andel', fAndel, 'Teamets andel']]) {
@@ -3235,7 +3309,7 @@ function pipeEdit(x, preset = {}) {
     if (isNum(nums.vind) && (nums.vind < 1 || !Number.isInteger(nums.vind))) { toast('Antal vindere skal være et helt tal på mindst 1'); fVind.focus(); return; }
     if (t === 'miniudbud' && !fRamme.value) { toast('Vælg den rammeaftale, miniudbuddet hører under'); fRamme.focus(); return; }
     const d = {};
-    for (const [k, id, lab] of [['pq', 'pf-pq', 'PQ-frist'], ['pqa', 'pf-pqa', 'PQ afleveret'], ['prak', 'pf-prak', 'Prækvalificeret'], ['tb', 'pf-tb', 'Tilbudsfrist'], ['tba', 'pf-tba', 'Tilbud afleveret'], ['op', 'pf-op', 'Forventet opstart'], ['as', 'pf-astart', 'Aftale start'], ['ae', 'pf-aslut', 'Aftale slut']]) {
+    for (const [k, id, lab] of [['sp', 'pf-sp', 'Spørgefrist'], ['pq', 'pf-pq', 'PQ-frist'], ['pqa', 'pf-pqa', 'PQ afleveret'], ['prak', 'pf-prak', 'Prækvalificeret'], ['tb', 'pf-tb', 'Tilbudsfrist'], ['tba', 'pf-tba', 'Tilbud afleveret'], ['rev', 'pf-rev', 'Revideret tilbud'], ['fa', 'pf-fa', 'Forventet afgørelse'], ['bd', 'pf-bd', 'Bid/no bid-dato'], ['op', 'pf-op', 'Forventet opstart'], ['as', 'pf-astart', 'Aftale start'], ['ae', 'pf-aslut', 'Aftale slut']]) {
       const r = readDMY(id, lab); if (!r.ok) return; d[k] = r.iso;
     }
     const prj = { arbejdstitel: titel, salgsnummer: fSalg.value.trim() || null, kunde: fKunde.value.trim() || null, bu: fBu.value.trim() || null, pl: fPl.value.trim().toUpperCase() || null, po: fPo.value.trim().toUpperCase() || null };
@@ -3249,8 +3323,9 @@ function pipeEdit(x, preset = {}) {
       ramme_vaerdi: ramme && isNum(nums.rv) ? nums.rv * 1000 : null, antal_vindere: ramme && isNum(nums.vind) ? nums.vind : null,
       andel: ramme && isNum(nums.andel) ? nums.andel / 100 : null, aftale_start: ramme ? d.as : null, aftale_slut: ramme ? d.ae : null,
       pq_frist: d.pq, pq_afleveret: d.pqa, prakvalificeret: d.prak, tilbudsfrist: d.tb, tilbud_afleveret: d.tba, forventet_opstart: d.op,
+      sporgefrist: d.sp, revideret_tilbud: d.rev, forventet_afgoerelse: d.fa,
       bemaerkning: fNote.value.trim() || null,
-      ...(x ? pFaseSkift(x, f, { prakvalificeret: d.prak }) : { fase: f, resultat_dato: pOpen(f) ? null : cphDay(Date.now()), tabt_i: ['tabt', 'no bid', 'annulleret'].includes(f) ? 'lead' : null }),
+      ...(x ? pFaseSkift(x, f, { prakvalificeret: d.prak, forventet: d.fa }) : { fase: f, resultat_dato: pOpen(f) ? null : cphDay(Date.now()), tabt_i: ['tabt', 'no bid', 'annulleret'].includes(f) ? 'lead' : null }),
     };
     if (pipe.prakvalificeret === undefined || (d.prak && !pipe.prakvalificeret)) pipe.prakvalificeret = d.prak;
     const erp = fErp.value.trim();
@@ -3258,6 +3333,7 @@ function pipeEdit(x, preset = {}) {
     btnSave.disabled = true;
     await pipeAct(async () => {
       const pid = await Store.pipeSave(x?.id, x?.projekt_id, prj, pipe);
+      if (fBid.value && (fBid.value !== (bid0?.beslutning || '') || (d.bd || null) !== (bid0?.beslutningsdato ? pDay(bid0.beslutningsdato) : null))) await Store.pipeBid(pid, bid0?.id, fBid.value, d.bd);
       if (f === 'vundet' && erp && !p.projektnummer) await Store.pipeWon(pid, erp);
       pdlg.close();
     }, ny ? `${titel} er oprettet` : f === 'vundet' && v.fase !== 'vundet' ? `${titel} er vundet${erp ? ' og har fået nummer ' + erp : ''}` : `${titel} er gemt`);
@@ -3284,9 +3360,10 @@ function pipeEdit(x, preset = {}) {
     sec('Økonomi'),
     h('div', { class: 'pf-grid' }, L('Størrelse som oplyst', fStr, 'Teksten fra udbuddet, fx "H > 30 mio" eller "0,8-1,3 mia"'), L('Anlægssum (tDKK)', fAnl), h('label', {}, chanceL, fChance), L('NIRAS-andel af honoraret (%)', fNiras, 'Tom = 100 %. Fx 56 %, hvis NIRAS har 9,3 af teamets 16,6 mio')),
     g.opgave, g.mini, g.ramme,
-    sec('Frister'),
-    h('div', { class: 'pf-grid' }, D('pf-pq', v.pq_frist, 'PQ-frist'), D('pf-pqa', v.pq_afleveret, 'PQ afleveret'), D('pf-prak', v.prakvalificeret, 'Prækvalificeret')),
-    h('div', { class: 'pf-grid' }, D('pf-tb', v.tilbudsfrist, 'Tilbudsfrist'), D('pf-tba', v.tilbud_afleveret, 'Tilbud afleveret'), D('pf-op', v.forventet_opstart, 'Forventet opstart')),
+    sec('Datoer'),
+    h('div', { class: 'pf-grid' }, D('pf-sp', v.sporgefrist, 'Spørgefrist'), D('pf-pq', v.pq_frist, 'PQ-frist'), D('pf-pqa', v.pq_afleveret, 'PQ afleveret'), D('pf-prak', v.prakvalificeret, 'Prækvalificeret')),
+    h('div', { class: 'pf-grid' }, D('pf-tb', v.tilbudsfrist, 'Tilbudsfrist'), D('pf-tba', v.tilbud_afleveret, 'Tilbud afleveret'), D('pf-rev', v.revideret_tilbud, 'Revideret tilbud (2. bud)'), D('pf-fa', v.forventet_afgoerelse, 'Forventet afgørelse')),
+    h('div', { class: 'pf-grid' }, L('Bid/no bid', fBid), D('pf-bd', bid0?.beslutningsdato, 'Bid/no bid-dato'), D('pf-op', v.forventet_opstart, 'Forventet opstart'), h('p', { class: 'note', style: 'margin:0;align-self:end', text: 'Bid/no bid-dato: beslutningsfrist, mens den afventer; ellers datoen for beslutningen. Forventet afgørelse gælder den fase, punktet er i.' })),
     g.erp,
     L('Bemærkning', fNote),
     sum,
@@ -3954,7 +4031,7 @@ const EX_SHEETS = [
   ['Ændringslog', 'aendring', [{ l: 'Nr', k: 'nr', t: 'num', w: 6 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Beskrivelse', k: 'beskrivelse', w: 50 }, { l: 'Årsag', k: 'aarsag', w: 14 }, { l: 'Beløb', k: 'beloeb', t: 'num', w: 12 }, { l: 'Timer', k: 'timer', t: 'num', w: 8 }, { l: 'Status', k: 'status', w: 12 }, { l: 'Registreret', k: 'registreret', t: 'date', w: 12 }, { l: 'Besluttet', k: 'besluttet', t: 'date', w: 12 }]],
   ['Kvalitetsplan', 'kvalitet', [{ l: 'Emne', k: 'emne', w: 30 }, { l: 'Krav', k: 'krav', w: 50 }, { l: 'Ansvarlig', k: 'ansvarlig', w: 12 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }, { l: 'Dokument', k: 'dokument_url', w: 40 }]],
   ['Milepæle', 'milepael', [{ l: 'Milepæl', k: 'navn', w: 34 }, { l: 'Planlagt', k: 'planlagt', t: 'date', w: 12 }, { l: 'Prognose', k: 'prognose', t: 'date', w: 12 }, { l: 'Faktisk', k: 'faktisk', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }]],
-  ['Pipeline', 'pipeline', [{ l: 'Type', k: 'type', w: 12 }, { l: 'Fase', k: 'fase', w: 9 }, { l: 'Kunde', k: 'kunde', w: 24 }, { l: 'Kilde', k: 'kilde', w: 16 }, { l: 'Honorar (DKK)', k: 'honorar', t: 'num', w: 14 }, { l: 'Vinderchance', k: 'vinderchance', t: 'num', w: 12 }, { l: 'Rammens værdi (DKK)', k: 'ramme_vaerdi', t: 'num', w: 16 }, { l: 'Antal vindere', k: 'antal_vindere', t: 'num', w: 10 }, { l: 'Andel', k: 'andel', t: 'num', w: 8 }, { l: 'Aftale start', k: 'aftale_start', t: 'date', w: 12 }, { l: 'Aftale slut', k: 'aftale_slut', t: 'date', w: 12 }, { l: 'Under rammeaftale', k: 'ramme_navn', w: 28 }, { l: 'PQ-frist', k: 'pq_frist', t: 'date', w: 12 }, { l: 'Tilbudsfrist', k: 'tilbudsfrist', t: 'date', w: 12 }, { l: 'Forventet opstart', k: 'forventet_opstart', t: 'date', w: 14 }, { l: 'Resultatdato', k: 'resultat_dato', t: 'date', w: 12 }, { l: 'Bemærkning', k: 'bemaerkning', w: 50 }, { l: 'Udbud', k: 'udbud', w: 24 }, { l: 'Rolle', k: 'rolle', w: 10 }, { l: 'Partnere', k: 'partnere', w: 30 }, { l: 'NIRAS-andel', k: 'niras_andel', t: 'num', w: 10 }, { l: 'Ansvarlige', k: 'ansvarlige', w: 14 }, { l: 'Størrelse som oplyst', k: 'stoerrelse', w: 24 }, { l: 'Anlægssum (DKK)', k: 'anlaegssum', t: 'num', w: 14 }, { l: 'PQ afleveret', k: 'pq_afleveret', t: 'date', w: 12 }, { l: 'Prækvalificeret', k: 'prakvalificeret', t: 'date', w: 13 }, { l: 'Tilbud afleveret', k: 'tilbud_afleveret', t: 'date', w: 13 }, { l: 'Tabt i fase', k: 'tabt_i', w: 10 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
+  ['Pipeline', 'pipeline', [{ l: 'Type', k: 'type', w: 12 }, { l: 'Fase', k: 'fase', w: 9 }, { l: 'Kunde', k: 'kunde', w: 24 }, { l: 'Kilde', k: 'kilde', w: 16 }, { l: 'Honorar (DKK)', k: 'honorar', t: 'num', w: 14 }, { l: 'Vinderchance', k: 'vinderchance', t: 'num', w: 12 }, { l: 'Rammens værdi (DKK)', k: 'ramme_vaerdi', t: 'num', w: 16 }, { l: 'Antal vindere', k: 'antal_vindere', t: 'num', w: 10 }, { l: 'Andel', k: 'andel', t: 'num', w: 8 }, { l: 'Aftale start', k: 'aftale_start', t: 'date', w: 12 }, { l: 'Aftale slut', k: 'aftale_slut', t: 'date', w: 12 }, { l: 'Under rammeaftale', k: 'ramme_navn', w: 28 }, { l: 'PQ-frist', k: 'pq_frist', t: 'date', w: 12 }, { l: 'Tilbudsfrist', k: 'tilbudsfrist', t: 'date', w: 12 }, { l: 'Forventet opstart', k: 'forventet_opstart', t: 'date', w: 14 }, { l: 'Resultatdato', k: 'resultat_dato', t: 'date', w: 12 }, { l: 'Bemærkning', k: 'bemaerkning', w: 50 }, { l: 'Udbud', k: 'udbud', w: 24 }, { l: 'Rolle', k: 'rolle', w: 10 }, { l: 'Partnere', k: 'partnere', w: 30 }, { l: 'NIRAS-andel', k: 'niras_andel', t: 'num', w: 10 }, { l: 'Ansvarlige', k: 'ansvarlige', w: 14 }, { l: 'Størrelse som oplyst', k: 'stoerrelse', w: 24 }, { l: 'Anlægssum (DKK)', k: 'anlaegssum', t: 'num', w: 14 }, { l: 'PQ afleveret', k: 'pq_afleveret', t: 'date', w: 12 }, { l: 'Prækvalificeret', k: 'prakvalificeret', t: 'date', w: 13 }, { l: 'Tilbud afleveret', k: 'tilbud_afleveret', t: 'date', w: 13 }, { l: 'Tabt i fase', k: 'tabt_i', w: 10 }, { l: 'Spørgefrist', k: 'sporgefrist', t: 'date', w: 12 }, { l: 'Revideret tilbud', k: 'revideret_tilbud', t: 'date', w: 13 }, { l: 'Forventet afgørelse', k: 'forventet_afgoerelse', t: 'date', w: 14 }, { l: 'Bid/no bid', k: 'bid_beslutning', w: 10 }, { l: 'Bid/no bid-dato', k: 'bid_dato', t: 'date', w: 13 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Dokumenter', 'dokument', [{ l: 'Type', k: 'type', w: 14 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Link', k: 'url', w: 50 }]],
 ];
 function ownDataSheets(D) {

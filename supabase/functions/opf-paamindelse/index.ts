@@ -1,4 +1,4 @@
-// Påmindelse om opfølgninger og om PQ- og tilbudsfrister i pipelinen dagen før fristen, kl. 07 dansk tid.
+// Påmindelse om opfølgninger og om pipelinens frister (spørgefrist, PQ, tilbud, revideret tilbud, bid/no bid-beslutning) dagen før, kl. 07 dansk tid.
 // Kaldes af pg_cron kl. 05 og 06 UTC; funktionen sender kun, når klokken er 7 i København (dækker sommer- og vintertid).
 // Hemmeligheder (Supabase > Edge Functions > Secrets): BREVO_API_KEY, BREVO_SENDER (afsenderadresse godkendt i Brevo), valgfri BREVO_SENDER_NAME.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -53,11 +53,13 @@ function mail(rows: Row[], frist: string) {
   return { subject, html, text };
 }
 
-type Pipe = { id: string; art: "pq" | "tilbud"; nr: string | null; navn: string | null; kunde: string | null; pl: string | null; po: string | null; fase: string; frist: string; honorar: number | null; email: string | null };
+type Art = "pq" | "tilbud" | "spoerg" | "revideret" | "bid";
+const ART: Record<Art, string> = { pq: "PQ-frist", tilbud: "Tilbudsfrist", spoerg: "Spørgefrist", revideret: "Revideret tilbud", bid: "Bid/no bid-beslutning" };
+type Pipe = { id: string; art: Art; nr: string | null; navn: string | null; kunde: string | null; pl: string | null; po: string | null; fase: string; frist: string; honorar: number | null; email: string | null };
 
 // Pipeline: én mail pr. frist, fx "S-100 Rammeaftale Testby · Tilbudsfrist i morgen"
 function pipeMail(r: Pipe, frist: string) {
-  const hvad = r.art === "pq" ? "PQ-frist" : "Tilbudsfrist";
+  const hvad = ART[r.art] || "Frist";
   const subject = `${r.nr || ""} ${r.navn || ""}`.trim() + ` · ${hvad} i morgen`;
   const link = DASH.replace("#opf", "#pipe");
   const html = `<!doctype html><html><body style="margin:0;background:#F2E2D5;font-family:Aptos,'Segoe UI',Arial,sans-serif;color:#221B18">
@@ -96,7 +98,7 @@ Deno.serve(async (req) => {
     // Uden forfatter går mailen til alle godkendte brugere
     let fallback: string[] | null = null;
     const modtagere = async (email: string | null) => email ? [email] : (fallback ??= ((await db("/rest/v1/adgang?select=email")) as { email: string }[]).map((x) => x.email));
-    type Job = { email: string; kind: "opf" | "pq" | "tilbud"; id: string; m: { subject: string; html: string; text: string } };
+    type Job = { email: string; kind: "opf" | Art; id: string; m: { subject: string; html: string; text: string } };
     const jobs: Job[] = [];
     for (const r of rows) for (const e of await modtagere(r.email)) jobs.push({ email: e, kind: "opf", id: r.id, m: mail([r], tomorrow) });
     for (const r of pipe) for (const e of await modtagere(r.email)) jobs.push({ email: e, kind: r.art, id: r.id, m: pipeMail(r, tomorrow) });
@@ -104,7 +106,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("BREVO_API_KEY"), sender = Deno.env.get("BREVO_SENDER");
     if (!apiKey || !sender) return json({ fejl: "BREVO_API_KEY og BREVO_SENDER mangler under Edge Functions > Secrets" }, 500);
     const result: unknown[] = [];
-    const sent = { opf: new Set<string>(), pq: new Set<string>(), tilbud: new Set<string>() };
+    const sent: Record<string, Set<string>> = { opf: new Set(), pq: new Set(), tilbud: new Set(), spoerg: new Set(), revideret: new Set(), bid: new Set() };
     for (const j of jobs) {
       const r = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
@@ -121,8 +123,11 @@ Deno.serve(async (req) => {
       if (sent.opf.size) await db(`/rest/v1/projekt_noter?id=in.(${[...sent.opf].join(",")})`, { ...min, body: stamp });
       if (sent.pq.size) await db(`/rest/v1/projekt_pipeline?id=in.(${[...sent.pq].join(",")})`, { ...min, body: JSON.stringify({ pq_paamindet: new Date().toISOString() }) });
       if (sent.tilbud.size) await db(`/rest/v1/projekt_pipeline?id=in.(${[...sent.tilbud].join(",")})`, { ...min, body: JSON.stringify({ tilbud_paamindet: new Date().toISOString() }) });
+      if (sent.spoerg.size) await db(`/rest/v1/projekt_pipeline?id=in.(${[...sent.spoerg].join(",")})`, { ...min, body: JSON.stringify({ sporg_paamindet: new Date().toISOString() }) });
+      if (sent.revideret.size) await db(`/rest/v1/projekt_pipeline?id=in.(${[...sent.revideret].join(",")})`, { ...min, body: JSON.stringify({ rev_paamindet: new Date().toISOString() }) });
+      if (sent.bid.size) await db(`/rest/v1/projekt_pipeline?id=in.(${[...sent.bid].join(",")})`, { ...min, body: JSON.stringify({ bid_paamindet: tomorrow }) });
     }
-    return json({ frist: tomorrow, sendt: sent.opf.size + sent.pq.size + sent.tilbud.size, test, mails: result });
+    return json({ frist: tomorrow, sendt: Object.values(sent).reduce((a, x) => a + x.size, 0), test, mails: result });
   } catch (e) {
     return json({ fejl: String((e as Error).message || e) }, 500);
   }

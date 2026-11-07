@@ -72,6 +72,7 @@ Hvert modul har også kolonnen `projekt` med en kopi af projektnummeret, som dat
 - **Udfald:** vundet, tabt, no bid og annulleret. `tabt_i` husker, om det skete i PQ eller tilbud. Hitraten tæller vundet og tabt de seneste 12 måneder.
 - **Delaftaler:** hver delaftale er sin egen rammeaftale med samme `udbud`.
 - **Liste og PowerPoint:** fanen Pipeline > Liste viser "Tilbud og PQ'er pr. dato" og kan hentes som .pptx.
+- **Datoer:** spørgefrist, PQ-frist, PQ afleveret, prækvalificeret, tilbudsfrist, tilbud afleveret, revideret tilbud (2. bud), forventet afgørelse, bid/no bid-dato (i `projekt_bid`), resultat, forventet opstart og aftaleperiode. Kortet viser næste handling; efter aflevering styrer forventet afgørelse markeringen (ellers 60 dage). Tabel har valgbare datokolonner. Påmindelse dagen før for spørgefrist, PQ, tilbud, revideret tilbud og bid/no bid-beslutning. SQL: `supabase/10_pipeline_datoer.sql`.
 - **Rammeaftale før vundet:** værdien er vores forventede andel = samlet værdi × andel. Står andelen tom, bruges 1 ÷ antal vindere. Vinderchancen er chancen for at komme på aftalen.
 - **Rammeaftale vundet:** tæller ikke i pipelinen. Resten (andel minus vundne miniudbud) står som **rammepotentiale**, så længe aftalen ikke er udløbet.
 - **Miniudbud:** tæller som en almindelig opgave (honorar × chance) og trækkes fra rammens rest, når det er vundet.
