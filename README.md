@@ -1,6 +1,6 @@
 # NIRAS DSGN Projektstatus
 
-Dashboard til månedsluk: projektstatus pr. måned og PTD, flag, risk log, kort og rapporter til projektansvarlige. Én HTML-fil, der kører i browseren.
+Dashboard til månedsluk: projektstatus pr. måned og PTD, flag, risk log, kort, rapporter til projektansvarlige og pipeline med leads, PQ, tilbud og rammeaftaler. Én HTML-fil, der kører i browseren.
 
 **Åbnes fra GitHub Pages:** https://nielselliotbrochner.github.io/NIRAS_DSGN_Projektstatus/
 
@@ -52,7 +52,7 @@ Fra GitHub Pages bruges OpenStreetMap uden nøgle. Som lokal fil kræver kortbag
 
 ## Påmindelser på e-mail
 
-Åbne opfølgninger giver en e-mail kl. 07 dagen før fristen til den, der skrev noten (via Brevo).
+Åbne opfølgninger giver en e-mail kl. 07 dagen før fristen til den, der skrev noten (via Brevo). Det samme gælder PQ- og tilbudsfrister i pipelinen, til den der oprettede leadet.
 - `supabase/06_opf_paamindelse.sql`: kolonne, funktioner og det daglige job (pg_cron).
 - `supabase/functions/opf-paamindelse`: edge-funktionen, der sender mailen.
 - Brevo-nøgle og afsender ligger under Supabase > Edge Functions > Secrets (`BREVO_API_KEY`, `BREVO_SENDER`).

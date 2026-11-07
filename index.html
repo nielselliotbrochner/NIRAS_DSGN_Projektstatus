@@ -315,6 +315,37 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .coming span { display: inline-block; border: 1px dashed var(--sand-3); border-radius: 999px; padding: 2px 9px; margin: 3px 4px 0 0; }
 dialog { border: 1px solid var(--line); border-radius: var(--r); padding: 0; width: min(720px, 94vw); max-height: 90vh; }
 dialog::backdrop { background: rgba(34,27,24,.4); }
+/* Pipeline */
+.pipe-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pipe-tiles { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.pipe-tiles .tile .s b { color: var(--red); }
+#pipe-type { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; background: var(--panel); font: inherit; font-size: 13px; }
+.pboard { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 6px; align-items: start; }
+.pcol { background: var(--sand-2); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 140px; }
+.pcol.drop { outline: 2px dashed var(--red); outline-offset: -2px; }
+.pcol-h { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; padding: 2px 4px 6px; border-bottom: 1px solid var(--line); }
+.pcol-h b { font-size: 14px; } .pcol-h span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.pcol .empty { color: var(--muted); font-size: 12px; padding: 4px; }
+.pcard { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--red); border-radius: 6px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.pcard:hover, .pcard:focus-visible { border-color: var(--sand-3); border-left-color: inherit; box-shadow: 0 1px 4px rgba(34,27,24,.1); outline: none; }
+.pcard.t-rammeaftale { border-left-color: var(--deep); } .pcard.t-miniudbud { border-left-color: #C9A68A; }
+.pcard.dragging { opacity: .45; }
+.pcard .pc-t { font-weight: 600; line-height: 1.25; }
+.pcard .pc-s { color: var(--muted); font-size: 12px; }
+.pcard .pc-v { font-variant-numeric: tabular-nums; }
+.pcard .pc-f { font-size: 12px; font-variant-numeric: tabular-nums; }
+.pcard .pc-f.over { color: var(--red); font-weight: 600; } .pcard .pc-f.snart { color: var(--amber); font-weight: 600; }
+.pcard details { font-size: 12px; margin-top: 2px; } .pcard details summary { cursor: pointer; color: var(--muted); }
+.pcard details ul { margin: 4px 0 0; padding-left: 16px; } .pcard details li { margin: 2px 0; }
+.ptag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 7px; border-radius: 999px; background: var(--sand); color: var(--deep); margin-right: 4px; vertical-align: 1px; }
+.ptag.ramme { background: var(--deep); color: #fff; }
+.t td .ptag { margin: 0; }
+#pdlg { width: min(820px, 94vw); }
+#pdlg .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
+#pdlg .pf-sec { font-size: 12px; font-weight: 700; color: var(--deep); text-transform: uppercase; letter-spacing: .06em; margin: 4px 0 -2px; }
+#pdlg .pf-sum { background: var(--sand-2); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; font-variant-numeric: tabular-nums; }
+#pdlg .pf-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } #pdlg .pf-acts .sp { flex: 1; }
+.btn.danger { color: var(--red); border-color: var(--red); background: var(--panel); }
 .dlg-h { background: var(--deep); color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
 .dlg-h h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 20px; }
 .dlg-b { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 18px; overflow: auto; max-height: calc(90vh - 56px); }
@@ -1062,6 +1093,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <button class="tab" role="tab" data-tab="kort" aria-selected="false" type="button">Kort</button>
         <button class="tab" role="tab" data-tab="rapport" aria-selected="false" type="button">Rapport</button>
         <button class="tab" role="tab" data-tab="opf" aria-selected="false" type="button">Opfølgning<span class="tbadge" id="opf-badge" hidden></span></button>
+        <button class="tab" role="tab" data-tab="pipe" aria-selected="false" type="button">Pipeline</button>
         <button class="tab" role="tab" data-tab="regler" aria-selected="false" type="button">Regler</button>
       </nav>
     </div>
@@ -1284,6 +1316,31 @@ svg.leaflet-image-layer.leaflet-interactive path {
       </div>
     </section>
 
+    <!-- PIPELINE -->
+    <section class="page" id="pipe" hidden>
+      <div class="card">
+        <div class="phead">
+          <div><h2>Pipeline</h2><p class="note">Leads, PQ, tilbud og rammeaftaler i dit udvalg (BU, PL og PA øverst). Vægtet pipeline er værdi × vinderchance for åbne punkter. En rammeaftale tæller med vores forventede andel (aftalens værdi ÷ antal vindere, hvis andelen ikke er udfyldt), indtil den er vundet. Derefter står resten som rammepotentiale, og miniudbuddene tæller som almindelige tilbud.</p></div>
+          <div class="pipe-acts">
+            <div class="seg" role="group" aria-label="Visning"><button type="button" data-pipeview="tavle">Tavle</button><button type="button" data-pipeview="tabel">Tabel</button></div>
+            <button class="btn primary" id="pipe-new" type="button">Nyt lead</button>
+          </div>
+        </div>
+        <div class="tiles pipe-tiles" id="pipe-tiles"></div>
+        <div class="chips">
+          <button class="chip" type="button" data-pchip="aabne" aria-pressed="true">Åbne</button>
+          <button class="chip" type="button" data-pchip="vundne" aria-pressed="false">Vundne</button>
+          <button class="chip" type="button" data-pchip="tabte" aria-pressed="false">Tabt og no bid</button>
+          <button class="chip" type="button" data-pchip="alle" aria-pressed="false">Alle</button>
+          <select id="pipe-type" aria-label="Type"><option value="alle">Alle typer</option><option value="opgave">Opgaver</option><option value="rammeaftale">Rammeaftaler</option><option value="miniudbud">Miniudbud</option></select>
+          <input class="search" id="pipe-q" type="search" placeholder="Søg titel, nummer, kunde, PL, PA eller kilde" aria-label="Søg i pipeline">
+        </div>
+        <p class="note" id="pipe-count"></p>
+        <div class="pboard" id="pipe-board"></div>
+        <div class="tablebox" id="pipe-tblbox" hidden><table class="t" id="t-pipe"></table></div>
+      </div>
+    </section>
+
     <!-- REGLER -->
     <section class="page" id="regler" hidden>
       <div class="grid">
@@ -1346,6 +1403,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </aside>
 
 <!-- INDSTILLINGER -->
+<dialog id="pdlg" aria-labelledby="pdlg-title">
+  <div class="dlg-h"><h2 id="pdlg-title">Nyt lead</h2><button class="tbtn" id="pdlg-close" type="button">Luk</button></div>
+  <div class="dlg-b" id="pdlg-b"></div>
+</dialog>
 <dialog id="dlg">
   <div class="dlg-h"><h2>Indstillinger</h2><button class="tbtn" id="dlg-close" type="button">Luk</button></div>
   <div class="dlg-b">
@@ -1845,6 +1906,31 @@ const Store = {
     await this.sbFetch('/rest/v1/projekt_fokus?on_conflict=projekt', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify({ projekt, ...rec }) });
     return rec;
   },
+  /* ----- Pipeline: leads, PQ, tilbud og rammeaftaler ----- */
+  async pipeLoad() {
+    if (this.mode() !== 'supabase') return [];
+    return this.fetchAll('/rest/v1/projekt_pipeline?select=*,p:projekt_id(id,projektnummer,salgsnummer,arbejdstitel,titel,bu,pl,po,kunde,status)&order=oprettet');
+  },
+  // Gemmer stamdata i projekt og pipeline-felterne i projekt_pipeline. Nyt lead: opretter projektet først.
+  async pipeSave(id, projektId, prj, pipe) {
+    if (this.mode() !== 'supabase') throw new Error('Pipeline kræver login til Supabase');
+    const min = { Prefer: 'return=minimal' };
+    let pid = projektId, ny = false;
+    if (pid) await this.sbFetch('/rest/v1/projekt?id=eq.' + pid, { method: 'PATCH', headers: min, body: JSON.stringify(prj) });
+    else { const r = await this.sbFetch('/rest/v1/projekt', { method: 'POST', body: JSON.stringify({ ...prj, status: 'tilbud' }) }); pid = r[0].id; ny = true; }
+    try {
+      if (id) await this.sbFetch('/rest/v1/projekt_pipeline?id=eq.' + id, { method: 'PATCH', headers: min, body: JSON.stringify(pipe) });
+      else await this.sbFetch('/rest/v1/projekt_pipeline', { method: 'POST', headers: min, body: JSON.stringify({ ...pipe, projekt_id: pid }) });
+    } catch (e) {
+      if (ny) await this.sbFetch('/rest/v1/projekt?id=eq.' + pid, { method: 'DELETE', headers: min }).catch(() => {});
+      throw e;
+    }
+    return pid;
+  },
+  pipePatch(id, patch) { return this.sbFetch('/rest/v1/projekt_pipeline?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) }); },
+  pipeWon(projektId, nummer) { return this.sbFetch('/rest/v1/rpc/pipeline_vundet', { method: 'POST', body: JSON.stringify({ p_id: projektId, p_nummer: nummer || null }) }); },
+  // Sletter kun leads uden ERP-nummer; pipeline-rækken følger med (on delete cascade)
+  pipeDelete(projektId) { return this.sbFetch('/rest/v1/projekt?id=eq.' + projektId + '&projektnummer=is.null', { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); },
   /* ----- ERP-udtræk i Supabase ----- */
   async fetchAll(path) {
     const out = [];
@@ -1959,7 +2045,8 @@ const S = {
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
-  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
+  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
+  pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '',
 };
 const buOk = (r) => S.bus.size === 0 || S.bus.has(r.bu);
 const inScope = (r) => buOk(r) && (S.pls.size === 0 || S.pls.has(r.pl || '?')) && (S.pas.size === 0 || S.pas.has(r.po || '?'));
@@ -2175,6 +2262,7 @@ function render() {
   const nOver = opf.filter((x) => x.over).length;
   $('#opf-badge').hidden = !nOver; $('#opf-badge').textContent = nOver ? String(nOver) : ''; $('#opf-badge').title = nOver ? `${nOver} overskredne opfølgninger` : '';
   if (S.tab === 'opf') drawOpf(opf);
+  if (S.tab === 'pipe') drawPipe();
   if (S.sel) drawDrawer();
 }
 
@@ -2747,6 +2835,307 @@ function drawOpf(all) {
 }
 $$('.chip[data-ochip]').forEach((b) => b.addEventListener('click', () => { S.ochip = b.dataset.ochip; render(); }));
 $('#opf-q').addEventListener('input', (e) => { S.oq = e.target.value.trim(); render(); });
+
+/* ----- Pipeline: leads, PQ, tilbud, rammeaftaler og miniudbud ----- */
+const PFASER = [['lead', 'Lead'], ['pq', 'PQ'], ['tilbud', 'Tilbud'], ['vundet', 'Vundet'], ['tabt', 'Tabt'], ['no bid', 'No bid']];
+const PFASE = Object.fromEntries(PFASER);
+const PFASE_N = Object.fromEntries(PFASER.map(([k], i) => [k, i]));
+const PTYPE = { opgave: 'Opgave', rammeaftale: 'Rammeaftale', miniudbud: 'Miniudbud' };
+const PKILDER = ['Netværk', 'Offentligt udbud', 'Rammeaftale', 'Eksisterende kunde', 'Henvendelse fra kunde', 'Konkurrence', 'Partner', 'Andet'];
+const pOpen = (f) => f === 'lead' || f === 'pq' || f === 'tilbud';
+const pDay = (d) => (d ? String(d).slice(0, 10) : '');
+const pTitle = (p) => (p ? p.arbejdstitel || p.titel || p.salgsnummer || p.projektnummer || 'Uden titel' : '');
+async function loadPipe() {
+  if (Store.mode() !== 'supabase') { S.pipe = []; return; }
+  try { S.pipe = await Store.pipeLoad(); } catch (e) { S.pipe = []; toast('Kunne ikke hente pipeline: ' + e.message); }
+}
+// Beregner værdi, vægtet værdi og rammepotentiale for hvert punkt
+function pipeRows() {
+  const today = cphDay(Date.now());
+  const raw = S.pipe || [];
+  const byId = new Map(raw.map((x) => [x.id, x]));
+  const won = new Map(), kids = new Map();
+  raw.forEach((x) => {
+    if (x.type !== 'miniudbud' || !x.ramme_id) return;
+    if (!kids.has(x.ramme_id)) kids.set(x.ramme_id, []);
+    kids.get(x.ramme_id).push(x);
+    if (x.fase === 'vundet') won.set(x.ramme_id, (won.get(x.ramme_id) || 0) + num(x.honorar));
+  });
+  return raw.map((x) => {
+    const p = x.p || {}, ramme = x.type === 'rammeaftale', aaben = pOpen(x.fase);
+    const andel = ramme ? (isNum(x.andel) ? Number(x.andel) : num(x.antal_vindere) > 0 ? 1 / Number(x.antal_vindere) : null) : null;
+    const vaerdi = ramme ? (isNum(x.ramme_vaerdi) && andel != null ? Number(x.ramme_vaerdi) * andel : null) : nn(x.honorar);
+    const chance = nn(x.vinderchance);
+    const aktiv = ramme && x.fase === 'vundet' && (!x.aftale_slut || pDay(x.aftale_slut) >= today);
+    const rest = ramme && vaerdi != null ? Math.max(0, vaerdi - (won.get(x.id) || 0)) : null;
+    // Næste frist: PQ-frist i lead/PQ, ellers tilbudsfrist
+    const frist = !aaben ? '' : pDay(x.fase === 'tilbud' ? x.tilbudsfrist : x.pq_frist || x.tilbudsfrist);
+    const fristL = !frist ? '' : x.fase !== 'tilbud' && x.pq_frist ? 'PQ' : 'Tilbud';
+    const dage = frist ? Math.round((Date.parse(frist) - Date.parse(today)) / 864e5) : null;
+    const rp = x.ramme_id ? byId.get(x.ramme_id) : null;
+    return {
+      x, id: x.id, projekt_id: x.projekt_id, type: x.type, typeL: PTYPE[x.type] || x.type, fase: x.fase, faseL: PFASE[x.fase] || x.fase, faseN: PFASE_N[x.fase] ?? 9,
+      nr: p.projektnummer || p.salgsnummer || '', erp: p.projektnummer || '', salgsnummer: p.salgsnummer || '', navn: pTitle(p), kunde: p.kunde || '',
+      bu: p.bu || '', pl: p.pl || '', po: p.po || '', kilde: x.kilde || '',
+      vaerdi, chance, vaegtet: aaben && vaerdi != null && chance != null ? vaerdi * chance : null, aaben, andel,
+      ramme_vaerdi: nn(x.ramme_vaerdi), antal_vindere: nn(x.antal_vindere), rest: aktiv ? rest : null, restAlle: rest, aktiv,
+      udloebet: ramme && x.fase === 'vundet' && !aktiv, kids: kids.get(x.id) || [], vundetMini: won.get(x.id) || 0,
+      ramme_id: x.ramme_id, ramme: rp ? pTitle(rp.p) : '',
+      frist, fristL, dage, over: dage != null && dage < 0, snart: dage != null && dage >= 0 && dage <= 7,
+      opstart: pDay(x.forventet_opstart), resultat: pDay(x.resultat_dato), bemaerkning: x.bemaerkning || '',
+    };
+  });
+}
+const pipeScope = () => pipeRows().filter(inScope);
+function pipeFilter(rows) {
+  const q = S.pipeQ.toLowerCase();
+  return rows.filter((r) => (S.pipeChip === 'aabne' ? r.aaben : S.pipeChip === 'vundne' ? r.fase === 'vundet' : S.pipeChip === 'tabte' ? r.fase === 'tabt' || r.fase === 'no bid' : true)
+    && (S.pipeType === 'alle' || r.type === S.pipeType)
+    && (!q || [r.nr, r.navn, r.kunde, r.pl, r.po, r.kilde, r.ramme].some((v) => String(v || '').toLowerCase().includes(q))));
+}
+const pipeSum = (rows, k) => rows.reduce((a, r) => a + num(r[k]), 0);
+function drawPipe() {
+  $$('.chip[data-pchip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pchip === S.pipeChip)));
+  $$('.seg [data-pipeview]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pipeview === S.pipeView)));
+  $('#pipe-type').value = S.pipeType;
+  const all = pipeScope();
+  const open = all.filter((r) => r.aaben), aktive = all.filter((r) => r.aktiv);
+  const year = cphDay(Date.now()).slice(0, 4);
+  const vundneAar = all.filter((r) => r.fase === 'vundet' && r.type !== 'rammeaftale' && r.resultat.startsWith(year));
+  const udenChance = open.filter((r) => r.vaerdi != null && r.chance == null).length;
+  const n14 = open.filter((r) => r.dage != null && r.dage >= 0 && r.dage <= 14).length, nOver = open.filter((r) => r.over).length;
+  const tile = (l, v, sub) => h('div', { class: 'tile' }, h('span', { class: 'l', text: l }), h('span', { class: 'v', text: v }), h('span', { class: 's' }, ...[].concat(sub)));
+  $('#pipe-tiles').replaceChildren(
+    tile('Vægtet pipeline', F.mio(pipeSum(open, 'vaegtet')), [`${nf0.format(open.length)} åbne · uvægtet ${F.mio(pipeSum(open, 'vaerdi'))}`, udenChance ? h('b', { text: ` · ${udenChance} uden vinderchance` }) : '']),
+    tile('Rammepotentiale', F.mio(pipeSum(aktive, 'rest')), `Rest på ${nf0.format(aktive.length)} aktive rammeaftale${aktive.length === 1 ? '' : 'r'}, ikke i pipelinen`),
+    tile(`Vundet i ${year}`, F.mio(pipeSum(vundneAar, 'vaerdi')), `${nf0.format(vundneAar.length)} ${vundneAar.length === 1 ? 'opgave eller miniudbud' : 'opgaver og miniudbud'}`),
+    tile('Frister næste 14 dage', nf0.format(n14), nOver ? h('b', { text: `${nf0.format(nOver)} overskredne` }) : 'Ingen overskredne'));
+  const rows = pipeFilter(all);
+  $('#pipe-count').textContent = Store.mode() !== 'supabase' ? 'Pipeline gemmes i Supabase. Log ind for at se og oprette leads.'
+    : !all.length ? `Ingen leads i ${scopeLabel()} endnu. Klik på "Nyt lead" for at oprette det første.`
+    : `Viser ${nf0.format(rows.length)} af ${nf0.format(all.length)} i ${scopeLabel()}.` + (S.pipeView === 'tavle' ? ' Træk et kort til en anden fase for at flytte det.' : ' Klik på en kolonne for at sortere.');
+  $('#pipe-board').hidden = S.pipeView !== 'tavle';
+  $('#pipe-tblbox').hidden = S.pipeView !== 'tabel';
+  if (S.pipeView === 'tavle') drawPipeBoard(rows); else drawPipeTable(rows);
+}
+function pipeCard(r) {
+  const tag = r.type === 'rammeaftale' ? h('span', { class: 'ptag ramme', text: 'Ramme' }) : r.type === 'miniudbud' ? h('span', { class: 'ptag', text: 'Miniudbud' }) : null;
+  const kids = [];
+  let val;
+  if (r.type === 'rammeaftale') {
+    val = [h('div', { class: 'pc-v', text: `Andel ${F.mio(r.vaerdi) || '–'}${r.andel != null ? ` (${nf0.format(r.andel * 100)} %)` : ''}${r.antal_vindere ? ` · ${nf0.format(r.antal_vindere)} vindere` : ''}` }),
+      r.aaben ? h('div', { class: 'pc-s', text: `Chance ${F.pct(r.chance) || '–'} · vægtet ${F.mio(r.vaegtet) || '–'}` }) : null,
+      r.fase === 'vundet' ? h('div', { class: 'pc-v', text: r.udloebet ? `Udløbet ${F.date(r.x.aftale_slut)}` : `Rest ${F.mio(r.rest)} · vundet ${F.mio(r.vundetMini)}` }) : null];
+    if (r.kids.length) kids.push(h('details', { onclick: (e) => e.stopPropagation() }, h('summary', { text: `${r.kids.length} miniudbud` }),
+      h('ul', {}, r.kids.map((k) => h('li', { text: `${pTitle(k.p)} · ${PFASE[k.fase] || k.fase}${isNum(k.honorar) ? ' · ' + F.mio(Number(k.honorar)) : ''}` })))));
+  } else {
+    val = [h('div', { class: 'pc-v', text: `${F.mio(r.vaerdi) || 'Honorar ikke angivet'}${r.aaben && r.chance != null ? ` · ${F.pct(r.chance)}` : ''}` })];
+  }
+  const card = h('div', { class: 'pcard t-' + r.type, draggable: 'true', tabindex: '0', role: 'button', 'data-id': r.id, title: r.bemaerkning || null },
+    h('div', { class: 'pc-s' }, tag, r.nr || 'Uden nummer'),
+    h('div', { class: 'pc-t', text: r.navn }),
+    (r.kunde || r.pl || r.po) ? h('div', { class: 'pc-s', text: [r.kunde, r.pl ? 'PL ' + r.pl : '', r.po ? 'PA ' + r.po : ''].filter(Boolean).join(' · ') }) : null,
+    r.type === 'miniudbud' && r.ramme ? h('div', { class: 'pc-s', text: 'Under ' + r.ramme }) : null,
+    ...val,
+    r.frist ? h('div', { class: 'pc-f' + (r.over ? ' over' : r.snart ? ' snart' : ''), text: `${r.fristL}-frist ${F.date(r.frist)}${r.over ? ` (${-r.dage} ${r.dage === -1 ? 'dag' : 'dage'} over)` : r.dage === 0 ? ' (i dag)' : ''}` }) : null,
+    !r.aaben && r.resultat ? h('div', { class: 'pc-s', text: `${r.faseL} ${F.date(r.resultat)}` }) : null,
+    ...kids);
+  card.addEventListener('click', () => pipeEdit(r.x));
+  card.addEventListener('keydown', (e) => { if (e.key === 'Enter') pipeEdit(r.x); });
+  card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', r.id); e.dataTransfer.effectAllowed = 'move'; card.classList.add('dragging'); });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  return card;
+}
+function drawPipeBoard(rows) {
+  const faser = { aabne: ['lead', 'pq', 'tilbud'], vundne: ['vundet'], tabte: ['tabt', 'no bid'], alle: PFASER.map(([k]) => k) }[S.pipeChip];
+  // Inden for en fase: overskredne og nærmeste frist først, derefter størst vægtet værdi
+  const order = (a, b) => (a.frist && b.frist ? a.frist.localeCompare(b.frist) : a.frist ? -1 : b.frist ? 1 : 0) || num(b.vaegtet ?? b.vaerdi) - num(a.vaegtet ?? a.vaerdi);
+  $('#pipe-board').replaceChildren(...faser.map((f) => {
+    const rs = rows.filter((r) => r.fase === f).sort(order);
+    const sum = pOpen(f) ? `vægtet ${F.mio(pipeSum(rs, 'vaegtet')) || '0'}` : `værdi ${F.mio(pipeSum(rs.filter((r) => r.type !== 'rammeaftale'), 'vaerdi')) || '0'}`;
+    const col = h('div', { class: 'pcol', 'data-fase': f },
+      h('div', { class: 'pcol-h' }, h('b', { text: PFASE[f] }), h('span', { text: `${nf0.format(rs.length)} · ${sum}` })),
+      ...(rs.length ? rs.map(pipeCard) : [h('div', { class: 'empty', text: 'Ingen' })]));
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drop'); });
+    col.addEventListener('dragleave', () => col.classList.remove('drop'));
+    col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('drop'); pipeMove(e.dataTransfer.getData('text/plain'), f); });
+    return col;
+  }));
+}
+function drawPipeTable(rows) {
+  const k = S.sorts.pipe;
+  const sorted = [...rows].sort(k.k === 'frist'
+    ? (a, b) => (a.frist && b.frist ? a.frist.localeCompare(b.frist) * k.d : a.frist ? -1 : b.frist ? 1 : 0) || a.faseN - b.faseN
+    : (a, b) => cmp(k.k, k.d)(a, b) || a.faseN - b.faseN);
+  table($('#t-pipe'), [
+    { k: 'typeL', l: 'Type', cell: (td, r) => { td.replaceChildren(h('span', { class: 'ptag' + (r.type === 'rammeaftale' ? ' ramme' : ''), text: r.typeL })); } },
+    { k: 'faseN', l: 'Fase', f: (v, r) => r.faseL },
+    { k: 'nr', l: 'Nummer' },
+    { k: 'navn', l: 'Titel', cls: 'name' },
+    { k: 'kunde', l: 'Kunde', sec: 1 },
+    { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA', sec: 1 },
+    { k: 'kilde', l: 'Kilde', sec: 1 },
+    { k: 'vaerdi', l: 'Værdi (tDKK)', num: 1, f: F.tkr, title: 'Honorar. Rammeaftale: vores forventede andel' },
+    { k: 'chance', l: 'Chance', num: 1, f: F.pct },
+    { k: 'vaegtet', l: 'Vægtet (tDKK)', num: 1, f: F.tkr },
+    { k: 'frist', l: 'Næste frist', f: (v, r) => (v ? `${r.fristL} ${F.date(v)}` : ''), cell: (td, r) => { if (r.over) td.classList.add('neg'); } },
+    { k: 'opstart', l: 'Opstart', f: (v) => (v ? F.date(v) : ''), sec: 1 },
+    { k: 'rest', l: 'Rammerest (tDKK)', num: 1, f: F.tkr, title: 'Rest på vundne, aktive rammeaftaler: andel minus vundne miniudbud', sec: 1 },
+    { k: 'ramme', l: 'Under rammeaftale', sec: 1 },
+  ], sorted, { sortKey: 'pipe', onClick: (r) => pipeEdit(r.x), rowClass: (r) => (r.aaben ? '' : 'closed') });
+  if (!sorted.length) $('#t-pipe tbody').append(h('tr', {}, h('td', { colspan: 15, class: 'note', text: 'Ingen punkter matcher valget.' })));
+}
+async function pipeAct(fn, ok) {
+  try { await fn(); await loadPipe(); render(); if (ok) toast(ok); }
+  catch (e) { console.error(e); toast(pipeErr(e), true); }
+}
+const pipeErr = (e) => {
+  const m = String(e.message || e);
+  if (/projekt_salgsnummer_key/.test(m)) return 'Salgsnummeret findes allerede på et andet projekt. Vælg et andet nummer. (klik for at lukke)';
+  if (/projekt_identifikation/.test(m)) return 'Skriv en arbejdstitel. (klik for at lukke)';
+  return 'Kunne ikke gemme: ' + m + ' (klik for at lukke)';
+};
+// Træk og slip mellem faser. Vundet åbner formularen, så ERP-nummeret kan skrives.
+function pipeMove(id, fase) {
+  const x = (S.pipe || []).find((y) => y.id === id);
+  if (!x || x.fase === fase) return;
+  if (fase === 'vundet') { pipeEdit(x, { fase: 'vundet' }); return; }
+  const patch = { fase, resultat_dato: pOpen(fase) ? null : x.resultat_dato || cphDay(Date.now()) };
+  pipeAct(() => Store.pipePatch(id, patch), `${pTitle(x.p)} flyttet til ${PFASE[fase]}`);
+}
+const pdlg = $('#pdlg');
+$('#pdlg-close').addEventListener('click', () => pdlg.close());
+function pipeEdit(x, preset = {}) {
+  if (Store.mode() !== 'supabase') { toast('Pipeline gemmes i Supabase. Log ind for at oprette leads.'); return; }
+  const ny = !x, p = x?.p || {};
+  const v = { type: 'opgave', fase: 'lead', ...(x || {}), ...preset };
+  const firstBu = S.bus.size === 1 ? [...S.bus][0] : '';
+  const opts = (list, cur) => list.map(([k, l]) => { const o = h('option', { value: k, text: l }); if (k === cur) o.selected = true; return o; });
+  const dl = (id, vals) => h('datalist', { id }, [...new Set(vals.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'da')).map((t) => h('option', { value: t })));
+  const inp = (id, val, attrs = {}) => { const e = h('input', { id, type: 'text', autocomplete: 'off', ...attrs }); e.value = val ?? ''; return e; };
+  const pctIn = (id, frac) => inp(id, isNum(frac) ? String(Math.round(Number(frac) * 1000) / 10).replace('.', ',') : '', { inputmode: 'decimal', placeholder: '%' });
+  const tIn = (id, kr) => inp(id, isNum(kr) ? String(Math.round(Number(kr) / 100) / 10).replace('.', ',') : '', { inputmode: 'decimal', placeholder: 'tDKK' });
+  const L = (text, el, cls) => h('label', { class: cls || null }, text, el);
+  const rammer = (S.pipe || []).filter((y) => y.type === 'rammeaftale' && y.id !== x?.id);
+  const fType = h('select', { id: 'pf-type' }, opts(Object.entries(PTYPE), v.type));
+  const fFase = h('select', { id: 'pf-fase' }, opts(PFASER, v.fase));
+  const fRamme = h('select', { id: 'pf-ramme' }, h('option', { value: '', text: 'Vælg rammeaftale' }), rammer.map((y) => { const o = h('option', { value: y.id, text: pTitle(y.p) + (y.p?.salgsnummer ? ` (${y.p.salgsnummer})` : '') }); if (y.id === v.ramme_id) o.selected = true; return o; }));
+  const fTitel = inp('pf-titel', p.arbejdstitel || p.titel || '', { required: '' });
+  const fSalg = inp('pf-salg', p.salgsnummer || '');
+  const fKunde = inp('pf-kunde', p.kunde || '', { list: 'pf-kunder' });
+  const fBu = inp('pf-bu', ny ? firstBu || 'DSGN' : p.bu || '', { list: 'pf-bus' });
+  const fPl = inp('pf-pl', ny ? (S.pls.size === 1 ? [...S.pls][0] : '') : p.pl || '', { list: 'pf-pls' });
+  const fPo = inp('pf-po', ny ? (S.pas.size === 1 ? [...S.pas][0] : '') : p.po || '', { list: 'pf-pas' });
+  const fKilde = inp('pf-kilde', v.kilde || '', { list: 'pf-kilder' });
+  const fChance = pctIn('pf-chance', v.vinderchance);
+  const fHon = tIn('pf-hon', v.honorar);
+  const fRv = tIn('pf-rv', v.ramme_vaerdi);
+  const fVind = inp('pf-vind', v.antal_vindere ?? '', { inputmode: 'numeric', placeholder: 'fx 4' });
+  const fAndel = pctIn('pf-andel', v.andel);
+  const fErp = inp('pf-erp', '', { inputmode: 'numeric', placeholder: 'fx 10431234' });
+  const fNote = h('textarea', { id: 'pf-note', rows: 3 }); fNote.value = v.bemaerkning || '';
+  const sum = h('div', { class: 'pf-sum', 'aria-live': 'polite' });
+  const g = {
+    opgave: h('div', { class: 'pf-grid' }, L('Honorar (tDKK)', fHon)),
+    mini: h('div', { class: 'pf-grid' }, L('Rammeaftale', fRamme)),
+    ramme: h('div', { class: 'pf-grid' }, L('Aftalens samlede værdi (tDKK)', fRv), L('Antal vindere', fVind), L('Vores andel (%)', fAndel),
+      L('Aftale start', dmyField('pf-astart', pDay(v.aftale_start), 'Aftale start')), L('Aftale slut', dmyField('pf-aslut', pDay(v.aftale_slut), 'Aftale slut'))),
+    erp: h('div', { class: 'pf-grid' }, L('ERP-projektnummer (valgfrit)', fErp), h('p', { class: 'note', style: 'margin:0;align-self:end', text: 'Findes nummeret allerede fra ERP-udtrækket, flyttes leadets oplysninger over på det projekt.' })),
+  };
+  const chanceL = h('span', { text: 'Vinderchance (%)' });
+  const parseN = (t) => { const s = String(t || '').trim().replace(/\s/g, '').replace(/\./g, '').replace(',', '.'); return s === '' ? null : Number.isFinite(Number(s)) ? Number(s) : NaN; };
+  const sync = () => {
+    const t = fType.value, f = fFase.value;
+    g.opgave.hidden = t === 'rammeaftale'; g.mini.hidden = t !== 'miniudbud'; g.ramme.hidden = t !== 'rammeaftale';
+    g.erp.hidden = !(f === 'vundet' && t !== 'rammeaftale' && !p.projektnummer);
+    chanceL.textContent = t === 'rammeaftale' ? 'Chance for at komme på aftalen (%)' : 'Vinderchance (%)';
+    const vind = parseN(fVind.value);
+    fAndel.placeholder = vind > 0 ? `${nf1.format(100 / vind)} % (1/${vind})` : '%';
+    const ch = parseN(fChance.value);
+    let val = null, txt;
+    if (t === 'rammeaftale') {
+      const rv = parseN(fRv.value), an = parseN(fAndel.value);
+      const frac = isNum(an) ? an / 100 : vind > 0 ? 1 / vind : null;
+      val = isNum(rv) && frac != null ? rv * 1000 * frac : null;
+      txt = val == null ? 'Udfyld aftalens værdi og antal vindere for at se vores andel.'
+        : f === 'vundet' ? `Vores andel ${F.mio(val)}. Rammeaftalen er vundet, så resten står som rammepotentiale og tæller ikke i pipelinen.`
+        : pOpen(f) ? `Vores andel ${F.mio(val)}${isNum(ch) ? ` × ${nf0.format(ch)} % = ${F.mio(val * ch / 100)} i den vægtede pipeline` : '. Udfyld chancen for at tælle med i den vægtede pipeline.'}`
+        : `Vores andel ${F.mio(val)}. Tæller ikke i pipelinen.`;
+    } else {
+      const hon = parseN(fHon.value); val = isNum(hon) ? hon * 1000 : null;
+      txt = val == null ? 'Udfyld honoraret for at se værdien i pipelinen.'
+        : pOpen(f) ? `Honorar ${F.mio(val)}${isNum(ch) ? ` × ${nf0.format(ch)} % = ${F.mio(val * ch / 100)} i den vægtede pipeline` : '. Udfyld vinderchancen for at tælle med i den vægtede pipeline.'}`
+        : f === 'vundet' ? `Honorar ${F.mio(val)} vundet${t === 'miniudbud' ? ' og trukket fra rammeaftalens rest' : ''}.` : `Honorar ${F.mio(val)}. Tæller ikke i pipelinen.`;
+    }
+    sum.textContent = txt;
+  };
+  [fType, fFase].forEach((e) => e.addEventListener('change', sync));
+  [fHon, fRv, fVind, fAndel, fChance].forEach((e) => e.addEventListener('input', sync));
+  const save = async () => {
+    const titel = fTitel.value.trim();
+    if (!titel) { fTitel.focus(); toast('Skriv en arbejdstitel'); return; }
+    const t = fType.value, f = fFase.value;
+    const nums = { chance: parseN(fChance.value), hon: parseN(fHon.value), rv: parseN(fRv.value), vind: parseN(fVind.value), andel: parseN(fAndel.value) };
+    if (Object.values(nums).some((n) => Number.isNaN(n))) { toast('Tal skal skrives som fx 1.250 eller 12,5'); return; }
+    if (isNum(nums.chance) && (nums.chance < 0 || nums.chance > 100)) { toast('Vinderchancen skal være mellem 0 og 100 %'); fChance.focus(); return; }
+    if (isNum(nums.andel) && (nums.andel < 0 || nums.andel > 100)) { toast('Andelen skal være mellem 0 og 100 %'); fAndel.focus(); return; }
+    if (isNum(nums.vind) && (nums.vind < 1 || !Number.isInteger(nums.vind))) { toast('Antal vindere skal være et helt tal på mindst 1'); fVind.focus(); return; }
+    if (t === 'miniudbud' && !fRamme.value) { toast('Vælg den rammeaftale, miniudbuddet hører under'); fRamme.focus(); return; }
+    const d = {};
+    for (const [k, id, lab] of [['pq', 'pf-pq', 'PQ-frist'], ['tb', 'pf-tb', 'Tilbudsfrist'], ['op', 'pf-op', 'Forventet opstart'], ['as', 'pf-astart', 'Aftale start'], ['ae', 'pf-aslut', 'Aftale slut']]) {
+      const r = readDMY(id, lab); if (!r.ok) return; d[k] = r.iso;
+    }
+    const prj = { arbejdstitel: titel, salgsnummer: fSalg.value.trim() || null, kunde: fKunde.value.trim() || null, bu: fBu.value.trim() || null, pl: fPl.value.trim().toUpperCase() || null, po: fPo.value.trim().toUpperCase() || null };
+    const ramme = t === 'rammeaftale';
+    const pipe = {
+      type: t, fase: f, kilde: fKilde.value.trim() || null, vinderchance: isNum(nums.chance) ? nums.chance / 100 : null,
+      honorar: ramme ? null : isNum(nums.hon) ? nums.hon * 1000 : null,
+      ramme_id: t === 'miniudbud' ? fRamme.value : null,
+      ramme_vaerdi: ramme && isNum(nums.rv) ? nums.rv * 1000 : null, antal_vindere: ramme && isNum(nums.vind) ? nums.vind : null,
+      andel: ramme && isNum(nums.andel) ? nums.andel / 100 : null, aftale_start: ramme ? d.as : null, aftale_slut: ramme ? d.ae : null,
+      pq_frist: d.pq, tilbudsfrist: d.tb, forventet_opstart: d.op, bemaerkning: fNote.value.trim() || null,
+      resultat_dato: pOpen(f) ? null : (v.fase === f && x?.resultat_dato) || cphDay(Date.now()),
+    };
+    const erp = fErp.value.trim();
+    if (erp && !/^\d{6,10}$/.test(erp)) { toast('ERP-projektnummeret skal være 6 til 10 cifre'); fErp.focus(); return; }
+    btnSave.disabled = true;
+    await pipeAct(async () => {
+      const pid = await Store.pipeSave(x?.id, x?.projekt_id, prj, pipe);
+      if (f === 'vundet' && erp && !p.projektnummer) await Store.pipeWon(pid, erp);
+      pdlg.close();
+    }, ny ? `${titel} er oprettet` : f === 'vundet' && v.fase !== 'vundet' ? `${titel} er vundet${erp ? ' og har fået nummer ' + erp : ''}` : `${titel} er gemt`);
+    btnSave.disabled = false;
+  };
+  const btnSave = h('button', { class: 'btn primary', type: 'button', text: ny ? 'Opret' : 'Gem', onclick: save });
+  const canDel = !ny && !p.projektnummer;
+  const btnDel = canDel ? h('button', { class: 'btn danger', type: 'button', text: 'Slet', onclick: () => {
+    const nk = (S.pipe || []).filter((y) => y.ramme_id === x.id).length;
+    if (!confirm(`Slet ${pTitle(p)}?${nk ? ` De ${nk} miniudbud under rammeaftalen bliver stående uden rammeaftale.` : ''} Det kan ikke fortrydes.`)) return;
+    pipeAct(async () => { await Store.pipeDelete(x.projekt_id); pdlg.close(); }, `${pTitle(p)} er slettet`);
+  } }) : null;
+  $('#pdlg-title').textContent = ny ? 'Nyt lead' : `${PTYPE[v.type] || 'Lead'}: ${pTitle(p)}`;
+  const form = h('div', { class: 'form' },
+    dl('pf-kunder', (S.pipe || []).map((y) => y.p?.kunde)), dl('pf-bus', S.P.map((r) => r.bu)), dl('pf-pls', S.P.map((r) => r.pl)), dl('pf-pas', S.P.map((r) => r.po)), dl('pf-kilder', [...PKILDER, ...(S.pipe || []).map((y) => y.kilde)]),
+    h('div', { class: 'pf-grid' }, L('Type', fType), L('Fase', fFase), L(h('span', {}, 'Arbejdstitel ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fTitel), L('Salgs- eller midl. nummer', fSalg)),
+    p.projektnummer ? h('p', { class: 'note', style: 'margin:0', text: `ERP-projektnummer ${p.projektnummer}. Titel, BU, PL og PA opdateres fra ERP-udtrækket.` }) : null,
+    h('div', { class: 'pf-grid' }, L('Kunde', fKunde), L('BU', fBu), L('PL', fPl), L('PA', fPo)),
+    h('div', { class: 'pf-grid' }, L('Kilde', fKilde), h('label', {}, chanceL, fChance)),
+    g.opgave, g.mini, g.ramme,
+    h('div', { class: 'pf-grid' }, L('PQ-frist', dmyField('pf-pq', pDay(v.pq_frist), 'PQ-frist')), L('Tilbudsfrist', dmyField('pf-tb', pDay(v.tilbudsfrist), 'Tilbudsfrist')), L('Forventet opstart', dmyField('pf-op', pDay(v.forventet_opstart), 'Forventet opstart'))),
+    g.erp,
+    L('Bemærkning', fNote),
+    sum,
+    h('div', { class: 'pf-acts' }, btnSave, h('button', { class: 'btn', type: 'button', text: 'Annullér', onclick: () => pdlg.close() }), h('span', { class: 'sp' }), btnDel));
+  $('#pdlg-b').replaceChildren(form);
+  sync();
+  pdlg.showModal();
+  (preset.fase === 'vundet' && !g.erp.hidden ? fErp : ny ? fTitel : fFase).focus();
+}
+$('#pipe-new').addEventListener('click', () => pipeEdit(null));
+$$('.chip[data-pchip]').forEach((b) => b.addEventListener('click', () => { S.pipeChip = b.dataset.pchip; render(); }));
+$$('.seg [data-pipeview]').forEach((b) => b.addEventListener('click', () => { S.pipeView = b.dataset.pipeview; ls.set('pd.pipeview', S.pipeView); render(); }));
+$('#pipe-type').addEventListener('change', (e) => { S.pipeType = e.target.value; render(); });
+$('#pipe-q').addEventListener('input', (e) => { S.pipeQ = e.target.value.trim(); render(); });
 
 /* ----- Rapport til PA ----- */
 const RP = () => S.rp;
@@ -3367,7 +3756,7 @@ function buildXlsx(sheets) {
 const download = (blob, name) => { const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 
 /* ----- Mine data: saml alt egenproduceret ----- */
-const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument'];
+const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline'];
 async function collectOwnData(onlyScope) {
   const by = new Map(S.P.map((r) => [r.projekt, r]));
   const enrich = (x) => {
@@ -3386,7 +3775,7 @@ async function collectOwnData(onlyScope) {
     D.noter = ls.get('pd.notes', []).map(enrich).filter(keep);
     D.fokus = Object.entries(ls.get('pd.fokus', {})).map(([projekt, v]) => enrich({ projekt, ...v })).filter(keep);
     D.info = Object.entries(ls.get('pd.info', {})).map(([projekt, v]) => enrich({ projekt, ...v })).filter(keep);
-    ['bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'projekter'].forEach((m) => { D[m] = []; });
+    ['bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'projekter'].forEach((m) => { D[m] = []; });
   }
   D.regler = S.rules.map((x) => ({ regel: x.regel, niveau: x.niveau, navn: x.navn, betingelse: x.tekst(x.g, x.g2), graense: x.g, graense2: x.g2 ?? null, standard: RULES_DEFAULT.find((y) => y.regel === x.regel).g }));
   return D;
@@ -3400,6 +3789,7 @@ const EX_SHEETS = [
   ['Ændringslog', 'aendring', [{ l: 'Nr', k: 'nr', t: 'num', w: 6 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Beskrivelse', k: 'beskrivelse', w: 50 }, { l: 'Årsag', k: 'aarsag', w: 14 }, { l: 'Beløb', k: 'beloeb', t: 'num', w: 12 }, { l: 'Timer', k: 'timer', t: 'num', w: 8 }, { l: 'Status', k: 'status', w: 12 }, { l: 'Registreret', k: 'registreret', t: 'date', w: 12 }, { l: 'Besluttet', k: 'besluttet', t: 'date', w: 12 }]],
   ['Kvalitetsplan', 'kvalitet', [{ l: 'Emne', k: 'emne', w: 30 }, { l: 'Krav', k: 'krav', w: 50 }, { l: 'Ansvarlig', k: 'ansvarlig', w: 12 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }, { l: 'Dokument', k: 'dokument_url', w: 40 }]],
   ['Milepæle', 'milepael', [{ l: 'Milepæl', k: 'navn', w: 34 }, { l: 'Planlagt', k: 'planlagt', t: 'date', w: 12 }, { l: 'Prognose', k: 'prognose', t: 'date', w: 12 }, { l: 'Faktisk', k: 'faktisk', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }]],
+  ['Pipeline', 'pipeline', [{ l: 'Type', k: 'type', w: 12 }, { l: 'Fase', k: 'fase', w: 9 }, { l: 'Kunde', k: 'kunde', w: 24 }, { l: 'Kilde', k: 'kilde', w: 16 }, { l: 'Honorar (DKK)', k: 'honorar', t: 'num', w: 14 }, { l: 'Vinderchance', k: 'vinderchance', t: 'num', w: 12 }, { l: 'Rammens værdi (DKK)', k: 'ramme_vaerdi', t: 'num', w: 16 }, { l: 'Antal vindere', k: 'antal_vindere', t: 'num', w: 10 }, { l: 'Andel', k: 'andel', t: 'num', w: 8 }, { l: 'Aftale start', k: 'aftale_start', t: 'date', w: 12 }, { l: 'Aftale slut', k: 'aftale_slut', t: 'date', w: 12 }, { l: 'Under rammeaftale', k: 'ramme_navn', w: 28 }, { l: 'PQ-frist', k: 'pq_frist', t: 'date', w: 12 }, { l: 'Tilbudsfrist', k: 'tilbudsfrist', t: 'date', w: 12 }, { l: 'Forventet opstart', k: 'forventet_opstart', t: 'date', w: 14 }, { l: 'Resultatdato', k: 'resultat_dato', t: 'date', w: 12 }, { l: 'Bemærkning', k: 'bemaerkning', w: 50 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Dokumenter', 'dokument', [{ l: 'Type', k: 'type', w: 14 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Link', k: 'url', w: 50 }]],
 ];
 function ownDataSheets(D) {
@@ -3506,6 +3896,7 @@ async function ensureLogin() {
 async function afterLogin() {
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
+  await loadPipe();
   rebuild(); render();
   $('#btn-logout').title = 'Log ud (' + (Store.session?.user?.email || '') + ')';
 }
@@ -3518,10 +3909,11 @@ async function logOut() {
 
 /* ================= Start ================= */
 (async () => {
-  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'risiko', 'kort', 'rapport', 'opf', 'regler'].includes(h0)) S.tab = h0;
+  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler'].includes(h0)) S.tab = h0;
   await ensureLogin();
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
+  await loadPipe();
   rebuild();
   show(S.tab);
   $('#btn-logout').title = 'Log ud (' + (Store.session?.user?.email || '') + ')';
