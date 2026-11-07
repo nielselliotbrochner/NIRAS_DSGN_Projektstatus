@@ -59,20 +59,25 @@ Triggere: nye projektnumre i et udtræk opretter selv et projekt. PTD opdaterer 
 | `projekt_kvalitet` | 0-mange | Kvalitetsplan (udgave 1): emne, krav, ansvarlig, frist, status |
 | `projekt_milepael` | 0-mange | Projektplan (udgave 1): planlagt, prognose, faktisk dato |
 | `projekt_dokument` | 0-mange | Links til dokumenter, fx i SharePoint |
-| `projekt_pipeline` | 0-1 | Pipeline: type (opgave, rammeaftale, miniudbud), fase (lead, PQ, tilbud, vundet, tabt, no bid), kilde, honorar, vinderchance, PQ- og tilbudsfrist, forventet opstart. Rammeaftale: samlet værdi, antal vindere, andel, aftaleperiode. Miniudbud: `ramme_id` → rammeaftalens pipeline-række |
+| `projekt_pipeline` | 0-1 | Pipeline: type (opgave, rammeaftale, miniudbud), fase (lead, PQ, tilbud, vundet, tabt, no bid, annulleret), tabt i fase, kilde, teamets honorar, NIRAS-andel, anlægssum, størrelse som oplyst, rolle (TR/UR), partnere, ansvarlige, udbud (delaftaler), vinderchance, PQ- og tilbudsfrist med afleveret-dato, prækvalificeret, forventet opstart. Rammeaftale: samlet værdi, antal vindere, andel, aftaleperiode. Miniudbud: `ramme_id` → rammeaftalens pipeline-række |
 
 Hvert modul har også kolonnen `projekt` med en kopi af projektnummeret, som databasen selv udfylder og retter. Dashboardet kan derfor skrive med projektnummer, og tilbud uden nummer skriver med `projekt_id`.
 
 ## Pipeline og rammeaftaler
 
 - Et lead er en række i `projekt` (salgsnummer eller midlertidigt nummer og arbejdstitel) med én række i `projekt_pipeline`. Fanen Pipeline i dashboardet opretter begge.
-- **Vægtet pipeline** = værdi × vinderchance for åbne punkter (lead, PQ, tilbud).
+- **NIRAS-værdi** = teamets honorar × NIRAS-andel (tom = 100 %). Rammeaftale: aftalens værdi × teamets andel (tom = 1 ÷ antal vindere) × NIRAS-andel.
+- **Vægtet pipeline** = NIRAS-værdi × vinderchance for åbne punkter (lead, PQ, tilbud).
+- **Afleveret:** en PQ eller et tilbud med afleveret-dato står som "afventer svar" i stedet for overskredet frist og får ingen påmindelse. Over 60 dage markeres kortet.
+- **Udfald:** vundet, tabt, no bid og annulleret. `tabt_i` husker, om det skete i PQ eller tilbud. Hitraten tæller vundet og tabt de seneste 12 måneder.
+- **Delaftaler:** hver delaftale er sin egen rammeaftale med samme `udbud`.
+- **Liste og PowerPoint:** fanen Pipeline > Liste viser "Tilbud og PQ'er pr. dato" og kan hentes som .pptx.
 - **Rammeaftale før vundet:** værdien er vores forventede andel = samlet værdi × andel. Står andelen tom, bruges 1 ÷ antal vindere. Vinderchancen er chancen for at komme på aftalen.
 - **Rammeaftale vundet:** tæller ikke i pipelinen. Resten (andel minus vundne miniudbud) står som **rammepotentiale**, så længe aftalen ikke er udløbet.
 - **Miniudbud:** tæller som en almindelig opgave (honorar × chance) og trækkes fra rammens rest, når det er vundet.
 - `pipeline_vundet(projekt_id, ERP-nummer)` sætter fasen til vundet og giver evt. ERP-nummer. Findes nummeret allerede fra ERP-udtrækket, flyttes leadets noter, bid og pipeline over, og leadet lukkes.
 - `pipe_paamindelser(dato)` giver PQ- og tilbudsfrister til påmindelsesmailen kl. 07 dagen før.
-- SQL: `supabase/07_pipeline.sql`.
+- SQL: `supabase/07_pipeline.sql` og `supabase/09_pipeline_felter.sql`.
 
 ## Fra tilbud til projekt
 
