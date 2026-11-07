@@ -117,31 +117,33 @@ grant execute on function public.pipe_paamindelser(date) to service_role;
 
 ------------------------------------------------------------------------
 -- Rammeaftaler og miniudbud
---   type 'rammeaftale': aftalesum, antal_vindere, forventet_andel (tom = aftalesum / antal_vindere), aftale_start/slut.
---     Før vundet tæller forventet andel × vinderchance i den vægtede pipeline.
+--   type 'opgave' (almindeligt lead/PQ/tilbud), 'rammeaftale' eller 'miniudbud'.
+--   Rammeaftale: ramme_vaerdi (samlet aftaleværdi), antal_vindere, andel (0-1; tom = 1 / antal_vindere), aftale_start/slut.
+--     Før vundet tæller ramme_vaerdi × andel × vinderchance i den vægtede pipeline.
 --     Efter vundet tæller den ikke med; resten (andel minus vundne miniudbud) vises som rammepotentiale.
---   type 'miniudbud': ramme_id peger på rammeaftalens projekt; tæller som et almindeligt tilbud (honorar × chance).
+--   Miniudbud: ramme_id peger på rammeaftalens pipeline-række; tæller som en opgave (honorar × chance).
 ------------------------------------------------------------------------
-alter table public.projekt_pipeline
-  add column if not exists type            text not null default 'tilbud',
-  add column if not exists ramme_id        uuid references public.projekt (id) on delete set null,
-  add column if not exists aftalesum       numeric,
-  add column if not exists antal_vindere   integer,
-  add column if not exists forventet_andel numeric,
-  add column if not exists aftale_start    date,
-  add column if not exists aftale_slut     date,
-  add column if not exists bemaerkning     text;
+alter table public.projekt_pipeline add column if not exists type text not null default 'opgave';
+alter table public.projekt_pipeline add column if not exists ramme_id uuid references public.projekt_pipeline (id) on delete set null;
+alter table public.projekt_pipeline add column if not exists ramme_vaerdi numeric;
+alter table public.projekt_pipeline add column if not exists antal_vindere integer;
+alter table public.projekt_pipeline add column if not exists andel numeric;
+alter table public.projekt_pipeline add column if not exists aftale_start date;
+alter table public.projekt_pipeline add column if not exists aftale_slut date;
+alter table public.projekt_pipeline add column if not exists bemaerkning text;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'projekt_pipeline_type_check') then
-    alter table public.projekt_pipeline add constraint projekt_pipeline_type_check check (type in ('tilbud', 'rammeaftale', 'miniudbud'));
+    alter table public.projekt_pipeline add constraint projekt_pipeline_type_check check (type in ('opgave', 'rammeaftale', 'miniudbud'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'projekt_pipeline_andel_check') then
+    alter table public.projekt_pipeline add constraint projekt_pipeline_andel_check check (andel is null or andel between 0 and 1);
   end if;
   if not exists (select 1 from pg_constraint where conname = 'projekt_pipeline_vindere_check') then
     alter table public.projekt_pipeline add constraint projekt_pipeline_vindere_check check (antal_vindere is null or antal_vindere >= 1);
   end if;
-  if not exists (select 1 from pg_constraint where conname = 'projekt_pipeline_ramme_check') then
-    alter table public.projekt_pipeline add constraint projekt_pipeline_ramme_check check (ramme_id is null or ramme_id <> projekt_id);
-  end if;
 end $$;
+alter table public.projekt_pipeline drop constraint if exists projekt_pipeline_ramme_check;
+alter table public.projekt_pipeline add constraint projekt_pipeline_ramme_check check (ramme_id is null or ramme_id <> id);
 create index if not exists projekt_pipeline_ramme_idx on public.projekt_pipeline (ramme_id);
 
 -- Leadets status i stamtabellen følger fasen, så længe det ikke har ERP-nummer
@@ -159,8 +161,9 @@ create or replace trigger pipeline_status after insert or update of fase on publ
 -- Eksport som de øvrige moduler, med rammeaftalens navn
 drop view if exists public.v_eksport_pipeline;
 create view public.v_eksport_pipeline with (security_invoker = true) as
-  select p.projektnummer, p.salgsnummer, coalesce(p.titel, p.arbejdstitel) as projektnavn, p.bu, p.pl, p.po, p.kunde,
-         r.salgsnummer as ramme_salgsnummer, coalesce(r.titel, r.arbejdstitel) as ramme_navn, m.*
+  select p.projektnummer, p.salgsnummer, coalesce(p.titel, p.arbejdstitel) as projektnavn, p.bu, p.pl, p.po, p.kunde, m.*,
+         rp.salgsnummer as ramme_salgsnummer, coalesce(rp.titel, rp.arbejdstitel) as ramme_navn
   from public.projekt_pipeline m join public.projekt p on p.id = m.projekt_id
-  left join public.projekt r on r.id = m.ramme_id;
+  left join public.projekt_pipeline r on r.id = m.ramme_id
+  left join public.projekt rp on rp.id = r.projekt_id;
 grant select on public.v_eksport_pipeline to authenticated;
