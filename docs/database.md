@@ -80,6 +80,14 @@ Hvert modul har også kolonnen `projekt` med en kopi af projektnummeret, som dat
 - `pipe_paamindelser(dato)` giver PQ- og tilbudsfrister til påmindelsesmailen kl. 07 dagen før.
 - SQL: `supabase/07_pipeline.sql` og `supabase/09_pipeline_felter.sql`.
 
+## Personnoter (10. nov. 2026)
+
+- `person_noter`: initialer (som PL/PA i ERP), dato, note, opfølgning, frist, status, koblede projekter (`projektnumre`), oprettet, redigeret. Kolonnen `projekter` (uuid[]) er ubrugt.
+- `note_filer`: filer til en personnote (filnavn, type, størrelse, sti). Filerne ligger i den private bucket `person-filer` (højst 25 MB pr. fil; pdf, billeder, Office, msg, eml, txt, csv) og åbnes med et link, der virker i 5 minutter.
+- Fanen Personer viser panelet, når en eller flere personer er valgt i PL eller PA øverst: nøgletal, ny personnote med filer, og en tidslinje med personnoter og projektnoter fra projekter, hvor personen er PL eller PA i det valgte PTD-udtræk.
+- Opfølgninger fra personnoter står også i fanen Opfølgning og får påmindelse kl. 07 dagen før (`person_paamindelser`).
+- Eksport: `v_eksport_personnoter` og arket Personnoter i "Mine data". SQL: `supabase/11_person_noter.sql`.
+
 ## Fra tilbud til projekt
 
 1. Tilbuddet oprettes i `projekt` med salgsnummer og arbejdstitel (status tilbud). Bid/no bid, noter m.m. kobles på dets id.

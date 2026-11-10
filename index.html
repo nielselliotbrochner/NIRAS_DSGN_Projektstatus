@@ -348,6 +348,29 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .t.plist td { white-space: normal; vertical-align: top; } .t.plist td:first-child { font-weight: 600; min-width: 180px; }
 #t-pipe th:first-child, #t-pipe td:first-child { position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: 1px 0 0 var(--line); max-width: 260px; }
 #t-pipe thead th:first-child { z-index: 2; background: var(--sand-2); }
+/* Personnoter */
+.pn-who { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pn-av { width: 40px; height: 40px; border-radius: 50%; background: var(--deep); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; letter-spacing: .02em; }
+.pn-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 10px 0 12px; }
+.pn-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.pn-e { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: start; }
+.pn-d { font-size: 12px; color: var(--muted); padding-top: 11px; font-variant-numeric: tabular-nums; }
+.entry.pn-p { border-left: 3px solid var(--deep); }
+.pn-files { display: flex; flex-wrap: wrap; gap: 6px; }
+.pn-file { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; color: var(--ink); }
+.pn-file:hover { border-color: var(--sand-3); background: var(--sand-2); }
+.pn-file.new { cursor: default; background: var(--sand-2); }
+.pn-form { background: var(--sand-2); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.pn-form.edit { background: #fff; }
+.pn-form .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
+.pn-form .pf-acts { display: flex; gap: 8px; }
+.pn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .pn-row input { width: 260px; max-width: 100%; }
+.pn-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.pn-drop { border: 1px dashed var(--sand-3); border-radius: var(--r); padding: 12px; text-align: center; font-size: 13px; color: var(--muted); cursor: pointer; background: #fff; }
+.pn-drop.on, .pn-drop:hover, .pn-drop:focus-visible { border-color: var(--red); color: var(--ink); outline: none; }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--deep); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.linkbtn.danger { color: var(--red); }
+@media (max-width: 700px) { .pn-e { grid-template-columns: 1fr; gap: 2px; } .pn-d { padding-top: 0; } }
 .pcolsel { margin: 4px 0 8px; } .pcolsel summary { cursor: pointer; font-size: 13px; color: var(--deep); font-weight: 600; }
 .pcolsel-b { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 0; font-size: 13px; align-items: center; }
 .pcolsel-b label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
@@ -1179,9 +1202,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     <!-- PERSONER -->
     <section class="page" id="pers" hidden>
+      <div class="card" id="pn-card"></div>
       <div class="card">
         <h2>Nøgletal pr. person</h2>
-        <p class="note">PTD og seneste måned i den valgte BU. Klik på en person for at se vedkommendes projekter.</p>
+        <p class="note">PTD og seneste måned i den valgte BU. Klik på en person for at vælge vedkommende i PL eller PA øverst og se personnoterne.</p>
         <div class="chips">
           <button class="chip" type="button" data-role="pl" aria-pressed="true">Projektledere (PL)</button>
           <button class="chip" type="button" data-role="po" aria-pressed="false">Projektansvarlige (PA)</button>
@@ -1943,6 +1967,29 @@ const Store = {
     }
     return pid;
   },
+  /* ----- Personnoter og filer ----- */
+  personNotes(inits) { return this.fetchAll(`/rest/v1/person_noter?initialer=in.(${inits.map((x) => '"' + encodeURIComponent(x) + '"').join(',')})&select=*,filer:note_filer(id,sti,filnavn,mime,stoerrelse,oprettet)&order=dato.desc,oprettet.desc`); },
+  personOpf() { return this.fetchAll('/rest/v1/person_noter?opfoelgning=not.is.null&select=id,initialer,dato,note,opfoelgning,frist,status,oprettet&order=frist'); },
+  async addPersonNote(row) { const r = await this.sbFetch('/rest/v1/person_noter', { method: 'POST', body: JSON.stringify(row) }); return r[0]; },
+  updatePersonNote(id, patch) { return this.sbFetch('/rest/v1/person_noter?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) }); },
+  // Filen lægges i den private bucket person-filer under notens id; navnet gøres sikkert, det oprindelige gemmes i note_filer
+  async uploadNoteFile(noteId, file, mime) {
+    const safe = String(file.name).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.\-]+/g, '_').slice(-80);
+    const sti = `${noteId}/${Date.now()}-${safe}`;
+    await this.sbFetch('/storage/v1/object/person-filer/' + sti, { method: 'POST', headers: { 'Content-Type': mime || 'application/octet-stream', 'x-upsert': 'false' }, body: file });
+    await this.sbFetch('/rest/v1/note_filer', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ person_note_id: noteId, sti, filnavn: file.name, mime, stoerrelse: file.size }) });
+  },
+  // Link, der virker i 5 minutter
+  async fileUrl(sti) { const r = await this.sbFetch('/storage/v1/object/sign/person-filer/' + sti, { method: 'POST', body: JSON.stringify({ expiresIn: 300 }) }); return this.cfg.url.replace(/\/$/, '') + '/storage/v1' + (r.signedURL || r.signedUrl); },
+  async deleteNoteFile(f) {
+    await this.sbFetch('/storage/v1/object/person-filer', { method: 'DELETE', body: JSON.stringify({ prefixes: [f.sti] }) });
+    await this.sbFetch('/rest/v1/note_filer?id=eq.' + f.id, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  },
+  async deletePersonNote(n) {
+    const st = (n.filer || []).map((f) => f.sti);
+    if (st.length) await this.sbFetch('/storage/v1/object/person-filer', { method: 'DELETE', body: JSON.stringify({ prefixes: st }) });
+    await this.sbFetch('/rest/v1/person_noter?id=eq.' + n.id, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  },
   // Seneste bid/no bid pr. projekt: rettes, eller oprettes hvis der ikke er en
   pipeBid(projektId, bidId, beslutning, dato) {
     const body = JSON.stringify({ beslutning, beslutningsdato: dato || null });
@@ -2069,6 +2116,7 @@ const S = {
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
   pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30), pipeColsOpen: false,
+  pnotes: null, pnKey: '', pnEdit: null, pnFiles: [], pnFilter: 'alle', pnMore: 40, pnOpf: [],
 };
 const buOk = (r) => S.bus.size === 0 || S.bus.has(r.bu);
 const inScope = (r) => buOk(r) && (S.pls.size === 0 || S.pls.has(r.pl || '?')) && (S.pas.size === 0 || S.pas.has(r.po || '?'));
@@ -2819,7 +2867,22 @@ function opfRows() {
     const over = !lukket && !!frist && frist < today;
     return { n, id: n.id, projekt: n.projekt, navn: r.navn, pl: r.pl, po: r.po, opfoelgning: n.opfoelgning, note: n.note, frist, oprettet: n.oprettet,
       lukket, over, dage: over ? Math.round((Date.parse(today) - Date.parse(frist)) / 864e5) : null, status: lukket ? 'Lukket' : over ? 'Overskredet' : 'Åben' };
-  }).filter(Boolean);
+  }).filter(Boolean).concat(opfPersonRows(today));
+}
+// Opfølgninger fra personnoter: vises for de valgte personer, eller alle når PL og PA står på Alle
+function opfPersonRows(today) {
+  const pick = new Set([...S.pls, ...S.pas]);
+  return (S.pnOpf || []).filter((n) => !pick.size || pick.has(n.initialer)).map((n) => {
+    const lukket = n.status === 'lukket', frist = n.frist ? String(n.frist).slice(0, 10) : '', over = !lukket && !!frist && frist < today;
+    return { n, id: n.id, kind: 'person', projekt: n.initialer, navn: 'Personnote', pl: S.P.some((r) => r.pl === n.initialer) ? n.initialer : '', po: S.P.some((r) => r.po === n.initialer) ? n.initialer : '',
+      opfoelgning: n.opfoelgning, note: n.note, frist, oprettet: n.dato, lukket, over, dage: over ? Math.round((Date.parse(today) - Date.parse(frist)) / 864e5) : null, status: lukket ? 'Lukket' : over ? 'Overskredet' : 'Åben' };
+  });
+}
+// Gå til en persons panel: vælg personen i PL (eller PA, hvis vedkommende kun er PA)
+function pnGo(init) {
+  const isPl = S.P.some((r) => r.pl === init);
+  S.pls = isPl ? new Set([init]) : new Set(); S.pas = isPl ? new Set() : new Set([init]); S.pnKey = '';
+  rebuild(); show('pers');
 }
 // Standardsortering: overskredne øverst (ældste frist først), så åbne efter frist, åbne uden frist efter skrivedato, til sidst lukkede
 const opfGroup = (x) => (x.over ? 0 : x.lukket ? 3 : x.frist ? 1 : 2);
@@ -2846,17 +2909,181 @@ function drawOpf(all) {
     { k: 'status', l: 'Status', cell: (td, x) => { td.replaceChildren(h('span', { class: 'otag ' + (x.over ? 'od' : x.lukket ? 'cl' : 'op'), text: x.over ? `Overskredet ${x.dage} ${x.dage === 1 ? 'dag' : 'dage'}` : x.status })); } },
     { k: 'frist', l: 'Frist', f: (v) => (v ? F.date(v) : 'Ingen frist'), cell: (td, x) => { if (x.over) td.classList.add('neg'); if (x.frist === today && !x.lukket) td.classList.add('due'); } },
     { k: 'opfoelgning', l: 'Opfølgning', cls: 'wrapc' },
-    { k: 'projekt', l: 'Projekt' },
+    { k: 'projekt', l: 'Projekt', f: (v, x) => (x.kind === 'person' ? 'Person ' + v : v) },
     { k: 'navn', l: 'Navn', cls: 'name', sec: 1 },
     { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA', sec: 1 },
     { k: 'note', l: 'Bemærkning', cls: 'wrapc onote', sec: 1, f: (v) => (v ? (v.length > 140 ? v.slice(0, 140) + ' …' : v) : '') },
     { k: 'oprettet', l: 'Skrevet', f: (v) => F.date(v), sec: 1 },
-    { k: 'act', l: '', cell: (td, x) => { td.replaceChildren(h('button', { class: 'btn small', type: 'button', text: x.lukket ? 'Genåbn' : 'Luk', onclick: (e) => { e.stopPropagation(); act(() => Store.updateNote(x.id, { status: x.lukket ? 'åben' : 'lukket' }), x.lukket ? 'Opfølgningen er genåbnet' : 'Opfølgningen er lukket'); } })); } },
-  ], rows, { sortKey: 'opf', onClick: (x) => openProject(x.projekt), rowClass: (x) => (x.over ? 'od' : x.lukket ? 'closed' : '') });
+    { k: 'act', l: '', cell: (td, x) => { td.replaceChildren(h('button', { class: 'btn small', type: 'button', text: x.lukket ? 'Genåbn' : 'Luk', onclick: (e) => { e.stopPropagation(); (x.kind === 'person' ? pnAct : act)(() => (x.kind === 'person' ? Store.updatePersonNote(x.id, { status: x.lukket ? 'åben' : 'lukket' }) : Store.updateNote(x.id, { status: x.lukket ? 'åben' : 'lukket' })), x.lukket ? 'Opfølgningen er genåbnet' : 'Opfølgningen er lukket'); } })); } },
+  ], rows, { sortKey: 'opf', onClick: (x) => (x.kind === 'person' ? pnGo(x.projekt) : openProject(x.projekt)), rowClass: (x) => (x.over ? 'od' : x.lukket ? 'closed' : '') });
   if (!rows.length) $('#t-opf tbody').append(h('tr', {}, h('td', { colspan: 10, class: 'note', text: all.length ? 'Ingen opfølgninger matcher valget.' : 'Ingen opfølgninger i udvalget.' })));
 }
 $$('.chip[data-ochip]').forEach((b) => b.addEventListener('click', () => { S.ochip = b.dataset.ochip; render(); }));
 $('#opf-q').addEventListener('input', (e) => { S.oq = e.target.value.trim(); render(); });
+
+/* ----- Personnoter: noter på en person (PL/PA) med filer, og tidslinje med projektnoter ----- */
+const PN_EXT = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic', heif: 'image/heif', webp: 'image/webp', gif: 'image/gif',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc: 'application/msword', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xls: 'application/vnd.ms-excel',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', msg: 'application/vnd.ms-outlook', eml: 'message/rfc822', txt: 'text/plain', csv: 'text/csv' };
+const PN_MAX = 25 * 1024 * 1024;
+const pnMime = (f) => PN_EXT[String(f.name).split('.').pop().toLowerCase()] || f.type || '';
+const pnIcon = (m) => (/pdf/.test(m) ? '📄' : /^image\//.test(m) ? '🖼' : /sheet|excel|csv/.test(m) ? '📊' : /outlook|rfc822/.test(m) ? '✉' : '📎');
+const pnSize = (b) => (!b ? '' : b >= 1048576 ? nf1.format(b / 1048576) + ' MB' : nf0.format(Math.max(1, b / 1024)) + ' kB');
+const pnSel = () => [...new Set([...S.pls, ...S.pas])].filter((x) => x && x !== '?').sort();
+async function loadPersonOpf() {
+  if (Store.mode() !== 'supabase') { S.pnOpf = []; return; }
+  try { S.pnOpf = await Store.personOpf(); } catch (e) { S.pnOpf = []; console.warn('Personnoter (opfølgning) kunne ikke hentes', e); }
+}
+async function pnReload() {
+  const sel = pnSel();
+  S.pnotes = sel.length ? await Store.personNotes(sel) : [];
+  await loadPersonOpf();
+}
+async function pnAct(fn, ok) {
+  try { await fn(); await pnReload(); render(); if (ok) toast(ok); }
+  catch (e) { console.error(e); toast('Kunne ikke gemme: ' + (e.message || e) + ' (klik for at lukke)', true); }
+}
+async function pnOpenFile(f) {
+  const w = window.open('', '_blank');
+  try { const url = await Store.fileUrl(f.sti); if (w) w.location = url; else location.href = url; }
+  catch (e) { if (w) w.close(); toast('Filen kunne ikke åbnes: ' + e.message, true); }
+}
+function drawPersonPanel() {
+  const card = $('#pn-card'), sel = pnSel();
+  if (!sel.length) {
+    card.replaceChildren(h('p', { class: 'note', style: 'margin:0', text: 'Vælg en person i PL eller PA øverst, eller klik på en person i tabellen, for at se og skrive personnoter.' }));
+    return;
+  }
+  if (Store.mode() !== 'supabase') { card.replaceChildren(h('p', { class: 'note', style: 'margin:0', text: 'Personnoter gemmes i Supabase. Log ind for at se og skrive dem.' })); return; }
+  const key = sel.join(',');
+  if (S.pnKey !== key) {
+    S.pnKey = key; S.pnotes = null; S.pnEdit = null; S.pnMore = 40;
+    S.pnFilter = S.pls.size && !S.pas.size ? 'pl' : S.pas.size && !S.pls.size ? 'po' : 'alle';
+    Store.personNotes(sel).then((r) => { if (S.pnKey === key) { S.pnotes = r; render(); } }).catch((e) => { S.pnotes = []; toast('Kunne ikke hente personnoter: ' + e.message, true); render(); });
+  }
+  const selSet = new Set(sel);
+  const projs = S.P.filter((r) => buOk(r) && (selSet.has(r.pl) || selSet.has(r.po)));
+  const byNr = new Map(projs.map((r) => [r.projekt, r]));
+  const sum = summarize(projs, (S.months[S.periode]?.rows || []).filter((r) => buOk(r) && (selSet.has(r.pl) || selSet.has(r.po))));
+  // Tidslinje: personnoter + projektnoter fra projekter, hvor de valgte er PL eller PA. Personnoter står med under både Som PL og Som PA.
+  const items = [];
+  (S.pnotes || []).forEach((n) => items.push({ kind: 'person', n, dato: pDay(n.dato), ts: n.oprettet, aaben: !!n.opfoelgning && n.status !== 'lukket' }));
+  S.notes.forEach((n) => {
+    const r = byNr.get(n.projekt); if (!r) return;
+    const roller = [selSet.has(r.pl) ? 'PL' : '', selSet.has(r.po) ? 'PA' : ''].filter(Boolean);
+    items.push({ kind: 'proj', n, r, roller, dato: n.oprettet ? DK.day(n.oprettet) : '', ts: n.oprettet, aaben: !!n.opfoelgning && n.status !== 'lukket' });
+  });
+  items.sort((a, b) => b.dato.localeCompare(a.dato) || String(b.ts).localeCompare(String(a.ts)));
+  const F_ = { alle: () => true, person: (x) => x.kind === 'person', pl: (x) => x.kind === 'person' || x.roller.includes('PL'), po: (x) => x.kind === 'person' || x.roller.includes('PA'), aabne: (x) => x.aaben };
+  const cnt = Object.fromEntries(Object.entries(F_).map(([k, f]) => [k, items.filter(f).length]));
+  const vis = items.filter(F_[S.pnFilter] || F_.alle);
+  const openN = items.filter((x) => x.aaben).length;
+  const tile = (l, v, cls) => h('div', { class: 'tile' }, h('span', { class: 'l', text: l }), h('span', { class: 'v' + (cls ? ' ' + cls : ''), text: v }));
+  const roleTxt = sel.map((p) => { const nPl = projs.filter((r) => r.pl === p).length, nPa = projs.filter((r) => r.po === p).length; return `${p}: PL på ${nPl}, PA på ${nPa}`; }).join(' · ');
+  const chips = [['alle', 'Alle'], ['person', 'Personnoter'], ['pl', 'Som PL'], ['po', 'Som PA'], ['aabne', 'Åbne opfølgninger']].map(([k, l]) =>
+    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(S.pnFilter === k), text: `${l} ${cnt[k]}`, onclick: () => { S.pnFilter = k; S.pnMore = 40; render(); } }));
+  const list = S.pnotes == null ? [h('p', { class: 'note', text: 'Henter personnoter …' })]
+    : vis.length ? vis.slice(0, S.pnMore).map((x) => (x.kind === 'person' && S.pnEdit === x.n.id ? pnForm(x.n, sel, projs) : pnItem(x, byNr)))
+    : [h('p', { class: 'note', text: 'Ingen noter matcher valget.' })];
+  card.replaceChildren(
+    h('div', { class: 'phead' },
+      h('div', { class: 'pn-who' }, ...sel.map((p) => h('span', { class: 'pn-av', text: p })),
+        h('div', {}, h('h2', { style: 'margin:0', text: sel.length === 1 ? `Personnoter · ${sel[0]}` : `Personnoter · ${sel.length} personer` }), h('p', { class: 'note', style: 'margin:0', text: roleTxt }))),
+      h('div', { class: 'pipe-acts' }, h('button', { class: 'btn', type: 'button', text: 'Vis projekter', onclick: () => show('proj') }))),
+    h('div', { class: 'tiles pn-tiles' }, tile('Projekter', nf0.format(projs.length)), tile('Omsætning PTD', F.mio(sum.oms)), tile('TFM', F.tfm(sum.tfm) || '–'),
+      tile('Flag', `${sum.roede} røde · ${sum.gule} gule`, sum.roede ? 'c-red' : ''), tile('Åbne opfølgninger', nf0.format(openN))),
+    S.pnEdit === 'ny' ? pnForm(null, sel, projs) : h('div', {}, h('button', { class: 'btn primary', type: 'button', text: 'Ny personnote', onclick: () => { S.pnEdit = 'ny'; S.pnFiles = []; render(); } })),
+    h('div', { class: 'chips', style: 'margin-top:12px' }, ...chips),
+    h('div', { class: 'pn-list' }, ...list),
+    ...(vis.length > S.pnMore ? [h('button', { class: 'btn small', type: 'button', text: `Vis flere (${vis.length - S.pnMore})`, onclick: () => { S.pnMore += 40; render(); } })] : []));
+}
+function pnItem(x, byNr) {
+  const n = x.n, lukket = n.status === 'lukket', frist = pDay(n.frist), today = cphDay(Date.now());
+  const over = x.aaben && frist && frist < today;
+  const fu = n.opfoelgning ? h('div', { class: 'fu ' + (over ? 'c-red' : lukket ? '' : 'c-amb') },
+    `${lukket ? '✓ ' : '⏱ '}${n.opfoelgning}${frist ? ' · frist ' + F.date(frist) : ''}${lukket ? ' (lukket)' : ''} `,
+    h('button', { class: 'btn small', type: 'button', text: lukket ? 'Genåbn' : 'Luk', onclick: () => (x.kind === 'person'
+      ? pnAct(() => Store.updatePersonNote(n.id, { status: lukket ? 'åben' : 'lukket' }), lukket ? 'Opfølgning genåbnet' : 'Opfølgning lukket')
+      : act(() => Store.updateNote(n.id, { status: lukket ? 'åben' : 'lukket' }), lukket ? 'Opfølgning genåbnet' : 'Opfølgning lukket')) })) : null;
+  if (x.kind === 'proj') {
+    return h('div', { class: 'pn-e' }, h('div', { class: 'pn-d', text: F.date(x.dato) }),
+      h('div', { class: 'entry' + (lukket && !n.note ? ' closed' : '') },
+        h('div', { class: 'meta' }, h('span', { class: 'ptag', text: 'Projektnote · ' + x.roller.join(' og ') }),
+          h('button', { class: 'linkbtn', type: 'button', text: `${x.r.projekt} ${x.r.navn || ''}`, onclick: () => openProject(x.r.projekt) })),
+        n.note ? h('div', { class: 'txt', text: n.note }) : null, fu));
+  }
+  const filer = (n.filer || []).slice().sort((a, b) => String(a.oprettet).localeCompare(String(b.oprettet)));
+  return h('div', { class: 'pn-e' }, h('div', { class: 'pn-d', text: F.date(x.dato) }),
+    h('div', { class: 'entry pn-p' },
+      h('div', { class: 'meta' }, h('span', { class: 'ptag ramme', text: 'Personnote' }), h('b', { text: n.initialer }),
+        n.redigeret ? h('span', { text: 'redigeret ' + F.date(n.redigeret) }) : null,
+        h('span', { style: 'flex:1' }),
+        h('button', { class: 'linkbtn', type: 'button', text: 'Redigér', onclick: () => { S.pnEdit = n.id; S.pnFiles = []; render(); } }),
+        h('button', { class: 'linkbtn danger', type: 'button', text: 'Slet', onclick: () => { if (confirm(`Slet personnoten fra ${F.date(x.dato)}${filer.length ? ` og ${filer.length} fil${filer.length === 1 ? '' : 'er'}` : ''}? Det kan ikke fortrydes.`)) pnAct(() => Store.deletePersonNote(n), 'Personnoten er slettet'); } })),
+      n.note ? h('div', { class: 'txt', text: n.note }) : null, fu,
+      filer.length ? h('div', { class: 'pn-files' }, ...filer.map((f) => h('button', { class: 'pn-file', type: 'button', title: 'Åbn ' + f.filnavn, onclick: () => pnOpenFile(f) }, pnIcon(f.mime) + ' ' + f.filnavn, h('span', { class: 'note', text: ' ' + pnSize(f.stoerrelse) })))) : null,
+      (n.projektnumre || []).length ? h('div', { class: 'meta' }, 'Vedrører', ...n.projektnumre.map((nr) => { const r = byNr.get(nr) || S.P.find((y) => y.projekt === nr); return h('button', { class: 'linkbtn', type: 'button', text: r ? `${nr} ${r.navn || ''}` : nr, onclick: () => (r ? openProject(nr) : null) }); })) : null));
+}
+// Formular til ny eller eksisterende personnote, inkl. filer
+function pnForm(n, sel, projs) {
+  const ny = !n;
+  const who = h('select', { id: 'pn-who' }, sel.map((p) => { const o = h('option', { value: p, text: p }); if (p === (n?.initialer || sel[0])) o.selected = true; return o; }));
+  if (n && !sel.includes(n.initialer)) who.append(h('option', { value: n.initialer, text: n.initialer, selected: '' }));
+  const note = h('textarea', { id: 'pn-note', rows: 3, placeholder: 'Fx aftaler, iagttagelser eller status på tværs af personens projekter' }); note.value = n?.note || '';
+  const fu = h('input', { id: 'pn-fu', type: 'text', placeholder: 'Opfølgning (valgfri)' }); fu.value = n?.opfoelgning || '';
+  let nrs = [...(n?.projektnumre || [])];
+  const chipBox = h('span', { class: 'pn-chips' });
+  const drawChips = () => chipBox.replaceChildren(...nrs.map((nr) => { const r = projs.find((y) => y.projekt === nr) || S.P.find((y) => y.projekt === nr); return h('button', { class: 'chip', type: 'button', 'aria-pressed': 'true', title: 'Fjern', text: `${nr} ${r?.navn || ''} ×`, onclick: () => { nrs = nrs.filter((y) => y !== nr); drawChips(); } }); }));
+  drawChips();
+  const addP = h('input', { id: 'pn-addp', type: 'text', list: 'pn-projl', placeholder: '+ projekt (nummer eller navn)', autocomplete: 'off' });
+  const tryAdd = () => { const v = addP.value.trim(); if (!v) return; const nr = (v.match(/^\d{6,10}/) || [])[0] || projs.find((r) => (r.navn || '').toLowerCase() === v.toLowerCase())?.projekt; if (nr && !nrs.includes(nr)) { nrs.push(nr); drawChips(); } addP.value = ''; };
+  addP.addEventListener('change', tryAdd); addP.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryAdd(); } });
+  const pending = h('div', { class: 'pn-files' });
+  const drawPending = () => pending.replaceChildren(...(S.pnFiles || []).map((f, i) => h('span', { class: 'pn-file new' }, pnIcon(pnMime(f)) + ' ' + f.name + ' ', h('span', { class: 'note', text: pnSize(f.size) }), h('button', { class: 'linkbtn', type: 'button', text: '×', title: 'Fjern', onclick: () => { S.pnFiles.splice(i, 1); drawPending(); } }))));
+  const addFiles = (list) => {
+    for (const f of list) {
+      if (f.size > PN_MAX) { toast(`${f.name} er større end 25 MB`, true); continue; }
+      if (!pnMime(f) || !Object.values(PN_EXT).includes(pnMime(f))) { toast(`${f.name}: filtypen kan ikke gemmes (pdf, billeder, Office, msg, txt)`, true); continue; }
+      S.pnFiles.push(f);
+    }
+    drawPending();
+  };
+  const fileIn = h('input', { id: 'pn-file', type: 'file', multiple: '', accept: Object.keys(PN_EXT).map((x) => '.' + x).join(','), style: 'display:none' });
+  fileIn.addEventListener('change', () => { addFiles([...fileIn.files]); fileIn.value = ''; });
+  const drop = h('div', { class: 'pn-drop', tabindex: '0', role: 'button', text: 'Træk filer hertil eller klik for at vælge · pdf, jpg, png, docx, xlsx, msg · højst 25 MB pr. fil' });
+  drop.addEventListener('click', () => fileIn.click());
+  drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileIn.click(); } });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('on'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('on'));
+  drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('on'); addFiles([...e.dataTransfer.files]); });
+  drawPending();
+  const existing = (n?.filer || []).length ? h('div', { class: 'pn-files' }, ...(n.filer || []).map((f) => h('span', { class: 'pn-file' }, pnIcon(f.mime) + ' ' + f.filnavn + ' ',
+    h('button', { class: 'linkbtn danger', type: 'button', text: 'slet', onclick: () => { if (confirm(`Slet filen ${f.filnavn}?`)) pnAct(() => Store.deleteNoteFile(f), 'Filen er slettet'); } })))) : null;
+  const btn = h('button', { class: 'btn primary', type: 'button', text: ny ? 'Gem note' : 'Gem ændringer' });
+  btn.addEventListener('click', async () => {
+    const d = readDMY('pn-dato', 'Dato'); if (!d.ok) return;
+    if (!d.iso) { toast('Noten skal have en dato'); return; }
+    const fr = readDMY('pn-frist', 'Frist'); if (!fr.ok) return;
+    if (!note.value.trim() && !fu.value.trim() && !(S.pnFiles || []).length) { toast('Skriv en note, en opfølgning eller vedhæft en fil'); note.focus(); return; }
+    tryAdd();
+    const row = { initialer: who.value, dato: d.iso, note: note.value.trim() || null, opfoelgning: fu.value.trim() || null, frist: fr.iso, projektnumre: nrs };
+    btn.disabled = true; btn.textContent = (S.pnFiles || []).length ? 'Gemmer og uploader …' : 'Gemmer …';
+    await pnAct(async () => {
+      const id = ny ? (await Store.addPersonNote(row)).id : (await Store.updatePersonNote(n.id, { ...row, redigeret: new Date().toISOString() }), n.id);
+      for (const f of S.pnFiles || []) await Store.uploadNoteFile(id, f, pnMime(f));
+      S.pnFiles = []; S.pnEdit = null;
+    }, ny ? 'Personnoten er gemt' : 'Ændringerne er gemt');
+    btn.disabled = false;
+  });
+  return h('div', { class: 'form pn-form' + (ny ? '' : ' edit') },
+    h('datalist', { id: 'pn-projl' }, projs.map((r) => h('option', { value: `${r.projekt} ${r.navn || ''}` }))),
+    h('div', { class: 'pf-grid' }, h('label', {}, 'Person', who), h('label', {}, 'Dato', dmyField('pn-dato', pDay(n?.dato) || cphDay(Date.now()), 'Dato', true)),
+      h('label', {}, 'Opfølgning', fu), h('label', {}, 'Frist', dmyField('pn-frist', pDay(n?.frist), 'Frist'))),
+    h('label', {}, 'Note', note),
+    h('div', { class: 'pn-row' }, h('span', { class: 'note', text: 'Vedrører' }), chipBox, addP),
+    existing, drop, fileIn, pending,
+    h('div', { class: 'pf-acts' }, btn, h('button', { class: 'btn', type: 'button', text: 'Annullér', onclick: () => { S.pnEdit = null; S.pnFiles = []; render(); } })));
+}
 
 /* ----- Pipeline: leads, PQ, tilbud, rammeaftaler og miniudbud ----- */
 const PFASER = [['lead', 'Lead'], ['pq', 'PQ'], ['tilbud', 'Tilbud'], ['vundet', 'Vundet'], ['tabt', 'Tabt'], ['no bid', 'No bid'], ['annulleret', 'Annulleret']];
@@ -3606,6 +3833,7 @@ function drawProjects(rows) {
   drawProjTable(viewRows);
 }
 function drawPersons() {
+  drawPersonPanel();
   $$('.chip[data-role]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.role === S.pRole)));
   const base = S.P.filter(buOk);
   const mbase = (S.months[S.periode]?.rows || []).filter(buOk);
@@ -3623,7 +3851,7 @@ function drawPersons() {
     { k: 'wipPos', l: 'WIP+', num: 1, f: F.tkr, sec: 1 }, { k: 'forfalden', l: 'Forfalden', num: 1, f: F.tkr, sec: 1 },
     { k: 'roede', l: 'Røde', num: 1, f: F.int, cell: flagCell('roede') }, { k: 'gule', l: 'Gule', num: 1, f: F.int, cell: flagCell('gule') },
     { k: 'fokus', l: 'Fokus', num: 1, f: F.int, sec: 1 },
-  ], rows, { sortKey: 'pers', selKey: (() => { const set = S.pRole === 'pl' ? S.pls : S.pas; return set.size === 1 ? { k: 'person', v: [...set][0] } : null; })(), onClick: (r) => { if (S.pRole === 'pl') { S.pls = new Set([r.person]); S.pas = new Set(); } else { S.pas = new Set([r.person]); S.pls = new Set(); } S.chip = 'alle'; show('proj'); } });
+  ], rows, { sortKey: 'pers', selKey: (() => { const set = S.pRole === 'pl' ? S.pls : S.pas; return set.size === 1 ? { k: 'person', v: [...set][0] } : null; })(), onClick: (r) => { if (S.pRole === 'pl') { S.pls = new Set([r.person]); S.pas = new Set(); } else { S.pas = new Set([r.person]); S.pls = new Set(); } S.chip = 'alle'; rebuild(); render(); $('#pn-card').scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
 }
 function drawRules(rows) {
   const el = $('#t-rules');
@@ -3998,7 +4226,7 @@ function buildXlsx(sheets) {
 const download = (blob, name) => { const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 
 /* ----- Mine data: saml alt egenproduceret ----- */
-const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline'];
+const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'personnoter'];
 async function collectOwnData(onlyScope) {
   const by = new Map(S.P.map((r) => [r.projekt, r]));
   const enrich = (x) => {
@@ -4009,7 +4237,8 @@ async function collectOwnData(onlyScope) {
   const D = { kilde: Store.label(), eksporteret: new Date().toISOString() };
   if (Store.mode() === 'supabase') {
     const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`)));
-    EX_MODULES.forEach((m, i) => { D[m] = got[i].map(enrich).filter(keep); });
+    const pick = new Set([...S.pls, ...S.pas]);
+    EX_MODULES.forEach((m, i) => { D[m] = m === 'personnoter' ? got[i].filter((x) => !onlyScope || !pick.size || pick.has(x.initialer)) : got[i].map(enrich).filter(keep); });
     const pr = await Store.fetchAll('/rest/v1/projekt?select=*&order=oprettet');
     D.projekter = pr.filter((x) => x.salgsnummer || x.arbejdstitel || ['tilbud', 'no bid', 'tabt'].includes(x.status) || (x.ekstra && Object.keys(x.ekstra).length))
       .map((x) => ({ ...x, projektnavn: x.titel || x.arbejdstitel, ekstra: x.ekstra && Object.keys(x.ekstra).length ? x.ekstra : null })).filter(keep);
@@ -4017,7 +4246,7 @@ async function collectOwnData(onlyScope) {
     D.noter = ls.get('pd.notes', []).map(enrich).filter(keep);
     D.fokus = Object.entries(ls.get('pd.fokus', {})).map(([projekt, v]) => enrich({ projekt, ...v })).filter(keep);
     D.info = Object.entries(ls.get('pd.info', {})).map(([projekt, v]) => enrich({ projekt, ...v })).filter(keep);
-    ['bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'projekter'].forEach((m) => { D[m] = []; });
+    ['bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'personnoter', 'projekter'].forEach((m) => { D[m] = []; });
   }
   D.regler = S.rules.map((x) => ({ regel: x.regel, niveau: x.niveau, navn: x.navn, betingelse: x.tekst(x.g, x.g2), graense: x.g, graense2: x.g2 ?? null, standard: RULES_DEFAULT.find((y) => y.regel === x.regel).g }));
   return D;
@@ -4032,6 +4261,7 @@ const EX_SHEETS = [
   ['Kvalitetsplan', 'kvalitet', [{ l: 'Emne', k: 'emne', w: 30 }, { l: 'Krav', k: 'krav', w: 50 }, { l: 'Ansvarlig', k: 'ansvarlig', w: 12 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }, { l: 'Dokument', k: 'dokument_url', w: 40 }]],
   ['Milepæle', 'milepael', [{ l: 'Milepæl', k: 'navn', w: 34 }, { l: 'Planlagt', k: 'planlagt', t: 'date', w: 12 }, { l: 'Prognose', k: 'prognose', t: 'date', w: 12 }, { l: 'Faktisk', k: 'faktisk', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }]],
   ['Pipeline', 'pipeline', [{ l: 'Type', k: 'type', w: 12 }, { l: 'Fase', k: 'fase', w: 9 }, { l: 'Kunde', k: 'kunde', w: 24 }, { l: 'Kilde', k: 'kilde', w: 16 }, { l: 'Honorar (DKK)', k: 'honorar', t: 'num', w: 14 }, { l: 'Vinderchance', k: 'vinderchance', t: 'num', w: 12 }, { l: 'Rammens værdi (DKK)', k: 'ramme_vaerdi', t: 'num', w: 16 }, { l: 'Antal vindere', k: 'antal_vindere', t: 'num', w: 10 }, { l: 'Andel', k: 'andel', t: 'num', w: 8 }, { l: 'Aftale start', k: 'aftale_start', t: 'date', w: 12 }, { l: 'Aftale slut', k: 'aftale_slut', t: 'date', w: 12 }, { l: 'Under rammeaftale', k: 'ramme_navn', w: 28 }, { l: 'PQ-frist', k: 'pq_frist', t: 'date', w: 12 }, { l: 'Tilbudsfrist', k: 'tilbudsfrist', t: 'date', w: 12 }, { l: 'Forventet opstart', k: 'forventet_opstart', t: 'date', w: 14 }, { l: 'Resultatdato', k: 'resultat_dato', t: 'date', w: 12 }, { l: 'Bemærkning', k: 'bemaerkning', w: 50 }, { l: 'Udbud', k: 'udbud', w: 24 }, { l: 'Rolle', k: 'rolle', w: 10 }, { l: 'Partnere', k: 'partnere', w: 30 }, { l: 'NIRAS-andel', k: 'niras_andel', t: 'num', w: 10 }, { l: 'Ansvarlige', k: 'ansvarlige', w: 14 }, { l: 'Størrelse som oplyst', k: 'stoerrelse', w: 24 }, { l: 'Anlægssum (DKK)', k: 'anlaegssum', t: 'num', w: 14 }, { l: 'PQ afleveret', k: 'pq_afleveret', t: 'date', w: 12 }, { l: 'Prækvalificeret', k: 'prakvalificeret', t: 'date', w: 13 }, { l: 'Tilbud afleveret', k: 'tilbud_afleveret', t: 'date', w: 13 }, { l: 'Tabt i fase', k: 'tabt_i', w: 10 }, { l: 'Spørgefrist', k: 'sporgefrist', t: 'date', w: 12 }, { l: 'Revideret tilbud', k: 'revideret_tilbud', t: 'date', w: 13 }, { l: 'Forventet afgørelse', k: 'forventet_afgoerelse', t: 'date', w: 14 }, { l: 'Bid/no bid', k: 'bid_beslutning', w: 10 }, { l: 'Bid/no bid-dato', k: 'bid_dato', t: 'date', w: 13 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
+  ['Personnoter', 'personnoter', [{ l: 'Person', k: 'initialer', w: 10 }, { l: 'Dato', k: 'dato', t: 'date', w: 12 }, { l: 'Note', k: 'note', w: 60 }, { l: 'Opfølgning', k: 'opfoelgning', w: 40 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 9 }, { l: 'Vedrører projekter', k: 'projektnumre', w: 28 }, { l: 'Filer', k: 'filer', w: 40 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }, { l: 'Redigeret', k: 'redigeret', t: 'ts', w: 17 }]],
   ['Dokumenter', 'dokument', [{ l: 'Type', k: 'type', w: 14 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Link', k: 'url', w: 50 }]],
 ];
 function ownDataSheets(D) {
@@ -4139,6 +4369,7 @@ async function afterLogin() {
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
   await loadPipe();
+  await loadPersonOpf();
   rebuild(); render();
   $('#btn-logout').title = 'Log ud (' + (Store.session?.user?.email || '') + ')';
 }
@@ -4156,6 +4387,7 @@ async function logOut() {
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
   await loadPipe();
+  await loadPersonOpf();
   rebuild();
   show(S.tab);
   $('#btn-logout').title = 'Log ud (' + (Store.session?.user?.email || '') + ')';
