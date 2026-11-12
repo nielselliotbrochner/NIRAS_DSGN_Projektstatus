@@ -45,7 +45,36 @@ Mindst ét af projektnummer, salgsnummer eller arbejdstitel skal være udfyldt.
 | `erp_maaned` | (periode, projekt) | Månedens bevægelser |
 | `erp_risiko` | (pr_dato, projekt) | Risk log |
 
-Triggere: nye projektnumre i et udtræk opretter selv et projekt. PTD opdaterer titel, BU, PL og PA (kun fra nyere udtræk end det seneste). Risk log udfylder kunde.
+Triggere: nye projektnumre i et udtræk opretter selv et projekt. PTD opdaterer titel, BU, PL, PA og kunde (kun fra nyere udtræk end det seneste). Risk log udfylder kunde.
+
+### Detailed Main Project View (12. nov. 2026, `12_erp_detailed.sql`)
+
+Fra november 2026 hentes PTD og valgt måned som "Detailed Main Project View". Begge tabeller har fået samme nye kolonner (tomme i ældre udtræk). `erp_maaned` har desuden fået `poc` (status ved månedens udgang).
+
+| Kolonne | ERP-navn | Bemærkning |
+|---|---|---|
+| `kunde`, `kontrakttype`, `ps` | Customer, Customer Contract Type, PS | Kontrakttype vises med ERP's navne: Fixed Price, Time & Material |
+| `risikoklasse` | Risk Class | Maconomy-klassen 1-4 ("Level 3 – High risk" → 3) |
+| `startdato`, `oprettet_dato`, `forv_slut`, `faerdig_dato`, `lukket_dato` | Started, Creation, Expected Ending, Work Completed, Actual Closing Date | |
+| `timer`, `timer_etc`, `timer_eac` | Hours QTY (ACT/ETC/EAC) | `timer_eac` kun i PTD |
+| `underlev`, `overhead`, `projektresultat`, `overforbrug` | Subcontractor Cost (ACT), Overhead, Project Profit (ACT), Over-spending | |
+| `rest_oms`, `backlog_brutto`, `backlog_netto`, `kostpris`, `salgspris`, `fakt_fm` | Remaning Revenue Recognized, Backlog Gross/Net, Cost/Sales Rate, Invoiced FM | kun i PTD |
+| `loen_etc`, `loen_eac`, `ext_etc`, `ext_eac`, `underlev_etc`, `underlev_eac` | ETC- og EAC-omkostninger | |
+| `tfm_etc`, `delta_tfm_eac` | Factor TFM (ETC), Delta Factor EAC | |
+| `contingency` | Contingency | |
+| `effekt_aendring` | Effect of Change | kun i måned |
+| `mangler_kontrakt`, `mangler_risikoklasse`, `mangler_tjekliste`, `mangler_qa`, `mangler_survey` | Missing Contract/Risk Class/Checklist/QA/Survey | 1 i udtrækket = sand. Betydningen skal bekræftes |
+
+Omdøbte kolonner læses ind i de eksisterende felter: Fee to be Invoiced → `til_fakt`, External Cost (ACT) → `ext`, Total Labour Costs Time (ACT) → `loen`, Gross Margin (ACT) → `db`, Factor TFM (EAC) → `tfm_eac`.
+
+**Genkendelse af PTD og måned.** Tre uafhængige tjek skal give samme svar, ellers gemmes intet:
+1. Filterlinjen ("Anvendte filtre"): månedsudtræk har "Medtaget … (Month Name, Year)". PTD har det aldrig.
+2. Kolonner: måned har "Effect of Change" (nyt format) eller ingen POC (gammelt format). PTD har POC uden "Effect of Change".
+3. Tal: omsætning i alt ÷ baseline i alt er ca. 0,9 i PTD og ca. 0,02 i en måned. Grænsen er 0,3.
+
+Før noget gemmes, viser dashboardet, hvad filen er genkendt som, og hvad hvert tjek fandt.
+
+**Risikoklasse.** Ledelsens beslutning fra risk log går forud. Uden risk log (eller for projekter uden for den) bruges `risikoklasse` fra PTD. Risk log er herefter valgfri; den giver ledelsens klasse, risikofaktorer, vurdering, honorar, tabsrisiko og AR +90 dage.
 
 ## Moduler (alle med `projekt_id` → `projekt.id`)
 

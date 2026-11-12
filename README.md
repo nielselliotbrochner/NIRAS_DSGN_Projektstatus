@@ -22,9 +22,10 @@ Siden indeholder ingen data. Den starter med en login-skærm; alle tal og noter 
 
 ## Brug hver måned
 
-1. Træk de tre udtræk ind i dashboardet (PTD, måned og risk log). Filnavnene er ligegyldige; dashboardet genkender filerne indefra.
-2. Dashboardet afstemmer mod udtrækkenes Total-linje og gemmer dem med dato.
-   - Type: kolonnerne (POC = til dato, Actual Factor TFM = måned, RiskCategory/Mac Risk = risk log).
+1. Træk udtrækkene ind i dashboardet: PTD og valgt måned (gerne som "Detailed Main Project View") og eventuelt risk log. Filnavnene er ligegyldige; dashboardet genkender filerne indefra.
+2. Dashboardet afstemmer mod udtrækkenes Total-linje, viser hvad hver fil er genkendt som, og gemmer dem med dato, når du bekræfter.
+   - Type: tre tjek skal være enige: filterlinjen ("Medtaget … (Month Name, Year)" = måned), kolonnerne (Effect of Change eller ingen POC = måned) og omsætning ÷ baseline (under 0,3 = måned). RiskCategory/Mac Risk = risk log.
+   - Risk log er valgfri: PTD i det nye format har Risk Class (Maconomy). Risk log giver ledelsens klasse, faktorer og vurdering.
    - Måned: udtrækkets filter nederst i filen, fx "Aug, 2026 (Month Name, Year)".
    - Dato og hentetidspunkt for PTD og risk log: ERP-eksportens tidsstempel inde i filen. Er filen gemt igen i Excel, bruges nyeste ETC-dato.
    - Filnavnet bruges kun, hvis filen ikke selv indeholder oplysningen.

@@ -101,6 +101,23 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .fb-r::before { content: "!"; display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: var(--red); color: #fff; font-weight: 700; font-size: 11px; }
 .fb-y::before { content: "!"; display: inline-flex; align-items: flex-end; justify-content: center; width: 16px; height: 14px; background: var(--amber); color: #fff; font-weight: 700; font-size: 10px; line-height: 1; clip-path: polygon(50% 0, 100% 100%, 0 100%); padding-bottom: 1px; }
 .hm1 { background: #EFE3D7; } .hm2 { background: #E2B04A; } .hm3 { background: #BA1223; } .hm4 { background: #700B15; }
+.kt { display: inline-block; font-size: 11px; line-height: 1.5; padding: 0 7px; border-radius: 4px; white-space: nowrap; border: 1px solid transparent; }
+.kt-fp { background: #F3E4E5; color: var(--deep); border-color: #E3C4C7; }
+.kt-tm { background: #E6EFEA; color: #234F3A; border-color: #C5D9CD; }
+.t.t2 td.kc { min-width: 140px; max-width: 220px; }
+.t tr.dim td:not(.hc) { color: var(--muted); }
+#k-tiles { margin-bottom: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.dmeta a.k { color: var(--deep); }
+.ktsplit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ktsplit .kbox { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: var(--sand-2); }
+.ktsplit .kbox .kh { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+.ktsplit .tiles { margin: 0; }
+@media (max-width: 700px) { .ktsplit { grid-template-columns: 1fr; } }
+.dmeta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 10px; background: var(--sand-2); border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; }
+.dmeta .k { font-weight: 600; }
+.dmeta .m { color: var(--muted); font-size: 12px; }
+.mflags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 12px; align-items: center; }
+.mflags .mf { border: 1px solid #E9C98F; background: #FBF1DE; color: #7A4E0E; border-radius: 4px; padding: 0 7px; }
 .t td.hc { text-align: center; font-weight: 700; }
 .t td.hc1 { background: #EFE3D7; } .t td.hc2 { background: #E2B04A; } .t td.hc3 { background: #BA1223; color: #fff; } .t td.hc4 { background: #700B15; color: #fff; }
 .rt th.rot button { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; height: 156px; padding: 8px 6px; text-align: left; font-size: 12px; }
@@ -235,6 +252,7 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 13px; }
 .chip[aria-pressed="true"] { background: var(--deep); color: #fff; border-color: var(--deep); }
+.chipsep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
 .tablebox { max-height: 70vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
 table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .t th { position: sticky; top: 0; background: var(--sand-2); text-align: left; font-weight: 600; border-bottom: 1px solid var(--line); padding: 0; white-space: nowrap; z-index: 1; }
@@ -1125,6 +1143,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <button class="tab" role="tab" data-tab="ov" aria-selected="true" type="button">Overblik</button>
         <button class="tab" role="tab" data-tab="proj" aria-selected="false" type="button">Projekter</button>
         <button class="tab" role="tab" data-tab="pers" aria-selected="false" type="button">Personer</button>
+        <button class="tab" role="tab" data-tab="kunder" aria-selected="false" type="button">Kunder</button>
         <button class="tab" role="tab" data-tab="risiko" aria-selected="false" type="button">Risiko</button>
         <button class="tab" role="tab" data-tab="kort" aria-selected="false" type="button">Kort</button>
         <button class="tab" role="tab" data-tab="rapport" aria-selected="false" type="button">Rapport</button>
@@ -1147,6 +1166,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <p class="note">Stilling pr. udtræksdatoen</p>
           <div class="tiles" id="tiles-cash"></div>
         </div>
+      </div>
+      <div class="card">
+        <h2>Kontrakttype</h2>
+        <p class="note">PTD fordelt på Customer Contract Type. Klik på en type for at se projekterne.</p>
+        <div class="ktsplit" id="kt-split"></div>
       </div>
       <div class="grid">
         <div class="card">
@@ -1192,7 +1216,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <button class="chip" type="button" data-chip="fokus" aria-pressed="false">Fokus</button>
           <button class="chip" type="button" data-chip="aaben" aria-pressed="false">Åben opfølgning</button>
           <button class="chip" type="button" id="chip-rule" aria-pressed="true" hidden></button>
-          <input class="search" id="search" type="search" placeholder="Søg nummer, navn, PL eller PA" aria-label="Søg i projekter">
+          <span class="chipsep" aria-hidden="true"></span>
+          <button class="chip" type="button" data-kt="" aria-pressed="true" title="Customer Contract Type">Alle kontrakter</button>
+          <button class="chip" type="button" data-kt="Fixed Price" aria-pressed="false">Fixed Price</button>
+          <button class="chip" type="button" data-kt="Time &amp; Material" aria-pressed="false">Time &amp; Material</button>
+          <input class="search" id="search" type="search" placeholder="Søg nummer, navn, kunde, PL eller PA" aria-label="Søg i projekter">
         </div>
         <p class="note" id="count"></p>
         <div class="tablebox"><table class="t t2" id="t-proj"></table></div>
@@ -1201,6 +1229,34 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </section>
 
     <!-- PERSONER -->
+    <!-- KUNDER -->
+    <section class="page" id="kunder" hidden>
+      <div class="card" id="k-detail" hidden>
+        <div class="phead">
+          <div><h2 id="k-h"></h2><p class="note" id="k-sub"></p></div>
+          <button class="btn" id="k-close" type="button">Luk kunden</button>
+        </div>
+        <div class="tiles" id="k-tiles"></div>
+        <div class="tablebox"><table class="t" id="t-kproj"></table></div>
+        <p class="note">Beløb i tDKK. Klik på et projekt for detaljer og noter.</p>
+      </div>
+      <div class="card">
+        <div class="phead">
+          <div><h2>Kunder</h2><p class="note">Kunder fra Customer i PTD-udtrækket. Klik på en kunde for at se alle projekter med kunden.</p></div>
+          <div class="seg" role="group" aria-label="Udsnit">
+            <button type="button" data-kall="0" title="Kun projekter i den valgte BU, PL og PA">Valgt udsnit</button>
+            <button type="button" data-kall="1" title="Alle BU'er, uanset filteret øverst">Hele NIRAS</button>
+          </div>
+        </div>
+        <div class="chips">
+          <input class="search" id="k-search" type="search" placeholder="Søg kunde" aria-label="Søg kunde">
+        </div>
+        <p class="note" id="k-count"></p>
+        <div class="tablebox"><table class="t" id="t-kunder"></table></div>
+        <p class="note">Beløb i tDKK. TFM EAC er vægtet med baseline. Fixed Price viser antal projekter med Customer Contract Type Fixed Price.</p>
+      </div>
+    </section>
+
     <section class="page" id="pers" hidden>
       <div class="card" id="pn-card"></div>
       <div class="card">
@@ -1420,8 +1476,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <div class="dbody">
     <div><button class="focusbtn" id="d-focus" type="button" aria-pressed="false">☆ Markér som fokusprojekt</button></div>
     <div class="flags" id="d-flags"></div>
+    <div id="d-meta"></div>
     <p class="sec-h">Om projektet</p>
     <div id="d-info"></div>
+    <p class="sec-h">Kontrakt og fremdrift</p>
+    <div id="d-kf"></div>
     <div class="kv" id="d-kv"></div>
     <p class="sec-h">Udvikling i PTD-udtræk</p>
     <div id="d-hist"></div>
@@ -1689,8 +1748,29 @@ const COLS = {
   'To Be Invoiced': 'til_fakt', 'AR Due': 'forfalden', 'Revenue Recognized': 'oms', 'External Cost': 'ext',
   'Total Labour Cost (Time)': 'loen', 'Gross Margin': 'db', 'Actual TFM': 'tfm', 'TFM EAC': 'tfm_eac', 'POC': 'poc',
   'Actual Factor TFM': 'tfm', 'EAC Factor TFM': 'tfm_eac', 'Latest ETC Date': 'etc_dato',
+  // Detailed Main Project View (nyt format fra november 2026): omdøbte kolonner
+  'Fee to be Invoiced': 'til_fakt', 'External Cost (ACT)': 'ext', 'Total Labour Costs Time (ACT)': 'loen', 'Gross Margin (ACT)': 'db', 'Factor TFM (EAC)': 'tfm_eac',
+  // … og nye kolonner
+  'Customer': 'kunde', 'Customer Contract Type': 'kontrakttype', 'Risk Class': 'risikoklasse', 'PS': 'ps',
+  'Started Date': 'startdato', 'Creation Date': 'oprettet_dato', 'Expected Ending Date': 'forv_slut', 'Work Completed Date': 'faerdig_dato', 'Actual Closing Date': 'lukket_dato',
+  'Subcontractor Cost (ACT)': 'underlev', 'Overhead': 'overhead', 'Project Profit (ACT)': 'projektresultat', 'Over-spending': 'overforbrug',
+  'Remaning Revenue Recognized': 'rest_oms', 'Remaining Revenue Recognized': 'rest_oms', 'Backlog Gross': 'backlog_brutto', 'Backlog Net': 'backlog_netto',
+  'Cost Rate': 'kostpris', 'Sales Rate': 'salgspris', 'Invoiced FM': 'fakt_fm', 'Delta Factor EAC': 'delta_tfm_eac', 'Factor TFM (ETC)': 'tfm_etc',
+  'Hours QTY (ACT)': 'timer', 'Hours QTY (ETC)': 'timer_etc', 'Hours QTY (EAC)': 'timer_eac',
+  'Labour Cost Total Time (ETC)': 'loen_etc', 'Total Labour Costs Time (EAC)': 'loen_eac', 'External Cost (ETC)': 'ext_etc', 'External Cost (EAC)': 'ext_eac',
+  'Subcontractor Costs (ETC)': 'underlev_etc', 'Subcontractor Costs (EAC)': 'underlev_eac', 'Contingency': 'contingency', 'Effect of Change': 'effekt_aendring',
+  'Missing Contract': 'mangler_kontrakt', 'Missing Risk Class': 'mangler_risikoklasse', 'Missing Checklist': 'mangler_tjekliste', 'Missing QA': 'mangler_qa', 'Missing Survey': 'mangler_survey',
 };
+// Kolonnenavne slås op uden hensyn til store og små bogstaver (fx "Delta factor EAC" i månedsudtrækket)
+const COLS_LC = Object.fromEntries(Object.entries(COLS).map(([k, v]) => [k.toLowerCase(), v]));
 const MONEY = ['baseline', 'wip', 'faktureret', 'over_baseline', 'til_fakt', 'forfalden', 'oms', 'ext', 'loen', 'db'];
+const MONEY2 = ['underlev', 'overhead', 'projektresultat', 'overforbrug', 'rest_oms', 'backlog_brutto', 'backlog_netto', 'loen_etc', 'loen_eac', 'ext_etc', 'ext_eac', 'underlev_etc', 'underlev_eac', 'contingency', 'effekt_aendring'];
+const FACT = ['tfm', 'tfm_eac', 'poc', 'kostpris', 'salgspris', 'fakt_fm', 'delta_tfm_eac', 'tfm_etc'];
+const HOURS = ['timer', 'timer_etc', 'timer_eac'];
+const DATES = ['etc_dato', 'startdato', 'oprettet_dato', 'forv_slut', 'faerdig_dato', 'lukket_dato'];
+const FLAGS = ['mangler_kontrakt', 'mangler_risikoklasse', 'mangler_tjekliste', 'mangler_qa', 'mangler_survey'];
+const TXT2 = ['kunde', 'kontrakttype', 'ps'];
+const riskLevel = (v) => { if (isNum(v)) return Number(v); const m = /(\d)/.exec(String(v || '')); return m ? Number(m[1]) : null; };
 const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, maj: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, okt: 10, nov: 11, dec: 12 };
 
 /* ----- Risk log ----- */
@@ -1767,9 +1847,7 @@ async function parseFile(file) {
   if ((grid[2] || []).some((x) => String(x || '').trim() === 'Mac Risk') || String((grid[0] || [])[0] || '').trim() === 'RiskCategory') return parseRisk(grid, file);
   const head = (grid[0] || []).map((x) => String(x || '').trim());
   if (!head.includes('Project Number') || !head.includes('Revenue Recognized')) throw new Error(`${file.name}: kendte ikke kolonnerne`);
-  const kind = head.includes('POC') ? 'ptd' : head.includes('Actual Factor TFM') ? 'maaned' : null;
-  if (!kind) throw new Error(`${file.name}: kunne ikke se om det er PTD eller måned`);
-  const idx = head.map((c) => COLS[c] || null);
+  const idx = head.map((c) => COLS_LC[c.toLowerCase()] || null);
   const rows = [];
   let total = null, filterText = '';
   for (const g of grid.slice(1)) {
@@ -1781,17 +1859,20 @@ async function parseFile(file) {
     idx.forEach((k, i) => {
       if (!k) return;
       let v = g[i];
-      if (k === 'etc_dato') v = serialToISO(v);
-      else if (MONEY.includes(k) || k === 'tfm' || k === 'tfm_eac' || k === 'poc') v = isNum(v) ? Number(v) : null;
-      else v = v == null ? null : String(v).trim();
+      if (DATES.includes(k)) v = serialToISO(v);
+      else if (MONEY.includes(k) || MONEY2.includes(k) || FACT.includes(k) || HOURS.includes(k)) v = isNum(v) ? Number(v) : null;
+      else if (FLAGS.includes(k)) v = v === true || Number(v) === 1;
+      else if (k === 'risikoklasse') v = riskLevel(v);
+      else { v = v == null ? null : String(v).trim(); if (v === '') v = null; }
       o[k] = v;
     });
     if (!o.bu) continue;
     // ERP regner TFM af en løn på fx 0,000000000002 DKK og giver tal som 2,6e16. Det er meningsløst og for stort til databasen.
     if (isNum(o.tfm) && (Math.abs(o.tfm) > 1e4 || Math.abs(num(o.loen)) < 1)) o.tfm = null;
-    ['tfm_eac', 'poc'].forEach((k) => { if (isNum(o[k]) && Math.abs(o[k]) > 1e4) o[k] = null; });
+    ['tfm_eac', 'poc', 'tfm_etc', 'delta_tfm_eac', 'fakt_fm'].forEach((k) => { if (isNum(o[k]) && Math.abs(o[k]) > 1e4) o[k] = null; });
     rows.push(o);
   }
+  const chk = detectKind(file.name, head, filterText, rows), kind = chk.kind;
   // Afstemning mod Total-linjen
   let recon = { ok: null, diff: [] };
   if (total) {
@@ -1823,7 +1904,32 @@ async function parseFile(file) {
     }
     if (!key) throw new Error(`${file.name}: kunne ikke finde måneden i udtrækkets filter. Navngiv filen …Monthly_ÅÅÅÅMM.xlsx`);
   }
-  return { kind, key, kilde, udtrukket: grid.stamp, rows, recon, file: file.name, loaded: new Date().toISOString() };
+  const format = head.includes('Customer') ? 'detailed' : 'standard';
+  return { kind, check: chk, format, key, kilde, udtrukket: grid.stamp, rows, recon, file: file.name, loaded: new Date().toISOString() };
+}
+// Tre uafhængige tjek af, om et ERP-udtræk er PTD eller valgt måned. Alle tre skal give samme svar, ellers gemmes intet.
+//  1. Filterlinjen: månedsudtræk har "Medtaget … (Month Name, Year)". PTD har det aldrig.
+//  2. Kolonnerne: månedsudtræk har "Effect of Change" (nyt format) eller mangler POC (gammelt format). PTD har POC uden "Effect of Change".
+//  3. Tallene: omsætning i alt ÷ baseline i alt er ca. 0,9 i PTD (til dato) og ca. 0,02 i en måned. Grænsen er 0,3.
+function detectKind(name, head, filterText, rows) {
+  const lc = head.map((c) => c.toLowerCase());
+  const mMonth = /Medtaget[^\n]*?([A-Za-z]{3})[a-z]*,?\s*(\d{4})\s*\(Month Name, Year\)/i.exec(filterText);
+  const mPtd = /Month Name, Year er ([A-Za-z]{3})[a-z]*,?\s*(\d{4})/i.exec(filterText);
+  const f = mMonth ? 'maaned' : 'ptd';
+  const fTxt = mMonth ? `"Medtaget … ${mMonth[1]}, ${mMonth[2]} (Month Name, Year)"` : mPtd ? `"Month Name, Year er ${mPtd[1]}, ${mPtd[2]}" uden Medtaget` : filterText ? 'ingen måned' : 'ingen filterlinje';
+  const hasPoc = lc.includes('poc'), hasEoc = lc.includes('effect of change');
+  const c = hasEoc || !hasPoc ? 'maaned' : 'ptd';
+  const cTxt = hasEoc ? 'POC og Effect of Change' : hasPoc ? (lc.includes('backlog net') ? 'POC og Backlog Net' : 'POC') : 'ingen POC';
+  const bl = rows.reduce((a, r) => a + num(r.baseline), 0), om = rows.reduce((a, r) => a + num(r.oms), 0);
+  const ratio = bl > 0 ? om / bl : null;
+  const t = ratio == null ? null : ratio < 0.3 ? 'maaned' : 'ptd';
+  const rTxt = ratio == null ? 'ingen baseline' : nf2.format(ratio);
+  const out = { kind: f, filter: fTxt, kolonner: cTxt, ratio, ratioTxt: rTxt, enige: f === c && c === t };
+  if (!out.enige) {
+    const L = (x) => (x === 'ptd' ? 'PTD' : x === 'maaned' ? 'måned' : 'kan ikke afgøres');
+    throw new Error(`${name}: de tre tjek er uenige, så filen er ikke gemt. Filterlinje: ${fTxt} (${L(f)}). Kolonner: ${cTxt} (${L(c)}). Omsætning ÷ baseline: ${rTxt} (${L(t)}).`);
+  }
+  return out;
 }
 
 /* ================= Lokal lagring af udtræk (IndexedDB) ================= */
@@ -1862,14 +1968,16 @@ const idb = {
 };
 
 /* ================= Fælles for lokal og Supabase-lagring af udtræk ================= */
-const DB_COLS = ['projekt', 'navn', 'bu', 'pl', 'po', 'valuta', 'baseline', 'wip', 'faktureret', 'over_baseline', 'til_fakt', 'forfalden', 'oms', 'ext', 'loen', 'db', 'tfm', 'tfm_eac', 'poc', 'etc_dato'];
+const DB_COLS = ['projekt', 'navn', 'bu', 'pl', 'po', 'valuta', 'baseline', 'wip', 'faktureret', 'over_baseline', 'til_fakt', 'forfalden', 'oms', 'ext', 'loen', 'db', 'tfm', 'tfm_eac', 'poc', 'etc_dato',
+  // fra Detailed Main Project View (tomme i ældre udtræk)
+  ...TXT2, 'risikoklasse', ...DATES.slice(1), ...MONEY2, ...FACT.slice(3), ...HOURS, ...FLAGS];
 const nn = (v) => (isNum(v) ? Number(v) : null);
 const isActive = (r) => ['oms', 'loen', 'ext', 'faktureret', 'wip'].some((k) => num(r[k]) !== 0);
 const normDbRow = (r) => {
   const o = {};
   DB_COLS.forEach((c) => { o[c] = r[c] ?? null; });
-  ['baseline', 'wip', 'faktureret', 'over_baseline', 'til_fakt', 'forfalden', 'oms', 'ext', 'loen', 'db', 'tfm', 'tfm_eac', 'poc'].forEach((c) => { o[c] = nn(o[c]); });
-  if (o.etc_dato) o.etc_dato = String(o.etc_dato).slice(0, 10);
+  [...MONEY, ...MONEY2, ...FACT, ...HOURS, 'risikoklasse'].forEach((c) => { o[c] = nn(o[c]); });
+  DATES.forEach((c) => { if (o[c]) o[c] = String(o[c]).slice(0, 10); });
   return o;
 };
 // Måned samlet pr. BU, projektleder og projektejer: grundlaget for udviklingsgrafen
@@ -2014,13 +2122,13 @@ const Store = {
   async pushExtract(d, progress) {
     const K = {
       ptd: { tbl: 'erp_ptd', keyCol: 'pr_dato', keyVal: d.key, cols: DB_COLS, src: () => d.rows },
-      maaned: { tbl: 'erp_maaned', keyCol: 'periode', keyVal: d.key + '-01', cols: DB_COLS.filter((c) => c !== 'poc'), src: () => d.rows.filter(isActive) },
+      maaned: { tbl: 'erp_maaned', keyCol: 'periode', keyVal: d.key + '-01', cols: DB_COLS, src: () => d.rows.filter(isActive) },
       risiko: { tbl: 'erp_risiko', keyCol: 'pr_dato', keyVal: d.key, cols: RISK_COLS, src: () => d.rows },
     }[d.kind];
     const { tbl, keyCol, keyVal, cols } = K;
     const src = K.src();
     // Sikkerhedsnet: tal uden for databasefelternes størrelse (numeric(14,6) og numeric(16,2)) sendes som tomme
-    const fit = (c, v) => (typeof v === 'number' ? (!isFinite(v) || Math.abs(v) >= (['tfm', 'tfm_eac', 'poc'].includes(c) ? 1e7 : 1e13) ? null : v) : v);
+    const fit = (c, v) => (typeof v === 'number' ? (!isFinite(v) || Math.abs(v) >= (FACT.includes(c) ? 1e6 : HOURS.includes(c) ? 1e11 : 1e13) ? null : v) : v);
     const rows = src.map((r) => { const o = { [keyCol]: keyVal }; cols.forEach((c) => { o[c] = fit(c, r[c] ?? null); }); return o; });
     const min = { Prefer: 'return=minimal' };
     await this.sbFetch(`/rest/v1/erp_upload?type=eq.${d.kind}&noegle=eq.${encodeURIComponent(d.key)}`, { method: 'DELETE', headers: min });
@@ -2113,8 +2221,9 @@ const S = {
   risk: null, riskTrend: [], riskBy: new Map(), rhist: {}, rhistCache: {}, rchip: 'k2', rq: '', rp: { pa: null, manual: {}, intro: '', ...{ r: true, y: true, n: false, minb: 0, fokus: true, open: true, risk: true, riskmin: 3, sort: 'score', age: 90, openall: true, sec: { kpi: true, flag: true, open: true, table: true, pages: true, risk: true, desc: false } }, ...ls.get('pd.rp', {}) }, kfarve: ls.get('pd.kfarve', 'flag'),
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
-  tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', regel: null, q: '', pRole: 'pl',
-  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
+  tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', kt: '', regel: null, q: '', pRole: 'pl',
+  kSel: null, kq: '', kAll: false,
+  sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, kunder: { k: 'baseline', d: -1 }, kproj: { k: 'baseline', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
   pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30), pipeColsOpen: false,
   pnotes: null, pnKey: '', pnEdit: null, pnFiles: [], pnFilter: 'alle', pnMore: 40, pnOpf: [],
 };
@@ -2272,13 +2381,17 @@ function rebuild() {
     m_db: (r, m) => !!m && num(m.db) < -g.m_db.g,
     m_tfm: (r, m) => !!m && num(m.loen) > g.m_tfm.g2 && isNum(m.tfm) && m.tfm < g.m_tfm.g,
     risk_hi: (r, m, e, rk) => !!rk && num(rk.klasse) >= g.risk_hi.g,
-    risk_noass: (r, m, e, rk) => !!rk && num(rk.klasse) >= g.risk_noass.g && !rk.vurderet,
+    risk_noass: (r, m, e, rk) => !!rk && rk.vurderet != null && num(rk.klasse) >= g.risk_noass.g && !rk.vurderet,
   };
   S.riskBy = new Map((S.risk?.rows || []).map((x) => [x.projekt, x]));
   S.P = S.ptd.rows.map((r) => {
     const m = mm.get(r.projekt);
     const e = r.etc_dato ? Math.round((Date.parse(asof) - Date.parse(r.etc_dato)) / 864e5) : null;
-    const rk = S.riskBy.get(r.projekt);
+    const rkLog = S.riskBy.get(r.projekt);
+    // Risikoklasse: ledelsens beslutning fra risk log går forud; ellers Maconomy-klassen fra ERP-udtrækket
+    const erpKl = isNum(r.risikoklasse) ? r.risikoklasse : null;
+    const kl = rkLog && isNum(rkLog.klasse) ? rkLog.klasse : erpKl;
+    const rk = rkLog || isNum(kl) ? { ...(rkLog || {}), klasse: kl, vurderet: rkLog ? rkLog.vurderet : null } : null;
     const hit = S.rules.filter((x) => T[x.regel](r, m, e, rk));
     const red = hit.filter((x) => x.niveau === 'rød').length;
     const log = notesBy.get(r.projekt) || [];
@@ -2289,7 +2402,10 @@ function rebuild() {
       dg: num(r.oms) > 0 ? num(r.db) / num(r.oms) : null, etc_dage: e,
       m_oms: m ? m.oms : null, m_db: m ? m.db : null, m_loen: m ? m.loen : null, m_tfm: m ? m.tfm : null, m_dg: m && num(m.oms) > 0 ? num(m.db) / num(m.oms) : null,
       fokus: !!S.fokus[r.projekt]?.fokus, stjerne: S.fokus[r.projekt]?.fokus ? '★' : '',
-      klasse: rk ? rk.klasse : null, mac_klasse: rk ? rk.mac_klasse : null, r_vurderet: rk ? rk.vurderet : null,
+      klasse: kl, klasse_kilde: rkLog && isNum(rkLog.klasse) ? 'risk log' : isNum(erpKl) ? 'ERP' : null,
+      mac_klasse: isNum(erpKl) ? erpKl : rkLog ? rkLog.mac_klasse : null, r_vurderet: rkLog ? rkLog.vurderet : null,
+      kunde: r.kunde || rkLog?.kunde || null, kontrakttype: r.kontrakttype || null,
+      timer_pct: num(r.timer_eac) > 0 && isNum(r.timer) ? r.timer / r.timer_eac : null,
       note: last ? last.note : '', note_ts: last ? last.oprettet : null, aabne: log.filter((n) => n.status !== 'lukket' && n.opfoelgning).length, noter: log,
     };
   });
@@ -2321,9 +2437,10 @@ function render() {
   const rows = S.P.filter(inScope);
   const sum = summarize(rows, monthRows(S.periode));
   drawHeader(rows, sum);
-  if (S.tab === 'ov') { drawTiles(sum); drawFlags(rows); drawScatter(rows); drawTop(rows); drawTrend(); }
+  if (S.tab === 'ov') { drawTiles(sum); drawKt(rows); drawFlags(rows); drawScatter(rows); drawTop(rows); drawTrend(); }
   if (S.tab === 'proj') drawProjects(rows);
   if (S.tab === 'pers') drawPersons();
+  if (S.tab === 'kunder') drawKunder();
   if (S.tab === 'regler') drawRules(rows);
   if (S.tab === 'risiko') drawRisk();
   if (S.tab === 'kort') drawMap(rows);
@@ -2384,6 +2501,20 @@ function drawTiles(o) {
     tile('Klar til fakturering', F.mio(o.tilFakt)), tile('Forfaldent tilgodehavende', F.mio(o.forfalden)));
 }
 
+function drawKt(rows) {
+  const box = $('#kt-split');
+  if (!rows.some((r) => r.kontrakttype)) { box.replaceChildren(h('p', { class: 'empty', text: 'Kontrakttypen kommer med PTD-udtrækket i det nye format (Detailed Main Project View).' })); return; }
+  const types = ['Fixed Price', 'Time & Material'];
+  const other = rows.filter((r) => !types.includes(r.kontrakttype));
+  box.replaceChildren(...types.map((t) => {
+    const rs = rows.filter((r) => r.kontrakttype === t), o = summarize(rs, []);
+    const tfmEac = (() => { const w = rs.filter((r) => isNum(r.tfm_eac) && num(r.baseline) > 0); const b = w.reduce((a, r) => a + num(r.baseline), 0); return b > 0 ? w.reduce((a, r) => a + r.tfm_eac * num(r.baseline), 0) / b : null; })();
+    return h('button', { class: 'kbox', type: 'button', style: 'text-align:left;cursor:pointer;font:inherit', title: 'Vis projekterne under Projekter', onclick: () => { S.kt = t; S.chip = 'alle'; S.regel = null; show('proj'); } },
+      h('div', { class: 'kh' }, ktBadge(t), h('span', { text: `${nf0.format(rs.length)} projekter · ${o.roede} med røde flag` })),
+      h('div', { class: 'tiles' }, tile('Baseline', F.mio(o.baseline)), tile('Omsætning PTD', F.mio(o.oms), 'DG ' + (F.pct(o.dg) || '—')),
+        tile('TFM', F.tfm(o.tfm) || '—'), tile('TFM EAC', F.tfm(tfmEac) || '—', 'vægtet med baseline')));
+  }), ...(other.length ? [h('p', { class: 'note', style: 'grid-column:1/-1;margin:0', text: `${nf0.format(other.length)} projekter uden kontrakttype i udtrækket.` })] : []));
+}
 function drawFlags(rows) {
   const box = $('#fbars');
   const cnt = S.rules.map((x) => ({ ...x, n: rows.filter((r) => r.hit.includes(x)).length })).filter((x) => x.n > 0)
@@ -2565,9 +2696,11 @@ const PT = {
     { k: 'score', l: 'Flag', title: 'Røde og gule flag. Sorterer efter vægt (rødt 3, gult 1)' },
     { k: 'projekt', l: 'Projekt' },
     { k: 'navn', l: 'Navn' },
+    { k: 'kunde', l: 'Kunde', title: 'Customer fra ERP-udtrækket' },
+    { k: 'kontrakttype', l: 'Kontrakt', title: 'Customer Contract Type fra ERP-udtrækket' },
     { k: 'pl', l: 'PL', title: 'Projektleder' },
     { k: 'po', l: 'PA', title: 'Projektansvarlig' },
-    { k: 'klasse', l: 'Risiko', title: 'Risikoklasse (Management decision) fra risk log' },
+    { k: 'klasse', l: 'Risiko', title: 'Risikoklasse: Management decision fra risk log, ellers Risk Class (Maconomy) fra ERP-udtrækket' },
   ],
   m: [
     { k: 'm_oms', l: 'Omsætning', u: 'tDKK', f: F.tkr, c: negCls },
@@ -2587,6 +2720,9 @@ const PT = {
     { k: 'etc_dato', l: 'ETC-dato', f: F_dmy, title: 'Seneste ETC-opdatering' },
   ],
 };
+// Kontrakttype som mærkat med ERP's egen benævnelse
+const KT_CLS = { 'Fixed Price': 'kt-fp', 'Time & Material': 'kt-tm' };
+const ktBadge = (v) => (v ? h('span', { class: 'kt ' + (KT_CLS[v] || ''), text: v }) : document.createTextNode('–'));
 function flagNode(r) {
   const w = h('span', { class: 'fl-cell', title: r.flagtekst || 'Ingen flag' });
   if (r.roede) w.append(h('span', { class: 'fb fb-r', text: String(r.roede) }));
@@ -2620,7 +2756,9 @@ function drawProjTable(rows) {
         td = h('td', { class: 'st' + (r.fokus ? ' on' : ''), title: r.fokus ? 'Fjern fokus' : 'Markér som fokusprojekt', text: r.fokus ? '★' : '☆' });
         td.addEventListener('click', (e) => { e.stopPropagation(); act(() => Store.setFokus(r.projekt, !r.fokus), r.fokus ? 'Fokus fjernet' : 'Markeret som fokusprojekt'); });
       } else if (c.k === 'score') td = h('td', {}, flagNode(r));
-      else if (c.k === 'klasse') { td = h('td', { class: isNum(r.klasse) ? 'hc hc' + r.klasse : null, title: isNum(r.klasse) ? `Risikoklasse ${r.klasse}${r.r_vurderet ? ', risikovurderet' : ''}` : 'Ikke i risk log', text: isNum(r.klasse) ? String(r.klasse) : '' }); }
+      else if (c.k === 'kontrakttype') td = h('td', {}, ktBadge(r.kontrakttype));
+      else if (c.k === 'kunde') td = h('td', { class: 'name kc', title: r.kunde || null, text: F.txt(r.kunde) });
+      else if (c.k === 'klasse') { td = h('td', { class: isNum(r.klasse) ? 'hc hc' + r.klasse : null, title: isNum(r.klasse) ? `Risikoklasse ${r.klasse} fra ${r.klasse_kilde}${r.r_vurderet ? ', risikovurderet' : ''}` : 'Ingen risikoklasse', text: isNum(r.klasse) ? String(r.klasse) : '' }); }
       else if (g === 'note') td = h('td', { class: 'notec gs', title: r.note ? F.date(r.note_ts) + ': ' + r.note : null }, r.note_ts ? h('span', { class: 'nd', text: F.date(r.note_ts) + ' ' }) : '', (r.note || '') + (r.aabne ? ` (${r.aabne} åben${r.aabne > 1 ? 'e' : ''})` : ''));
       else if (g === 'id') td = h('td', { class: c.k === 'projekt' ? 'pn' : c.k === 'navn' ? 'name' : null, title: c.k === 'navn' ? r.navn : null, text: F.txt(r[c.k]) });
       else td = h('td', { class: [c.k === 'etc_dato' ? '' : 'num', gs, c.c ? c.c(r[c.k]) : ''].join(' ').trim() || null, text: (c.f || F.txt)(r[c.k]) });
@@ -2633,12 +2771,16 @@ function drawProjTable(rows) {
 }
 $$('.seg [data-pview]').forEach((b) => b.addEventListener('click', () => { S.pview = b.dataset.pview; ls.set('pd.pview', S.pview); render(); }));
 /* ----- Risiko ----- */
-const riskRows = () => (S.risk?.rows || []).filter(inScope);
+// Uden risk log bruges Risk Class (Maconomy) fra PTD-udtrækket; faktorer og vurdering kræver risk log
+const erpRiskRows = () => S.P.filter((r) => isNum(r.risikoklasse)).map((r) => ({ projekt: r.projekt, navn: r.navn, bu: r.bu, pl: r.pl, po: r.po, kunde: r.kunde, klasse: r.risikoklasse, mac_klasse: r.risikoklasse, vurderet: false, ar90_tkr: null }));
+const riskRows = () => (S.risk ? S.risk.rows : erpRiskRows()).filter(inScope);
 function drawRisk() {
-  $('#r-empty').hidden = !!S.risk; $('#r-content').hidden = !S.risk;
-  if (!S.risk) return;
+  const hasErp = S.P.some((r) => isNum(r.risikoklasse));
+  $('#r-empty').hidden = !!S.risk || hasErp; $('#r-content').hidden = !(S.risk || hasErp);
+  if (!S.risk && !hasErp) return;
   const all = riskRows();
-  $('#r-sub').textContent = `Management decision i risk log pr. ${F.date(S.risk.key)} · ${nf0.format(all.length)} projekter i ${scopeLabel()}`;
+  $('#r-sub').textContent = S.risk ? `Management decision i risk log pr. ${F.date(S.risk.key)} · ${nf0.format(all.length)} projekter i ${scopeLabel()}`
+    : `Risk Class (Maconomy) fra PTD pr. ${F.date(S.ptd.key)} · ${nf0.format(all.length)} projekter i ${scopeLabel()}. Indlæs en risk log for ledelsens beslutning, risikofaktorer og vurdering.`;
   // klassefordeling
   const cnt = [1, 2, 3, 4].map((k) => all.filter((r) => r.klasse === k).length);
   const max = Math.max(1, ...cnt);
@@ -2663,6 +2805,18 @@ function drawRisk() {
       h('span', { class: 'n', text: `${c[2] + c[3]} høje` }));
   }) : [h('p', { class: 'empty', text: 'Ingen projekter i udvalget har udfyldte risikofaktorer.' })]));
   // tabel
+  if (!S.risk) {
+    // Kun ERP-klassen: vis klasser og kontrakttype i stedet for vurdering og afvigelser
+    const P = new Map(S.P.map((x) => [x.projekt, x]));
+    const fp2 = k2.filter((r) => P.get(r.projekt)?.kontrakttype === 'Fixed Price').length;
+    $('#r-tiles').replaceChildren(
+      tile('Klasse 2+', nf0.format(k2.length), `af ${nf0.format(all.length)} projekter`),
+      tile('Klasse 3+', nf0.format(all.filter((r) => r.klasse >= 3).length), 'høj eller meget høj risiko'),
+      tile('Fixed Price i klasse 2+', nf0.format(fp2), `af ${nf0.format(k2.length)} i klasse 2+`),
+      tile('Risk log', 'Ikke indlæst', 'vurdering og faktorer kræver risk log'));
+    if (!['k2', 'alle'].includes(S.rchip)) S.rchip = 'k2';
+  }
+  $$('.chip[data-rchip]').forEach((b) => { b.hidden = !S.risk && !['k2', 'alle'].includes(b.dataset.rchip); });
   $$('.chip[data-rchip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rchip === S.rchip)));
   const q = S.rq.toLowerCase();
   const rows = all.filter((r) => {
@@ -2743,8 +2897,9 @@ function drawRiskTrend() {
 function drawRiskDetail(p) {
   const box = $('#d-risk');
   const r = S.riskBy.get(p.projekt);
-  if (!S.risk) { box.replaceChildren(h('p', { class: 'note', text: 'Indlæs risk log-udtrækket for at se projektets risiko.' })); return; }
-  if (!r) { box.replaceChildren(h('p', { class: 'note', text: 'Projektet findes ikke i risk log-udtrækket.' })); return; }
+  const erp = isNum(p.risikoklasse) ? `Risk Class i ERP-udtrækket (Maconomy): ${p.risikoklasse}.` : '';
+  if (!S.risk) { box.replaceChildren(h('p', { class: 'note', text: [erp, 'Indlæs risk log-udtrækket for ledelsens beslutning og risikofaktorer.'].filter(Boolean).join(' ') })); return; }
+  if (!r) { box.replaceChildren(h('p', { class: 'note', text: [erp, 'Projektet findes ikke i risk log-udtrækket.'].filter(Boolean).join(' ') })); return; }
   const kids = [];
   kids.push(h('p', { class: 'take', style: 'margin:0' }, `Risikoklasse `, h('b', { text: isNum(r.klasse) ? String(r.klasse) : '–' }), ` · Maconomy ${isNum(r.mac_klasse) ? r.mac_klasse : '–'}${isNum(r.mac_klasse) && r.mac_klasse !== r.klasse ? ' (afviger)' : ''} · ${r.vurderet ? 'risikovurderet' : 'ikke risikovurderet'}`));
   if (r.vurderet || r.honorar || r.tabsrisiko) {
@@ -3577,7 +3732,7 @@ function pipeEdit(x, preset = {}) {
   const sec = (t) => h('div', { class: 'pf-sec', text: t });
   const pipeAll = S.pipe || [];
   const form = h('div', { class: 'form' },
-    dl('pf-kunder', pipeAll.map((y) => y.p?.kunde)), dl('pf-bus', S.P.map((r) => r.bu)), dl('pf-pls', S.P.map((r) => r.pl)), dl('pf-pas', S.P.map((r) => r.po)),
+    dl('pf-kunder', [...pipeAll.map((y) => y.p?.kunde), ...S.P.map((r) => r.kunde)]), dl('pf-bus', S.P.map((r) => r.bu)), dl('pf-pls', S.P.map((r) => r.pl)), dl('pf-pas', S.P.map((r) => r.po)),
     dl('pf-kilder', [...PKILDER, ...pipeAll.map((y) => y.kilde)]), dl('pf-udbudl', pipeAll.map((y) => y.udbud)), dl('pf-partnl', pipeAll.map((y) => y.partnere)),
     h('div', { class: 'pf-grid' }, L('Type', fType), L('Fase', fFase), L(h('span', {}, 'Arbejdstitel ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fTitel), L('Udbud (delaftaler)', fUdbud, 'Samme navn på alle delaftaler i et udbud, fx "Kejd rammeaftale"')),
     p.projektnummer ? h('p', { class: 'note', style: 'margin:0', text: `ERP-projektnummer ${p.projektnummer}. Titel, BU, PL og PA opdateres fra ERP-udtrækket.` }) : null,
@@ -3821,17 +3976,75 @@ function projFilter(r, chip, rule, q) {
   if (chip === 'aaben' && !(r.aabne > 0)) return false;
   if (rule && !r.hit.includes(rule)) return false;
   q = String(q || '').toLowerCase();
-  if (q && ![r.projekt, r.navn, r.pl, r.po].some((v) => String(v || '').toLowerCase().includes(q))) return false;
+  if (q && ![r.projekt, r.navn, r.kunde, r.pl, r.po].some((v) => String(v || '').toLowerCase().includes(q))) return false;
   return true;
 }
 function drawProjects(rows) {
   $$('.chip[data-chip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.chip === S.chip)));
+  $$('.chip[data-kt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kt === S.kt)));
+  if (S.kt) rows = rows.filter((r) => r.kontrakttype === S.kt);
   const rc = $('#chip-rule'); const rule = S.rules.find((x) => x.regel === S.regel);
   rc.hidden = !rule; rc.textContent = rule ? `Regel: ${rule.navn} ×` : '';
   viewRows = rows.filter((r) => projFilter(r, S.chip, rule, S.q)).sort(cmp(S.sorts.proj.k, S.sorts.proj.d));
   $('#count').textContent = `Viser ${nf0.format(viewRows.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()}`;
   drawProjTable(viewRows);
 }
+/* ----- Kunder ----- */
+const wEac = (rs) => { const w = rs.filter((r) => isNum(r.tfm_eac) && num(r.baseline) > 0); const b = w.reduce((a, r) => a + num(r.baseline), 0); return b > 0 ? w.reduce((a, r) => a + r.tfm_eac * num(r.baseline), 0) / b : null; };
+const klCell = (td, r) => { if (isNum(r.klasse)) { td.className = (td.className + ' hc hc' + r.klasse).trim(); td.title = 'Fra ' + r.klasse_kilde; } };
+function drawKunder() {
+  $$('.seg [data-kall]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.kall === '1') === S.kAll)));
+  const base = S.kAll ? S.P : S.P.filter(inScope);
+  const withK = base.filter((r) => r.kunde);
+  const by = new Map();
+  withK.forEach((r) => { if (!by.has(r.kunde)) by.set(r.kunde, []); by.get(r.kunde).push(r); });
+  const q = S.kq.toLowerCase();
+  const rows = [...by.entries()].map(([kunde, rs]) => {
+    const o = summarize(rs, []);
+    return { kunde, rs, n: rs.length, fp: rs.filter((r) => r.kontrakttype === 'Fixed Price').length, baseline: o.baseline, oms: o.oms, db: o.db, dg: o.dg, tfm: o.tfm, tfm_eac: wEac(rs),
+      wip: rs.reduce((a, r) => a + num(r.wip), 0), forfalden: o.forfalden, roede: o.roede, klmax: Math.max(0, ...rs.map((r) => num(r.klasse))) || null, bus: [...new Set(rs.map((r) => r.bu))].sort().join(', ') };
+  });
+  const shown = rows.filter((r) => !q || r.kunde.toLowerCase().includes(q)).sort(cmp(S.sorts.kunder.k, S.sorts.kunder.d));
+  const uden = base.length - withK.length;
+  $('#k-count').textContent = !withK.length ? '' : `Viser ${nf0.format(shown.length)} af ${nf0.format(rows.length)} kunder med ${nf0.format(withK.length)} projekter i ${S.kAll ? 'hele NIRAS' : scopeLabel()}` + (uden ? `. ${nf0.format(uden)} projekter har ingen kunde i udtrækket.` : '.');
+  if (!withK.length) {
+    $('#t-kunder').replaceChildren(h('tbody', {}, h('tr', {}, h('td', { class: 'empty', text: 'Ingen kunder i udtrækket. Kunderne kommer med PTD-udtrækket i det nye format (Detailed Main Project View).' }))));
+  } else {
+    table($('#t-kunder'), [
+      { k: 'kunde', l: 'Kunde', cls: 'name' }, ...(S.kAll ? [{ k: 'bus', l: 'BU', sec: 1 }] : []),
+      { k: 'n', l: 'Projekter', num: 1, f: F.int }, { k: 'fp', l: 'Fixed Price', num: 1, f: (v, r) => `${v} af ${r.n}`, title: 'Antal projekter med Customer Contract Type Fixed Price' },
+      { k: 'baseline', l: 'Baseline', num: 1, f: F.tkr }, { k: 'oms', l: 'Oms. PTD', num: 1, f: F.tkr, sec: 1 },
+      { k: 'dg', l: 'DG', num: 1, f: F.pct }, { k: 'tfm', l: 'TFM', num: 1, f: F.tfm, sec: 1 }, { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: F.tfm },
+      { k: 'wip', l: 'WIP', num: 1, f: F.tkr, sec: 1 }, { k: 'forfalden', l: 'Forfalden', num: 1, f: (v) => (num(v) ? F.tkr(v) : '–'), sec: 1 },
+      { k: 'roede', l: 'Røde flag', num: 1, f: F.int, title: 'Antal projekter med røde flag' }, { k: 'klmax', l: 'Højeste risiko', num: 1, f: (v) => (v ? String(v) : '–') },
+    ], shown, { sortKey: 'kunder', selKey: S.kSel ? { k: 'kunde', v: S.kSel } : null, onClick: (r) => { S.kSel = r.kunde; render(); $('#k-detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+  }
+  // Valgt kunde: alle projekter med kunden (i hele NIRAS, så intet skjules af filteret)
+  const det = $('#k-detail');
+  const all = S.kSel ? S.P.filter((r) => r.kunde === S.kSel) : [];
+  det.hidden = !all.length;
+  if (!all.length) return;
+  const inS = all.filter(inScope).length;
+  const o = summarize(all, []);
+  $('#k-h').textContent = S.kSel;
+  $('#k-sub').textContent = `${nf0.format(all.length)} projekter i hele NIRAS (${[...new Set(all.map((r) => r.bu))].sort().join(', ')})` + (inS < all.length ? `, heraf ${nf0.format(inS)} i ${scopeLabel()}` : '') + ` · PTD pr. ${F.date(S.ptd.key)}`;
+  const fp = all.filter((r) => r.kontrakttype === 'Fixed Price').length;
+  $('#k-tiles').replaceChildren(tile('Baseline', F.mio(o.baseline)), tile('Omsætning PTD', F.mio(o.oms), 'DG ' + (F.pct(o.dg) || '—')),
+    tile('TFM / TFM EAC', `${F.tfm(o.tfm) || '—'} / ${F.tfm(wEac(all)) || '—'}`), tile('Fixed Price', `${fp} af ${all.length}`, `${all.length - fp} Time & Material`),
+    tile('WIP', F.mio(o.wipPos + o.wipNeg)), tile('Røde flag', nf0.format(o.roede), `${nf0.format(o.gule)} kun gule`));
+  table($('#t-kproj'), [
+    { k: 'stjerne', l: '★', cls: 'star', title: 'Fokusprojekt' }, { k: 'projekt', l: 'Projekt' }, { k: 'navn', l: 'Navn', cls: 'name' }, { k: 'bu', l: 'BU' },
+    { k: 'kontrakttype', l: 'Kontrakt', cell: (td, r) => td.replaceChildren(ktBadge(r.kontrakttype)) }, { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA', sec: 1 },
+    { k: 'klasse', l: 'Risiko', num: 1, f: (v) => (isNum(v) ? String(v) : '–'), cell: klCell },
+    { k: 'roede', l: 'Røde', num: 1, f: F.int, cell: flagCell('roede') }, { k: 'gule', l: 'Gule', num: 1, f: F.int, cell: flagCell('gule'), sec: 1 },
+    { k: 'baseline', l: 'Baseline', num: 1, f: F.tkr }, { k: 'oms', l: 'Oms. PTD', num: 1, f: F.tkr, sec: 1 }, { k: 'dg', l: 'DG', num: 1, f: F.pct },
+    { k: 'poc', l: 'POC', num: 1, f: F.pct }, { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: F.tfm }, { k: 'wip', l: 'WIP', num: 1, f: F.tkr, sec: 1 },
+    { k: 'forv_slut', l: 'Forventet slut', f: F_dmy, sec: 1 },
+  ], [...all].sort(cmp(S.sorts.kproj.k, S.sorts.kproj.d)), { sortKey: 'kproj', rowClass: (r) => (inScope(r) ? '' : 'dim'), onClick: (r) => openProject(r.projekt) });
+}
+$$('.seg [data-kall]').forEach((b) => b.addEventListener('click', () => { S.kAll = b.dataset.kall === '1'; render(); }));
+$('#k-search').addEventListener('input', (e) => { S.kq = e.target.value.trim(); render(); });
+$('#k-close').addEventListener('click', () => { S.kSel = null; render(); });
 function drawPersons() {
   drawPersonPanel();
   $$('.chip[data-role]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.role === S.pRole)));
@@ -3889,6 +4102,7 @@ function drawDrawer() {
     ...kv('TFM EAC', F.tfm(r.tfm_eac)), ...kv('DG', F.pct(r.dg)), ...kv('Baseline (tDKK)', F.tkr(r.baseline)), ...kv('POC', F.pct(r.poc)),
     ...kv('Eksterne omk. (tDKK)', F.tkr(r.ext)), ...kv('Faktureret (tDKK)', F.tkr(r.faktureret)), ...kv('Faktureret over baseline (tDKK)', F.tkr(r.over_baseline)),
     ...kv('WIP (tDKK)', F.tkr(r.wip)), ...kv('Klar til fakturering (tDKK)', F.tkr(r.til_fakt)), ...kv('Forfalden (tDKK)', F.tkr(r.forfalden)));
+  drawMeta(r);
   drawInfo(r);
   drawHist(r);
   drawRiskDetail(r);
@@ -3906,6 +4120,35 @@ function drawDrawer() {
       n.opfoelgning ? h('button', { class: 'btn small', type: 'button', text: n.status === 'lukket' ? 'Genåbn' : 'Luk opfølgning', onclick: () => act(() => Store.updateNote(n.id, { status: n.status === 'lukket' ? 'åben' : 'lukket' })) }) : null,
       h('button', { class: 'btn small', type: 'button', text: 'Slet', onclick: () => { if (confirm('Slet noten?')) act(() => Store.deleteNote(n.id)); } })))))
     : [h('p', { class: 'note', text: 'Ingen noter på projektet endnu.' })]));
+}
+// Kunde, kontrakttype, risikoklasse og datoer øverst i detaljen; kontrakt og fremdrift fra det nye ERP-format
+function drawMeta(r) {
+  const asof = S.ptd?.key || '';
+  const over = r.forv_slut && !r.faerdig_dato && r.forv_slut < asof;
+  const kl = isNum(r.klasse) ? h('span', { class: 'kt', style: `background:${['', '#EFE3D7', '#E2B04A', '#BA1223', '#700B15'][r.klasse]};color:${r.klasse >= 3 ? '#fff' : 'var(--ink)'}`, title: `Fra ${r.klasse_kilde}${r.klasse_kilde === 'risk log' && isNum(r.mac_klasse) && r.mac_klasse !== r.klasse ? `. Maconomy siger ${r.mac_klasse}` : ''}`, text: 'Risikoklasse ' + r.klasse }) : null;
+  const dates = [r.startdato ? 'Startet ' + F_dmy(r.startdato) : '', r.forv_slut ? 'forventet slut ' + F_dmy(r.forv_slut) : '', r.faerdig_dato ? 'arbejde færdigt ' + F_dmy(r.faerdig_dato) : ''].filter(Boolean).join(' · ');
+  const has = r.kunde || r.kontrakttype || kl || dates;
+  $('#d-meta').replaceChildren(...(has ? [h('div', { class: 'dmeta' },
+    r.kunde ? h('a', { class: 'k', href: '#', title: 'Vis alle projekter med kunden', text: r.kunde, onclick: (e) => { e.preventDefault(); S.kSel = r.kunde; S.kq = ''; closeProject(); show('kunder'); } }) : null,
+    r.kontrakttype ? ktBadge(r.kontrakttype) : null, kl,
+    dates ? h('span', { class: 'm', text: dates }) : null,
+    over ? h('span', { class: 'flag y', title: 'Expected Ending Date er passeret, og der er ingen Work Completed Date', text: 'Forventet slut passeret' }) : null,
+    r.ps ? h('span', { class: 'm', text: 'PS ' + r.ps }) : null)] : []));
+  const box = $('#d-kf');
+  if (!isNum(r.timer) && !isNum(r.backlog_netto) && !isNum(r.projektresultat) && r.mangler_survey == null) {
+    box.replaceChildren(h('p', { class: 'note', text: 'Timer, restværdi, projektresultat og contingency kommer med PTD-udtrækket i det nye format (Detailed Main Project View).' }));
+    return;
+  }
+  const tim = (v) => (isNum(v) ? nf0.format(v) : '–');
+  const missing = [['mangler_kontrakt', 'Missing Contract'], ['mangler_risikoklasse', 'Missing Risk Class'], ['mangler_tjekliste', 'Missing Checklist'], ['mangler_qa', 'Missing QA'], ['mangler_survey', 'Missing Survey']].filter(([k]) => r[k]);
+  box.replaceChildren(
+    h('div', { class: 'tiles' },
+      tile('Timer brugt / EAC', `${tim(r.timer)} / ${tim(r.timer_eac)}`, isNum(r.timer_pct) ? F.pct(r.timer_pct) + ' brugt' + (isNum(r.timer_etc) ? ` · ${tim(r.timer_etc)} tilbage` : '') : (isNum(r.timer_etc) ? `${tim(r.timer_etc)} tilbage` : '')),
+      tile('Restværdi (Backlog Net)', isNum(r.backlog_netto) ? F.tkr(r.backlog_netto) + ' tDKK' : '–', isNum(r.backlog_brutto) ? 'brutto ' + F.tkr(r.backlog_brutto) + ' tDKK' : ''),
+      tile('Projektresultat', isNum(r.projektresultat) ? F.tkr(r.projektresultat) + ' tDKK' : '–', isNum(r.overhead) ? 'efter overhead ' + F.tkr(r.overhead) + ' tDKK' : ''),
+      tile('Contingency', isNum(r.contingency) ? F.tkr(r.contingency) + ' tDKK' : '–', isNum(r.overforbrug) && r.overforbrug !== 0 ? 'Over-spending ' + F.tkr(r.overforbrug) + ' tDKK' : '')),
+    h('div', { class: 'mflags' }, h('span', { class: 'note', text: 'Flag i ERP:' }),
+      ...(missing.length ? missing.map(([, l]) => h('span', { class: 'mf', text: l })) : [h('span', { class: 'note', text: 'ingen' })])));
 }
 // Redigering af en eksisterende note: tekst, opfølgning, frist og dato
 function noteEditor(n) {
@@ -4021,8 +4264,9 @@ async function reloadNotes() { const d = await Store.load(); S.notes = d.notes; 
 /* ================= Hændelser ================= */
 function show(id) { S.tab = id; $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id))); $$('main > .page[id]').forEach((p) => { p.hidden = p.id !== id; }); try { history.replaceState(null, '', '#' + id); } catch (e) { /* file:// */ } render(); }
 $$('.tab').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
-$('#btn-reset').addEventListener('click', () => { S.bus = new Set(S.P.some((r) => r.bu === 'DSGN') ? ['DSGN'] : []); S.pls = new Set(); S.pas = new Set(); S.chip = 'alle'; S.regel = null; S.q = ''; $('#search').value = ''; if (S.mSel || S.pSel) { S.mSel = ''; S.pSel = ''; applyPtd(); rebuild(); } render(); });
+$('#btn-reset').addEventListener('click', () => { S.bus = new Set(S.P.some((r) => r.bu === 'DSGN') ? ['DSGN'] : []); S.pls = new Set(); S.pas = new Set(); S.chip = 'alle'; S.kt = ''; S.regel = null; S.q = ''; $('#search').value = ''; if (S.mSel || S.pSel) { S.mSel = ''; S.pSel = ''; applyPtd(); rebuild(); } render(); });
 $$('.chip[data-chip]').forEach((b) => b.addEventListener('click', () => { S.chip = b.dataset.chip; render(); }));
+$$('.chip[data-kt]').forEach((b) => b.addEventListener('click', () => { S.kt = b.dataset.kt; render(); }));
 $$('.chip[data-role]').forEach((b) => b.addEventListener('click', () => { S.pRole = b.dataset.role; render(); }));
 $('#chip-rule').addEventListener('click', () => { S.regel = null; render(); });
 $('#search').addEventListener('input', (e) => { S.q = e.target.value.trim(); render(); });
@@ -4112,6 +4356,17 @@ async function loadFiles(files) {
   for (const f of files) { try { parsed.push(await parseFile(f)); } catch (e) { msgs.push(e.message); console.error(e); } }
   const ko = { ptd: 0, maaned: 1, risiko: 2 };
   parsed.sort((a, b) => (a.kind === b.kind ? a.key.localeCompare(b.key) : ko[a.kind] - ko[b.kind]));
+  // Bekræftelse før noget gemmes: hvad filen er genkendt som, og hvad de tre tjek fandt
+  for (let i = parsed.length - 1; i >= 0; i--) {
+    const d = parsed[i];
+    if (!d.check) continue;
+    const typ = d.kind === 'ptd' ? `PTD-udtræk pr. ${F.date(d.key)}` : `månedsudtræk for ${F.per(d.key)}`;
+    const q = `${d.file}\n\nGenkendt som ${typ}${d.format === 'detailed' ? ' (Detailed Main Project View)' : ''}.\n`
+      + `Filterlinje, kolonner og tal er enige:\n· Filterlinje: ${d.check.filter}\n· Kolonner: ${d.check.kolonner}\n· Omsætning ÷ baseline: ${d.check.ratioTxt}\n`
+      + `${d.kind === 'ptd' ? 'Datoen er læst fra ' + (KILDE[d.kilde] || 'filen') + (d.udtrukket ? ' (' + hentet(d) + ')' : '') : 'Måneden er læst fra ' + (KILDE[d.kilde] || 'filen')}.\n`
+      + `${nf0.format(d.rows.length)} projekter.\n\nGem udtrækket?`;
+    if (!confirm(q)) { msgs.push(`${d.file} blev ikke gemt`); parsed.splice(i, 1); }
+  }
   for (const d of parsed) {
     if (Store.mode() !== 'supabase') { try { await saveLocal(d); } catch (e) { msgs.push('Kunne ikke gemme i browseren'); } }
     msgs.push(`${dLabel(d)} (fra ${KILDE[d.kilde] || 'filen'}${d.udtrukket ? ', ' + hentet(d) : ''}): ${nf0.format(d.rows.length)} projekter${d.recon.ok === false ? ', AFVIGER fra Total-linjen i ' + d.recon.diff.join(', ') : d.recon.ok ? ', afstemt' : ''}`);
@@ -4126,7 +4381,7 @@ async function loadFiles(files) {
   }
   await loadData();
   rebuild(); render();
-  const fejl = msgs.some((m) => /^Supabase|kunne ikke|AFVIGER|ikke sendt/i.test(m));
+  const fejl = msgs.some((m) => /^Supabase|kunne ikke|AFVIGER|ikke sendt|uenige/i.test(m));
   toast((fejl ? 'OBS: ' : '') + msgs.join(' · ') + (fejl ? ' (klik for at lukke)' : ''), fejl);
 }
 
@@ -4134,7 +4389,7 @@ async function loadFiles(files) {
 $('#btn-export').addEventListener('click', () => {
   if (!S.ptd) { toast('Indlæs data først'); return; }
   const rows = S.tab === 'proj' ? viewRows : S.P.filter(inScope).sort(cmp('score', -1));
-  const cols = [['projekt', 'Projekt'], ['navn', 'Navn'], ['bu', 'BU'], ['pl', 'PL'], ['po', 'PA'], ['klasse', 'Risikoklasse'], ['stjerne', 'Fokus'], ['roede', 'Røde flag'], ['gule', 'Gule flag'], ['flagtekst', 'Flag'], ['baseline', 'Baseline'], ['poc', 'POC'], ['oms', 'Omsætning PTD'], ['db', 'DB PTD'], ['dg', 'DG'], ['loen', 'Løn PTD'], ['tfm', 'TFM'], ['tfm_eac', 'TFM EAC'], ['wip', 'WIP'], ['faktureret', 'Faktureret'], ['til_fakt', 'Klar til fakturering'], ['forfalden', 'Forfalden'], ['m_oms', 'Omsætning måned'], ['m_db', 'DB måned'], ['m_tfm', 'TFM måned'], ['etc_dato', 'Seneste ETC'], ['etc_dage', 'ETC dage'], ['note', 'Seneste note']];
+  const cols = [['projekt', 'Projekt'], ['navn', 'Navn'], ['kunde', 'Kunde'], ['kontrakttype', 'Kontrakttype'], ['bu', 'BU'], ['pl', 'PL'], ['po', 'PA'], ['klasse', 'Risikoklasse'], ['klasse_kilde', 'Risikoklasse fra'], ['stjerne', 'Fokus'], ['roede', 'Røde flag'], ['gule', 'Gule flag'], ['flagtekst', 'Flag'], ['baseline', 'Baseline'], ['poc', 'POC'], ['oms', 'Omsætning PTD'], ['db', 'DB PTD'], ['dg', 'DG'], ['loen', 'Løn PTD'], ['tfm', 'TFM'], ['tfm_eac', 'TFM EAC'], ['wip', 'WIP'], ['faktureret', 'Faktureret'], ['til_fakt', 'Klar til fakturering'], ['forfalden', 'Forfalden'], ['m_oms', 'Omsætning måned'], ['m_db', 'DB måned'], ['m_tfm', 'TFM måned'], ['etc_dato', 'Seneste ETC'], ['etc_dage', 'ETC dage'], ['note', 'Seneste note']];
   const cell = (v) => { if (v == null) return ''; if (typeof v === 'number') return String(Math.round(v * 10000) / 10000).replace('.', ','); const t = String(v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
   const csv = '﻿' + [cols.map((c) => c[1]).join(';'), ...rows.map((r) => cols.map((c) => cell(r[c[0]])).join(';'))].join('\r\n');
   const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: `Projektstatus_${scopeLabel().replace(/[^\wæøåÆØÅ-]+/g, '_')}_${S.ptd.key}.csv` });
@@ -4382,7 +4637,7 @@ async function logOut() {
 
 /* ================= Start ================= */
 (async () => {
-  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler'].includes(h0)) S.tab = h0;
+  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'kunder', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler'].includes(h0)) S.tab = h0;
   await ensureLogin();
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
