@@ -117,6 +117,25 @@ Hvert modul har også kolonnen `projekt` med en kopi af projektnummeret, som dat
 - Opfølgninger fra personnoter står også i fanen Opfølgning og får påmindelse kl. 07 dagen før (`person_paamindelser`).
 - Eksport: `v_eksport_personnoter` og arket Personnoter i "Mine data". SQL: `supabase/11_person_noter.sql`.
 
+## Kunder (12. nov. 2026, `13_kunder.sql`)
+
+Én kundetabel med to slags kunder, så leads, PQ og tilbud kan få en kunde fra ERP, også før opgaven findes i ERP.
+
+| Felt | Betydning |
+|---|---|
+| `navn` | Kundens navn (unikt pr. type uden hensyn til store og små bogstaver) |
+| `type` | `erp` (lagt ind automatisk fra PTD og risk log) eller `midlertidig` (oprettet i tilbudsfasen) |
+| `erp_id` | Kun midlertidige: den ERP-kunde, kunden er koblet til |
+| `koblet`, `koblet_af` | Hvornår og af hvem koblingen er lavet ("ERP (samme navn)", når den sker automatisk) |
+| `projekt.kunde_id` | Kunden på et lead, PQ eller tilbud |
+
+- **Synk fra ERP:** triggerne `erp_ptd_kunde` og `erp_risiko_kunde` lægger nye kundenavne ind som ERP-kunder. Får en midlertidig kunde præcis samme navn i ERP, kobles den automatisk.
+- **Kundenavnet på projektet** (`projekt.kunde`) følger `kunde_id`: ERP-navnet, når en midlertidig kunde er koblet. Projekter, der er kommet i ERP, beholder ERP's kundenavn.
+- **`kunde_kobl(midlertidig, erp)`** kobler (eller fjerner koblingen med null). Tilbuddene beholder den midlertidige kunde som historik ("tilbudt som") og vises og tælles med ERP-navnet.
+- **I dashboardet:** kundefeltet i pipeline-formularen foreslår kunder mærket ERP eller Midlertidig. Et nyt navn oprettes som midlertidig kunde efter bekræftelse. Fanen Kunder viser kunder fra PTD og pipeline, kundens leads, PQ og tilbud med hitrate, og en liste over midlertidige kunder med forslag til kobling: kunden på en vundet opgave, der er kommet i ERP, og ERP-navne, der begynder med eller indeholder det midlertidige navn.
+- **Eksport:** `v_eksport_kunder` (midlertidige kunder og kunder i brug, med ERP-navn og antal pipeline-punkter) og arket Kunder i "Mine data".
+- **Første fyldning:** 814 ERP-kunder. De 30 kundenavne i pipelinen: 13 koblet til ERP-kunder med samme navn, 17 oprettet som midlertidige kunder.
+
 ## Fra tilbud til projekt
 
 1. Tilbuddet oprettes i `projekt` med salgsnummer og arbejdstitel (status tilbud). Bid/no bid, noter m.m. kobles på dets id.

@@ -108,6 +108,14 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .t tr.dim td:not(.hc) { color: var(--muted); }
 #k-tiles { margin-bottom: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .dmeta a.k { color: var(--deep); }
+#k-pipebox { margin-top: 18px; } #k-pipebox .sec-h { margin-bottom: 8px; }
+.kmidl { display: flex; flex-direction: column; }
+.kmrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px 16px; padding: 10px 0; border-top: 1px solid var(--line); align-items: center; }
+.kmname .note { margin: 2px 0 0; }
+.kmact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.kmact .btn { padding: 4px 10px; font-size: 12px; }
+.kmsearch { display: inline-flex; gap: 4px; } .kmsearch input { width: 200px; height: 30px; font-size: 12px; }
+@media (max-width: 700px) { .kmrow { grid-template-columns: 1fr; } .kmact { justify-content: flex-start; } .kmsearch input { width: 150px; } }
 .ktsplit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .ktsplit .kbox { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; background: var(--sand-2); }
 .ktsplit .kbox .kh { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
@@ -396,6 +404,10 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .t td .ptag { margin: 0; }
 #pdlg { width: min(820px, 94vw); }
 #pdlg .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
+.pf-kwrap { display: flex; flex-direction: column; gap: 3px; }
+.pf-kstat { font-size: 11px; color: var(--muted); font-weight: 400; min-height: 14px; }
+.pf-kstat.ny { color: #7A4E0E; }
+.ktag { display: inline-block; font-size: 10px; line-height: 1.5; padding: 0 5px; border-radius: 3px; background: #FBF1DE; color: #7A4E0E; border: 1px solid #E9C98F; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
 #pdlg .pf-sec { font-size: 12px; font-weight: 700; color: var(--deep); text-transform: uppercase; letter-spacing: .06em; margin: 4px 0 -2px; }
 #pdlg .pf-sum { background: var(--sand-2); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; font-variant-numeric: tabular-nums; }
 #pdlg .pf-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } #pdlg .pf-acts .sp { flex: 1; }
@@ -1237,12 +1249,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <button class="btn" id="k-close" type="button">Luk kunden</button>
         </div>
         <div class="tiles" id="k-tiles"></div>
-        <div class="tablebox"><table class="t" id="t-kproj"></table></div>
-        <p class="note">Beløb i tDKK. Klik på et projekt for detaljer og noter.</p>
+        <div id="k-projbox">
+          <div class="tablebox"><table class="t" id="t-kproj"></table></div>
+          <p class="note">Beløb i tDKK. Klik på et projekt for detaljer og noter.</p>
+        </div>
+        <div id="k-pipebox">
+          <h3 class="sec-h">Leads, PQ og tilbud med kunden</h3>
+          <div class="tablebox"><table class="t" id="t-kpipe"></table></div>
+          <p class="note" id="k-pipenote"></p>
+        </div>
       </div>
       <div class="card">
         <div class="phead">
-          <div><h2>Kunder</h2><p class="note">Kunder fra Customer i PTD-udtrækket. Klik på en kunde for at se alle projekter med kunden.</p></div>
+          <div><h2>Kunder</h2><p class="note">Kunder fra PTD-udtrækket og fra leads, PQ og tilbud i pipelinen. Klik på en kunde for at se alle projekter og tilbud med kunden.</p></div>
           <div class="seg" role="group" aria-label="Udsnit">
             <button type="button" data-kall="0" title="Kun projekter i den valgte BU, PL og PA">Valgt udsnit</button>
             <button type="button" data-kall="1" title="Alle BU'er, uanset filteret øverst">Hele NIRAS</button>
@@ -1253,7 +1272,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <p class="note" id="k-count"></p>
         <div class="tablebox"><table class="t" id="t-kunder"></table></div>
-        <p class="note">Beløb i tDKK. TFM EAC er vægtet med baseline. Fixed Price viser antal projekter med Customer Contract Type Fixed Price.</p>
+        <p class="note">Beløb i tDKK. TFM EAC er vægtet med baseline. Fixed Price viser antal projekter med Customer Contract Type Fixed Price. Pipeline tæller åbne leads, PQ og tilbud.</p>
+      </div>
+      <div class="card" id="k-midl-card" hidden>
+        <div class="phead">
+          <div><h2>Midlertidige kunder</h2><p class="note">Kunder fra tilbudsfasen, som ikke findes i ERP. Kobl dem til ERP-kunden, når opgaven er vundet. Tilbuddene beholder det midlertidige navn som historik og vises med ERP-navnet.</p></div>
+          <div class="seg" role="group" aria-label="Midlertidige kunder">
+            <button type="button" data-kmidl="aabne">Ikke koblet</button>
+            <button type="button" data-kmidl="alle">Alle</button>
+          </div>
+        </div>
+        <p class="note" id="k-midl-sum"></p>
+        <div id="k-midl"></div>
+        <datalist id="k-erpnavne"></datalist>
       </div>
     </section>
 
@@ -2056,7 +2087,7 @@ const Store = {
   /* ----- Pipeline: leads, PQ, tilbud og rammeaftaler ----- */
   async pipeLoad() {
     if (this.mode() !== 'supabase') return [];
-    const q = (bid) => `/rest/v1/projekt_pipeline?select=*,p:projekt_id(id,projektnummer,salgsnummer,arbejdstitel,titel,bu,pl,po,kunde,status${bid ? ',bid:projekt_bid(id,beslutning,beslutningsdato,oprettet)' : ''})&order=oprettet`;
+    const q = (bid) => `/rest/v1/projekt_pipeline?select=*,p:projekt_id(id,projektnummer,salgsnummer,arbejdstitel,titel,bu,pl,po,kunde,kunde_id,status${bid ? ',bid:projekt_bid(id,beslutning,beslutningsdato,oprettet)' : ''})&order=oprettet`;
     try { return await this.fetchAll(q(true)); } catch (e) { console.warn('Bid/no bid kunne ikke hentes med pipelinen', e); return this.fetchAll(q(false)); }
   },
   // Gemmer stamdata i projekt og pipeline-felterne i projekt_pipeline. Nyt lead: opretter projektet først.
@@ -2108,6 +2139,11 @@ const Store = {
   pipeWon(projektId, nummer) { return this.sbFetch('/rest/v1/rpc/pipeline_vundet', { method: 'POST', body: JSON.stringify({ p_id: projektId, p_nummer: nummer || null }) }); },
   // Sletter kun leads uden ERP-nummer; pipeline-rækken følger med (on delete cascade)
   pipeDelete(projektId) { return this.sbFetch('/rest/v1/projekt?id=eq.' + projektId + '&projektnummer=is.null', { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); },
+  /* ----- Kunder: ERP-kunder og midlertidige kunder fra tilbudsfasen ----- */
+  kunderLoad() { return this.fetchAll('/rest/v1/kunde?select=id,navn,type,erp_id,koblet,koblet_af,oprettet&order=navn'); },
+  async kundeCreate(navn) { const r = await this.sbFetch('/rest/v1/kunde', { method: 'POST', body: JSON.stringify({ navn, type: 'midlertidig' }) }); return r[0]; },
+  kundeKobl(midl, erp) { return this.sbFetch('/rest/v1/rpc/kunde_kobl', { method: 'POST', body: JSON.stringify({ p_midl: midl, p_erp: erp || null }) }); },
+  kundeDelete(id) { return this.sbFetch('/rest/v1/kunde?id=eq.' + id + '&type=eq.midlertidig', { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); },
   /* ----- ERP-udtræk i Supabase ----- */
   async fetchAll(path) {
     const out = [];
@@ -2222,7 +2258,7 @@ const S = {
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', kt: '', regel: null, q: '', pRole: 'pl',
-  kSel: null, kq: '', kAll: false,
+  kSel: null, kq: '', kAll: false, kunder: null, kById: new Map(), kErpByLc: new Map(), kMidl: 'aabne',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, kunder: { k: 'baseline', d: -1 }, kproj: { k: 'baseline', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
   pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30), pipeColsOpen: false,
   pnotes: null, pnKey: '', pnEdit: null, pnFiles: [], pnFilter: 'alle', pnMore: 40, pnOpf: [],
@@ -3254,9 +3290,22 @@ const pTitle = (p) => (p ? p.arbejdstitel || p.titel || p.salgsnummer || p.proje
 const pDays = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
 const pInit = (t) => String(t || '').toUpperCase().split(/[^A-ZÆØÅ0-9]+/).filter(Boolean);
 async function loadPipe() {
-  if (Store.mode() !== 'supabase') { S.pipe = []; return; }
+  if (Store.mode() !== 'supabase') { S.pipe = []; S.kunder = null; indexKunder(); return; }
   try { S.pipe = await Store.pipeLoad(); } catch (e) { S.pipe = []; toast('Kunne ikke hente pipeline: ' + e.message); }
+  // Kundetabellen (13_kunder.sql). Mangler den, bruges kundefeltet som fritekst som før.
+  try { S.kunder = await Store.kunderLoad(); } catch (e) { S.kunder = null; console.warn('Kundetabellen kunne ikke hentes', e); }
+  indexKunder();
 }
+/* ----- Kunder: ERP-kunder og midlertidige kunder ----- */
+const kLc = (t) => String(t || '').trim().toLowerCase();
+function indexKunder() {
+  S.kById = new Map((S.kunder || []).map((k) => [k.id, k]));
+  S.kErpByLc = new Map((S.kunder || []).filter((k) => k.type === 'erp').map((k) => [kLc(k.navn), k]));
+}
+// Navnet, kunden vises og tælles med: ERP-navnet, når en midlertidig kunde er koblet
+const kEff = (k) => (k ? (k.erp_id && S.kById.get(k.erp_id)?.navn) || k.navn : null);
+// Kunden bag et navn: ERP-kunde først, ellers en midlertidig kunde med samme navn
+const kFind = (navn) => { const n = kLc(navn); return S.kErpByLc.get(n) || (S.kunder || []).find((k) => k.type === 'midlertidig' && kLc(k.navn) === n) || null; };
 // NIRAS' værdi: opgave og miniudbud = honorar × NIRAS-andel; rammeaftale = værdi × teamets andel (tom = 1/vindere) × NIRAS-andel
 const pNiras = (x) => (isNum(x.niras_andel) ? Number(x.niras_andel) : 1);
 const pRammeAndel = (x) => (isNum(x.andel) ? Number(x.andel) : num(x.antal_vindere) > 0 ? 1 / Number(x.antal_vindere) : null);
@@ -3303,7 +3352,8 @@ function pipeRows() {
     const rp = x.ramme_id ? byId.get(x.ramme_id) : null;
     return {
       x, id: x.id, projekt_id: x.projekt_id, type: x.type, typeL: PTYPE[x.type] || x.type, fase: x.fase, faseL: PFASE[x.fase] || x.fase, faseN: PFASE_N[x.fase] ?? 9,
-      nr: p.projektnummer || p.salgsnummer || '', erp: p.projektnummer || '', salgsnummer: p.salgsnummer || '', navn: pTitle(p), kunde: p.kunde || '',
+      nr: p.projektnummer || p.salgsnummer || '', erp: p.projektnummer || '', salgsnummer: p.salgsnummer || '', navn: pTitle(p), kunde: kEff(S.kById?.get(p.kunde_id)) || p.kunde || '', kunde_id: p.kunde_id || null,
+      kundeMidl: S.kById?.get(p.kunde_id)?.type === 'midlertidig' ? S.kById.get(p.kunde_id) : null,
       bu: p.bu || '', pl: p.pl || '', po: p.po || '', kilde: x.kilde || '', rolle: x.rolle || '', partnere: x.partnere || '', ansvarlige: x.ansvarlige || '',
       udbud: x.udbud || '', stoerrelse: x.stoerrelse || '', niras: isNum(x.niras_andel) ? Number(x.niras_andel) : null,
       vaerdi, chance, vaegtet: aaben && vaerdi != null && chance != null ? vaerdi * chance : null, aaben, andel: ramme ? pRammeAndel(x) : null,
@@ -3465,7 +3515,7 @@ function drawPipeTable(rows) {
     { k: 'navn', l: 'Titel', cls: 'name' },
     { k: 'typeL', l: 'Type', cell: (td, r) => { td.replaceChildren(h('span', { class: 'ptag' + (r.type === 'rammeaftale' ? ' ramme' : ''), text: r.typeL })); } },
     { k: 'faseN', l: 'Status', f: (v, r) => r.status, cell: (td, r) => { if (r.gammel) td.classList.add('c-amb'); } },
-    { k: 'kunde', l: 'Kunde', sec: 1 },
+    { k: 'kunde', l: 'Kunde', sec: 1, cell: (td, r) => { if (r.kundeMidl && !r.kundeMidl.erp_id) td.append(h('span', { class: 'ktag', title: 'Midlertidig kunde, ikke i ERP endnu', text: 'Midl.' })); } },
     { k: 'rolle', l: 'Rolle' },
     { k: 'ansvarlige', l: 'Ansvarlige' },
     { k: 'vaerdi', l: 'NIRAS-værdi (tDKK)', num: 1, f: F.tkr, title: 'Honorar × NIRAS-andel. Rammeaftale: aftalens værdi × teamets andel × NIRAS-andel' },
@@ -3618,7 +3668,19 @@ function pipeEdit(x, preset = {}) {
   const fTitel = inp('pf-titel', p.arbejdstitel || p.titel || '', { required: '' });
   const fSalg = inp('pf-salg', p.salgsnummer || '');
   const fUdbud = inp('pf-udbud', v.udbud || '', { list: 'pf-udbudl', placeholder: 'Fælles navn for delaftaler' });
-  const fKunde = inp('pf-kunde', p.kunde || '', { list: 'pf-kunder' });
+  // Kundefeltet viser kundens eget navn (også en midlertidig kunde, der er koblet til ERP), så koblingen bevares ved gem
+  const k0 = S.kById.get(p.kunde_id) || null;
+  const fKunde = inp('pf-kunde', k0 ? k0.navn : p.kunde || '', { list: 'pf-kunder', placeholder: S.kunder ? 'Skriv for at søge i ERP- og midlertidige kunder' : '' });
+  const kStat = h('small', { class: 'pf-kstat' });
+  const kResolve = () => { const t = fKunde.value.trim(); return !t ? null : k0 && kLc(k0.navn) === kLc(t) ? k0 : kFind(t); };
+  const kShow = () => {
+    if (!S.kunder) return;
+    const t = fKunde.value.trim(), k = kResolve();
+    kStat.className = 'pf-kstat' + (t && !k ? ' ny' : '');
+    kStat.textContent = !t ? '' : !k ? 'Ny kunde: oprettes som midlertidig kunde, når du gemmer'
+      : k.type === 'erp' ? 'ERP-kunde' : k.erp_id ? `Midlertidig kunde, koblet til ERP-kunden ${kEff(k)}` : 'Midlertidig kunde (ikke i ERP endnu)';
+  };
+  fKunde.addEventListener('input', kShow); kShow();
   const fBu = inp('pf-bu', ny ? firstBu || 'DSGN' : p.bu || '', { list: 'pf-bus' });
   const fPl = inp('pf-pl', ny ? (S.pls.size === 1 ? [...S.pls][0] : '') : p.pl || '', { list: 'pf-pls' });
   const fPo = inp('pf-po', ny ? (S.pas.size === 1 ? [...S.pas][0] : '') : p.po || '', { list: 'pf-pas' });
@@ -3695,6 +3757,16 @@ function pipeEdit(x, preset = {}) {
       const r = readDMY(id, lab); if (!r.ok) return; d[k] = r.iso;
     }
     const prj = { arbejdstitel: titel, salgsnummer: fSalg.value.trim() || null, kunde: fKunde.value.trim() || null, bu: fBu.value.trim() || null, pl: fPl.value.trim().toUpperCase() || null, po: fPo.value.trim().toUpperCase() || null };
+    // Kunde fra kundetabellen; findes navnet ikke, oprettes en midlertidig kunde
+    const kNy = S.kunder && prj.kunde && !kResolve() ? prj.kunde : null;
+    if (kNy && !confirm(`"${kNy}" findes ikke blandt kunderne fra ERP.\n\nOpret som midlertidig kunde? Når opgaven er vundet og kommer i ERP, kan du koble den til ERP-kunden under fanen Kunder.`)) { fKunde.focus(); return; }
+    if (S.kunder) {
+      const k = kResolve();
+      prj.kunde_id = k ? k.id : null;
+      if (k) prj.kunde = kEff(k);
+      // Projekter, der er kommet i ERP, beholder ERP's kundenavn
+      if (p.projektnummer && S.P.some((r) => r.projekt === p.projektnummer)) delete prj.kunde;
+    }
     const ramme = t === 'rammeaftale';
     const pipe = {
       type: t, kilde: fKilde.value.trim() || null, vinderchance: isNum(nums.chance) ? nums.chance / 100 : null,
@@ -3714,6 +3786,7 @@ function pipeEdit(x, preset = {}) {
     if (erp && !/^\d{6,10}$/.test(erp)) { toast('ERP-projektnummeret skal være 6 til 10 cifre'); fErp.focus(); return; }
     btnSave.disabled = true;
     await pipeAct(async () => {
+      if (kNy) prj.kunde_id = (await Store.kundeCreate(kNy)).id;
       const pid = await Store.pipeSave(x?.id, x?.projekt_id, prj, pipe);
       if (fBid.value && (fBid.value !== (bid0?.beslutning || '') || (d.bd || null) !== (bid0?.beslutningsdato ? pDay(bid0.beslutningsdato) : null))) await Store.pipeBid(pid, bid0?.id, fBid.value, d.bd);
       if (f === 'vundet' && erp && !p.projektnummer) await Store.pipeWon(pid, erp);
@@ -3732,11 +3805,12 @@ function pipeEdit(x, preset = {}) {
   const sec = (t) => h('div', { class: 'pf-sec', text: t });
   const pipeAll = S.pipe || [];
   const form = h('div', { class: 'form' },
-    dl('pf-kunder', [...pipeAll.map((y) => y.p?.kunde), ...S.P.map((r) => r.kunde)]), dl('pf-bus', S.P.map((r) => r.bu)), dl('pf-pls', S.P.map((r) => r.pl)), dl('pf-pas', S.P.map((r) => r.po)),
+    S.kunder ? h('datalist', { id: 'pf-kunder' }, S.kunder.filter((k) => k.type === 'erp' || !k.erp_id).map((k) => h('option', { value: k.navn, label: k.type === 'erp' ? 'ERP' : 'Midlertidig' })))
+      : dl('pf-kunder', [...pipeAll.map((y) => y.p?.kunde), ...S.P.map((r) => r.kunde)]), dl('pf-bus', S.P.map((r) => r.bu)), dl('pf-pls', S.P.map((r) => r.pl)), dl('pf-pas', S.P.map((r) => r.po)),
     dl('pf-kilder', [...PKILDER, ...pipeAll.map((y) => y.kilde)]), dl('pf-udbudl', pipeAll.map((y) => y.udbud)), dl('pf-partnl', pipeAll.map((y) => y.partnere)),
     h('div', { class: 'pf-grid' }, L('Type', fType), L('Fase', fFase), L(h('span', {}, 'Arbejdstitel ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fTitel), L('Udbud (delaftaler)', fUdbud, 'Samme navn på alle delaftaler i et udbud, fx "Kejd rammeaftale"')),
     p.projektnummer ? h('p', { class: 'note', style: 'margin:0', text: `ERP-projektnummer ${p.projektnummer}. Titel, BU, PL og PA opdateres fra ERP-udtrækket.` }) : null,
-    h('div', { class: 'pf-grid' }, L('Kunde', fKunde), L('Salgs- eller midl. nummer', fSalg), L('Kilde', fKilde), L('BU', fBu)),
+    h('div', { class: 'pf-grid' }, L('Kunde', h('span', { class: 'pf-kwrap' }, fKunde, kStat)), L('Salgs- eller midl. nummer', fSalg), L('Kilde', fKilde), L('BU', fBu)),
     sec('Team'),
     h('div', { class: 'pf-grid' }, L('Vores rolle', fRolle), L('Partnere', fPartn), L('Ansvarlige (initialer)', fAnsv, 'Tilbuds- og PQ-ansvarlige, fx HBEI/KEH'), L('PL / PA i ERP', h('span', { class: 'pf-pair' }, fPl, fPo))),
     sec('Økonomi'),
@@ -3998,42 +4072,63 @@ function drawKunder() {
   const base = S.kAll ? S.P : S.P.filter(inScope);
   const withK = base.filter((r) => r.kunde);
   const by = new Map();
-  withK.forEach((r) => { if (!by.has(r.kunde)) by.set(r.kunde, []); by.get(r.kunde).push(r); });
+  const add = (k) => { if (!by.has(k)) by.set(k, { rs: [], pr: [] }); return by.get(k); };
+  withK.forEach((r) => add(r.kunde).rs.push(r));
+  // Pipeline pr. kunde (ERP-navnet, når en midlertidig kunde er koblet)
+  const pAll = S.pipe ? pipeRows() : [];
+  const pBase = S.kAll ? pAll : pipeScope();
+  pBase.filter((r) => r.kunde).forEach((r) => add(r.kunde).pr.push(r));
   const q = S.kq.toLowerCase();
-  const rows = [...by.entries()].map(([kunde, rs]) => {
-    const o = summarize(rs, []);
-    return { kunde, rs, n: rs.length, fp: rs.filter((r) => r.kontrakttype === 'Fixed Price').length, baseline: o.baseline, oms: o.oms, db: o.db, dg: o.dg, tfm: o.tfm, tfm_eac: wEac(rs),
-      wip: rs.reduce((a, r) => a + num(r.wip), 0), forfalden: o.forfalden, roede: o.roede, klmax: Math.max(0, ...rs.map((r) => num(r.klasse))) || null, bus: [...new Set(rs.map((r) => r.bu))].sort().join(', ') };
+  const rows = [...by.entries()].map(([kunde, { rs, pr }]) => {
+    const o = summarize(rs, []), open = pr.filter((r) => r.aaben);
+    const midl = !S.kErpByLc.has(kLc(kunde)) && pr.some((r) => r.kundeMidl && !r.kundeMidl.erp_id);
+    return { kunde, rs, n: rs.length, fp: rs.filter((r) => r.kontrakttype === 'Fixed Price').length, baseline: rs.length ? o.baseline : null, oms: rs.length ? o.oms : null, db: o.db, dg: rs.length ? o.dg : null, tfm: rs.length ? o.tfm : null, tfm_eac: wEac(rs),
+      wip: rs.length ? rs.reduce((a, r) => a + num(r.wip), 0) : null, forfalden: o.forfalden, roede: rs.length ? o.roede : null, klmax: Math.max(0, ...rs.map((r) => num(r.klasse))) || null, bus: [...new Set([...rs.map((r) => r.bu), ...pr.map((r) => r.bu)].filter(Boolean))].sort().join(', '),
+      pOpen: open.length || null, pVaegtet: open.length ? pipeSum(open, 'vaegtet') : null, midl };
   });
   const shown = rows.filter((r) => !q || r.kunde.toLowerCase().includes(q)).sort(cmp(S.sorts.kunder.k, S.sorts.kunder.d));
-  const uden = base.length - withK.length;
-  $('#k-count').textContent = !withK.length ? '' : `Viser ${nf0.format(shown.length)} af ${nf0.format(rows.length)} kunder med ${nf0.format(withK.length)} projekter i ${S.kAll ? 'hele NIRAS' : scopeLabel()}` + (uden ? `. ${nf0.format(uden)} projekter har ingen kunde i udtrækket.` : '.');
-  if (!withK.length) {
+  const uden = base.length - withK.length, nPipe = rows.filter((r) => !r.n).length;
+  $('#k-count').textContent = !rows.length ? '' : `Viser ${nf0.format(shown.length)} af ${nf0.format(rows.length)} kunder med ${nf0.format(withK.length)} projekter i ${S.kAll ? 'hele NIRAS' : scopeLabel()}`
+    + (nPipe ? `. ${nf0.format(nPipe)} kunder har kun leads, PQ eller tilbud` : '') + (uden ? `. ${nf0.format(uden)} projekter har ingen kunde i udtrækket.` : '.');
+  if (!rows.length) {
     $('#t-kunder').replaceChildren(h('tbody', {}, h('tr', {}, h('td', { class: 'empty', text: 'Ingen kunder i udtrækket. Kunderne kommer med PTD-udtrækket i det nye format (Detailed Main Project View).' }))));
   } else {
+    const dash = (f) => (v, r) => (v == null ? '–' : f(v, r));
     table($('#t-kunder'), [
-      { k: 'kunde', l: 'Kunde', cls: 'name' }, ...(S.kAll ? [{ k: 'bus', l: 'BU', sec: 1 }] : []),
-      { k: 'n', l: 'Projekter', num: 1, f: F.int }, { k: 'fp', l: 'Fixed Price', num: 1, f: (v, r) => `${v} af ${r.n}`, title: 'Antal projekter med Customer Contract Type Fixed Price' },
-      { k: 'baseline', l: 'Baseline', num: 1, f: F.tkr }, { k: 'oms', l: 'Oms. PTD', num: 1, f: F.tkr, sec: 1 },
-      { k: 'dg', l: 'DG', num: 1, f: F.pct }, { k: 'tfm', l: 'TFM', num: 1, f: F.tfm, sec: 1 }, { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: F.tfm },
-      { k: 'wip', l: 'WIP', num: 1, f: F.tkr, sec: 1 }, { k: 'forfalden', l: 'Forfalden', num: 1, f: (v) => (num(v) ? F.tkr(v) : '–'), sec: 1 },
-      { k: 'roede', l: 'Røde flag', num: 1, f: F.int, title: 'Antal projekter med røde flag' }, { k: 'klmax', l: 'Højeste risiko', num: 1, f: (v) => (v ? String(v) : '–') },
+      { k: 'kunde', l: 'Kunde', cls: 'name', cell: (td, r) => { if (r.midl) td.append(h('span', { class: 'ktag', title: 'Midlertidig kunde, ikke koblet til ERP', text: 'Midlertidig' })); } },
+      ...(S.kAll ? [{ k: 'bus', l: 'BU', sec: 1 }] : []),
+      { k: 'n', l: 'Projekter', num: 1, f: F.int }, { k: 'fp', l: 'Fixed Price', num: 1, f: (v, r) => (r.n ? `${v} af ${r.n}` : '–'), title: 'Antal projekter med Customer Contract Type Fixed Price' },
+      { k: 'baseline', l: 'Baseline', num: 1, f: dash(F.tkr) }, { k: 'oms', l: 'Oms. PTD', num: 1, f: dash(F.tkr), sec: 1 },
+      { k: 'dg', l: 'DG', num: 1, f: dash(F.pct) }, { k: 'tfm', l: 'TFM', num: 1, f: dash(F.tfm), sec: 1 }, { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: dash(F.tfm) },
+      { k: 'wip', l: 'WIP', num: 1, f: dash(F.tkr), sec: 1 }, { k: 'forfalden', l: 'Forfalden', num: 1, f: (v) => (num(v) ? F.tkr(v) : '–'), sec: 1 },
+      { k: 'roede', l: 'Røde flag', num: 1, f: dash(F.int), title: 'Antal projekter med røde flag' }, { k: 'klmax', l: 'Højeste risiko', num: 1, f: (v) => (v ? String(v) : '–') },
+      { k: 'pOpen', l: 'Pipeline', num: 1, f: dash(F.int), title: 'Åbne leads, PQ og tilbud' }, { k: 'pVaegtet', l: 'Vægtet pipeline', num: 1, f: dash(F.tkr), sec: 1 },
     ], shown, { sortKey: 'kunder', selKey: S.kSel ? { k: 'kunde', v: S.kSel } : null, onClick: (r) => { S.kSel = r.kunde; render(); $('#k-detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
   }
-  // Valgt kunde: alle projekter med kunden (i hele NIRAS, så intet skjules af filteret)
+  drawKundeDetail(pAll);
+  drawKundeMidl(pAll);
+}
+// Valgt kunde: alle projekter (i hele NIRAS, så intet skjules af filteret) og alle leads, PQ og tilbud
+function drawKundeDetail(pAll) {
   const det = $('#k-detail');
   const all = S.kSel ? S.P.filter((r) => r.kunde === S.kSel) : [];
-  det.hidden = !all.length;
-  if (!all.length) return;
+  const pr = S.kSel ? pAll.filter((r) => r.kunde === S.kSel) : [];
+  det.hidden = !all.length && !pr.length;
+  if (det.hidden) return;
   const inS = all.filter(inScope).length;
   const o = summarize(all, []);
   $('#k-h').textContent = S.kSel;
-  $('#k-sub').textContent = `${nf0.format(all.length)} projekter i hele NIRAS (${[...new Set(all.map((r) => r.bu))].sort().join(', ')})` + (inS < all.length ? `, heraf ${nf0.format(inS)} i ${scopeLabel()}` : '') + ` · PTD pr. ${F.date(S.ptd.key)}`;
+  $('#k-sub').textContent = (all.length ? `${nf0.format(all.length)} projekter i hele NIRAS (${[...new Set(all.map((r) => r.bu))].sort().join(', ')})` + (inS < all.length ? `, heraf ${nf0.format(inS)} i ${scopeLabel()}` : '') + ` · PTD pr. ${F.date(S.ptd.key)}` : 'Ingen projekter i ERP endnu')
+    + (pr.length ? ` · ${nf0.format(pr.length)} leads, PQ og tilbud` : '');
   const fp = all.filter((r) => r.kontrakttype === 'Fixed Price').length;
-  $('#k-tiles').replaceChildren(tile('Baseline', F.mio(o.baseline)), tile('Omsætning PTD', F.mio(o.oms), 'DG ' + (F.pct(o.dg) || '—')),
+  const open = pr.filter((r) => r.aaben), vundet = pr.filter((r) => r.fase === 'vundet').length, tabt = pr.filter((r) => r.fase === 'tabt').length;
+  $('#k-tiles').replaceChildren(...(all.length ? [tile('Baseline', F.mio(o.baseline)), tile('Omsætning PTD', F.mio(o.oms), 'DG ' + (F.pct(o.dg) || '—')),
     tile('TFM / TFM EAC', `${F.tfm(o.tfm) || '—'} / ${F.tfm(wEac(all)) || '—'}`), tile('Fixed Price', `${fp} af ${all.length}`, `${all.length - fp} Time & Material`),
-    tile('WIP', F.mio(o.wipPos + o.wipNeg)), tile('Røde flag', nf0.format(o.roede), `${nf0.format(o.gule)} kun gule`));
-  table($('#t-kproj'), [
+    tile('WIP', F.mio(o.wipPos + o.wipNeg)), tile('Røde flag', nf0.format(o.roede), `${nf0.format(o.gule)} kun gule`)] : []),
+    ...(pr.length ? [tile('Åben pipeline', nf0.format(open.length), open.length ? 'vægtet ' + F.mio(pipeSum(open, 'vaegtet')) : ''),
+      tile('Hitrate med kunden', vundet + tabt ? F.pct(vundet / (vundet + tabt)) : '–', `${vundet} vundet, ${tabt} tabt`)] : []));
+  $('#k-projbox').hidden = !all.length;
+  if (all.length) table($('#t-kproj'), [
     { k: 'stjerne', l: '★', cls: 'star', title: 'Fokusprojekt' }, { k: 'projekt', l: 'Projekt' }, { k: 'navn', l: 'Navn', cls: 'name' }, { k: 'bu', l: 'BU' },
     { k: 'kontrakttype', l: 'Kontrakt', cell: (td, r) => td.replaceChildren(ktBadge(r.kontrakttype)) }, { k: 'pl', l: 'PL' }, { k: 'po', l: 'PA', sec: 1 },
     { k: 'klasse', l: 'Risiko', num: 1, f: (v) => (isNum(v) ? String(v) : '–'), cell: klCell },
@@ -4042,10 +4137,63 @@ function drawKunder() {
     { k: 'poc', l: 'POC', num: 1, f: F.pct }, { k: 'tfm_eac', l: 'TFM EAC', num: 1, f: F.tfm }, { k: 'wip', l: 'WIP', num: 1, f: F.tkr, sec: 1 },
     { k: 'forv_slut', l: 'Forventet slut', f: F_dmy, sec: 1 },
   ], [...all].sort(cmp(S.sorts.kproj.k, S.sorts.kproj.d)), { sortKey: 'kproj', rowClass: (r) => (inScope(r) ? '' : 'dim'), onClick: (r) => openProject(r.projekt) });
+  $('#k-pipebox').hidden = !pr.length;
+  if (!pr.length) return;
+  table($('#t-kpipe'), [
+    { k: 'navn', l: 'Titel', cls: 'name' }, { k: 'typeL', l: 'Type' }, { k: 'faseN', l: 'Status', f: (v, r) => r.status },
+    { k: 'nr', l: 'Nummer', sec: 1 }, { k: 'bu', l: 'BU', sec: 1 },
+    { k: 'kundeMidl', l: 'Tilbudt som', f: (v) => (v ? v.navn : ''), title: 'Navnet på den midlertidige kunde i tilbudsfasen', sec: 1 },
+    { k: 'vaerdi', l: 'NIRAS-værdi', num: 1, f: F.tkr }, { k: 'chance', l: 'Chance', num: 1, f: F.pct },
+    { k: 'frist', l: 'Næste frist', f: (v, r) => (v ? `${PFRIST_K[r.fristL] || ''} ${F.date(v)}` : '') }, { k: 'resultat', l: 'Afgjort', f: (v) => (v ? F.date(v) : '') },
+  ], [...pr].sort((a, b) => a.faseN - b.faseN || String(b.resultat || b.frist).localeCompare(String(a.resultat || a.frist))), { sortKey: null, onClick: (r) => pipeEdit(r.x) });
+  $('#k-pipenote').textContent = 'Beløb i tDKK. Klik for at åbne punktet. Hitraten er vundet ÷ (vundet + tabt) for alle afgjorte punkter med kunden.';
+}
+// Midlertidige kunder: kobling til ERP med forslag fra vundne opgaver og lignende ERP-navne
+function drawKundeMidl(pAll) {
+  const card = $('#k-midl-card');
+  const midl = (S.kunder || []).filter((k) => k.type === 'midlertidig');
+  card.hidden = !midl.length;
+  if (!midl.length) return;
+  $$('.seg [data-kmidl]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kmidl === S.kMidl)));
+  const dl = $('#k-erpnavne');
+  if (dl.childElementCount !== S.kErpByLc.size) dl.replaceChildren(...[...S.kErpByLc.values()].sort((a, b) => a.navn.localeCompare(b.navn, 'da')).map((k) => h('option', { value: k.navn })));
+  const P = new Map(S.P.map((r) => [r.projekt, r]));
+  const items = midl.map((k) => {
+    const pr = pAll.filter((r) => r.kunde_id === k.id);
+    // Forslag 1: vundne opgaver, der er kommet i ERP med en kunde
+    const fraErp = [...new Set(pr.filter((r) => r.erp && P.get(r.erp)?.kunde).map((r) => P.get(r.erp).kunde))].map((n) => S.kErpByLc.get(kLc(n))).filter(Boolean);
+    // Forslag 2: ERP-navne, der begynder med eller indeholder det midlertidige navn
+    const n = kLc(k.navn);
+    const lign = n.length >= 3 ? [...S.kErpByLc.values()].filter((e) => { const en = kLc(e.navn); return en.startsWith(n) || (n.length >= 5 && en.includes(n)); }).slice(0, 4) : [];
+    return { k, pr, fraErp, lign: lign.filter((e) => !fraErp.includes(e)) };
+  });
+  const ikke = items.filter((i) => !i.k.erp_id), medForslag = ikke.filter((i) => i.fraErp.length).length;
+  $('#k-midl-sum').textContent = `${nf0.format(ikke.length)} af ${nf0.format(items.length)} midlertidige kunder er ikke koblet til ERP` + (medForslag ? `. ${medForslag} har en vundet opgave i ERP, hvor kunden kan kobles med ét klik.` : '.');
+  const vis = (S.kMidl === 'alle' ? items : ikke).sort((a, b) => b.fraErp.length - a.fraErp.length || a.k.navn.localeCompare(b.k.navn, 'da'));
+  const act = async (fn, ok) => { try { await fn(); await loadPipe(); render(); toast(ok); } catch (e) { toast('Kunne ikke gemme: ' + e.message); } };
+  const kobl = (k, e) => act(() => Store.kundeKobl(k.id, e.id), `${k.navn} er koblet til ERP-kunden ${e.navn}`);
+  $('#k-midl').replaceChildren(vis.length ? h('div', { class: 'kmidl' }, ...vis.map(({ k, pr, fraErp, lign }) => {
+    const erp = k.erp_id ? S.kById.get(k.erp_id) : null;
+    const faser = pr.length ? Object.entries(pr.reduce((a, r) => { a[r.faseL] = (a[r.faseL] || 0) + 1; return a; }, {})).map(([f, c]) => `${c} ${f.toLowerCase()}`).join(', ') : 'ingen punkter';
+    const fIn = h('input', { type: 'text', list: 'k-erpnavne', placeholder: 'Søg ERP-kunde', autocomplete: 'off', 'aria-label': 'ERP-kunde til ' + k.navn });
+    const go = () => { const e = S.kErpByLc.get(kLc(fIn.value)); if (!e) { toast('Vælg en ERP-kunde fra listen'); fIn.focus(); return; } kobl(k, e); };
+    fIn.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
+    return h('div', { class: 'kmrow' },
+      h('div', { class: 'kmname' }, h('strong', { text: k.navn }), h('span', { class: 'note', text: ` · ${faser}` }),
+        pr.length ? h('div', { class: 'note', text: pr.map((r) => r.navn).slice(0, 3).join(' · ') + (pr.length > 3 ? ` · +${pr.length - 3}` : '') }) : null),
+      erp ? h('div', { class: 'kmact' }, h('span', { class: 'kt kt-tm', text: 'Koblet til ' + erp.navn }), h('span', { class: 'note', text: k.koblet ? ' ' + F.date(DK.day(k.koblet)) : '' }),
+        h('button', { class: 'btn', type: 'button', text: 'Fjern kobling', onclick: () => act(() => Store.kundeKobl(k.id, null), `Koblingen af ${k.navn} er fjernet`) }))
+        : h('div', { class: 'kmact' },
+          ...fraErp.map((e) => h('button', { class: 'btn primary', type: 'button', title: 'Kunden på den vundne opgave i ERP', text: 'Kobl til ' + e.navn, onclick: () => kobl(k, e) })),
+          ...lign.map((e) => h('button', { class: 'btn', type: 'button', title: 'Lignende navn i ERP', text: e.navn, onclick: () => { if (confirm(`Kobl ${k.navn} til ERP-kunden ${e.navn}?`)) kobl(k, e); } })),
+          h('span', { class: 'kmsearch' }, fIn, h('button', { class: 'btn', type: 'button', text: 'Kobl', onclick: go })),
+          !pr.length ? h('button', { class: 'btn danger', type: 'button', text: 'Slet', onclick: () => { if (confirm(`Slet den midlertidige kunde ${k.navn}?`)) act(() => Store.kundeDelete(k.id), `${k.navn} er slettet`); } }) : null));
+  })) : h('p', { class: 'empty', text: 'Alle midlertidige kunder er koblet til ERP.' }));
 }
 $$('.seg [data-kall]').forEach((b) => b.addEventListener('click', () => { S.kAll = b.dataset.kall === '1'; render(); }));
 $('#k-search').addEventListener('input', (e) => { S.kq = e.target.value.trim(); render(); });
 $('#k-close').addEventListener('click', () => { S.kSel = null; render(); });
+$$('.seg [data-kmidl]').forEach((b) => b.addEventListener('click', () => { S.kMidl = b.dataset.kmidl; render(); }));
 function drawPersons() {
   drawPersonPanel();
   $$('.chip[data-role]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.role === S.pRole)));
@@ -4482,7 +4630,7 @@ function buildXlsx(sheets) {
 const download = (blob, name) => { const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 
 /* ----- Mine data: saml alt egenproduceret ----- */
-const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'personnoter'];
+const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'personnoter', 'kunder'];
 async function collectOwnData(onlyScope) {
   const by = new Map(S.P.map((r) => [r.projekt, r]));
   const enrich = (x) => {
@@ -4492,9 +4640,10 @@ async function collectOwnData(onlyScope) {
   const keep = (x) => !onlyScope || (x.projektnummer ? (by.has(x.projektnummer) && inScope(by.get(x.projektnummer))) : inScope({ bu: x.bu, pl: x.pl, po: x.po }));
   const D = { kilde: Store.label(), eksporteret: new Date().toISOString() };
   if (Store.mode() === 'supabase') {
-    const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`)));
+    // Kundetabellen kan mangle i en ældre database; så springes arket over
+    const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`).catch((e) => { if (m === 'kunder') return []; throw e; })));
     const pick = new Set([...S.pls, ...S.pas]);
-    EX_MODULES.forEach((m, i) => { D[m] = m === 'personnoter' ? got[i].filter((x) => !onlyScope || !pick.size || pick.has(x.initialer)) : got[i].map(enrich).filter(keep); });
+    EX_MODULES.forEach((m, i) => { D[m] = m === 'kunder' ? got[i] : m === 'personnoter' ? got[i].filter((x) => !onlyScope || !pick.size || pick.has(x.initialer)) : got[i].map(enrich).filter(keep); });
     const pr = await Store.fetchAll('/rest/v1/projekt?select=*&order=oprettet');
     D.projekter = pr.filter((x) => x.salgsnummer || x.arbejdstitel || ['tilbud', 'no bid', 'tabt'].includes(x.status) || (x.ekstra && Object.keys(x.ekstra).length))
       .map((x) => ({ ...x, projektnavn: x.titel || x.arbejdstitel, ekstra: x.ekstra && Object.keys(x.ekstra).length ? x.ekstra : null })).filter(keep);
@@ -4518,11 +4667,12 @@ const EX_SHEETS = [
   ['Milepæle', 'milepael', [{ l: 'Milepæl', k: 'navn', w: 34 }, { l: 'Planlagt', k: 'planlagt', t: 'date', w: 12 }, { l: 'Prognose', k: 'prognose', t: 'date', w: 12 }, { l: 'Faktisk', k: 'faktisk', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 12 }]],
   ['Pipeline', 'pipeline', [{ l: 'Type', k: 'type', w: 12 }, { l: 'Fase', k: 'fase', w: 9 }, { l: 'Kunde', k: 'kunde', w: 24 }, { l: 'Kilde', k: 'kilde', w: 16 }, { l: 'Honorar (DKK)', k: 'honorar', t: 'num', w: 14 }, { l: 'Vinderchance', k: 'vinderchance', t: 'num', w: 12 }, { l: 'Rammens værdi (DKK)', k: 'ramme_vaerdi', t: 'num', w: 16 }, { l: 'Antal vindere', k: 'antal_vindere', t: 'num', w: 10 }, { l: 'Andel', k: 'andel', t: 'num', w: 8 }, { l: 'Aftale start', k: 'aftale_start', t: 'date', w: 12 }, { l: 'Aftale slut', k: 'aftale_slut', t: 'date', w: 12 }, { l: 'Under rammeaftale', k: 'ramme_navn', w: 28 }, { l: 'PQ-frist', k: 'pq_frist', t: 'date', w: 12 }, { l: 'Tilbudsfrist', k: 'tilbudsfrist', t: 'date', w: 12 }, { l: 'Forventet opstart', k: 'forventet_opstart', t: 'date', w: 14 }, { l: 'Resultatdato', k: 'resultat_dato', t: 'date', w: 12 }, { l: 'Bemærkning', k: 'bemaerkning', w: 50 }, { l: 'Udbud', k: 'udbud', w: 24 }, { l: 'Rolle', k: 'rolle', w: 10 }, { l: 'Partnere', k: 'partnere', w: 30 }, { l: 'NIRAS-andel', k: 'niras_andel', t: 'num', w: 10 }, { l: 'Ansvarlige', k: 'ansvarlige', w: 14 }, { l: 'Størrelse som oplyst', k: 'stoerrelse', w: 24 }, { l: 'Anlægssum (DKK)', k: 'anlaegssum', t: 'num', w: 14 }, { l: 'PQ afleveret', k: 'pq_afleveret', t: 'date', w: 12 }, { l: 'Prækvalificeret', k: 'prakvalificeret', t: 'date', w: 13 }, { l: 'Tilbud afleveret', k: 'tilbud_afleveret', t: 'date', w: 13 }, { l: 'Tabt i fase', k: 'tabt_i', w: 10 }, { l: 'Spørgefrist', k: 'sporgefrist', t: 'date', w: 12 }, { l: 'Revideret tilbud', k: 'revideret_tilbud', t: 'date', w: 13 }, { l: 'Forventet afgørelse', k: 'forventet_afgoerelse', t: 'date', w: 14 }, { l: 'Bid/no bid', k: 'bid_beslutning', w: 10 }, { l: 'Bid/no bid-dato', k: 'bid_dato', t: 'date', w: 13 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Personnoter', 'personnoter', [{ l: 'Person', k: 'initialer', w: 10 }, { l: 'Dato', k: 'dato', t: 'date', w: 12 }, { l: 'Note', k: 'note', w: 60 }, { l: 'Opfølgning', k: 'opfoelgning', w: 40 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 9 }, { l: 'Vedrører projekter', k: 'projektnumre', w: 28 }, { l: 'Filer', k: 'filer', w: 40 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }, { l: 'Redigeret', k: 'redigeret', t: 'ts', w: 17 }]],
+  ['Kunder', 'kunder', [{ l: 'Kunde', k: 'navn', w: 40 }, { l: 'Type', k: 'type', w: 12 }, { l: 'Koblet til ERP-kunde', k: 'erp_navn', w: 40 }, { l: 'Koblet', k: 'koblet', t: 'date', w: 12 }, { l: 'Koblet af', k: 'koblet_af', w: 22 }, { l: 'Pipeline-punkter', k: 'pipeline_punkter', t: 'num', w: 10 }, { l: 'Oprettet', k: 'oprettet', t: 'date', w: 12 }]],
   ['Dokumenter', 'dokument', [{ l: 'Type', k: 'type', w: 14 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Link', k: 'url', w: 50 }]],
 ];
 function ownDataSheets(D) {
   const sheets = EX_SHEETS.filter(([, key, , always]) => always || D[key].length).map(([name, key, cols]) => {
-    const all = [...ID_COLS, ...cols];
+    const all = [...(key === 'kunder' ? [] : ID_COLS), ...cols];
     const rows = [...D[key]].sort((a, b) => String(a.projektnummer || a.salgsnummer || '').localeCompare(String(b.projektnummer || b.salgsnummer || ''), 'da', { numeric: true }) || String(a.oprettet || '').localeCompare(String(b.oprettet || '')));
     return { name, cols: all.map((c) => ({ l: c.l, t: c.t || 'txt', w: c.w })), rows: rows.map((r) => all.map((c) => r[c.k])) };
   });
