@@ -3986,7 +3986,8 @@ function drawProjects(rows) {
   const rc = $('#chip-rule'); const rule = S.rules.find((x) => x.regel === S.regel);
   rc.hidden = !rule; rc.textContent = rule ? `Regel: ${rule.navn} ×` : '';
   viewRows = rows.filter((r) => projFilter(r, S.chip, rule, S.q)).sort(cmp(S.sorts.proj.k, S.sorts.proj.d));
-  $('#count').textContent = `Viser ${nf0.format(viewRows.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()}`;
+  $('#count').textContent = `Viser ${nf0.format(viewRows.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()}`
+    + (S.P.some((r) => r.kontrakttype) ? '' : `. Kontrakt er tom, fordi PTD pr. ${F.date(S.ptd.key)} er i det gamle format. Upload PTD som "Detailed Main Project View".`);
   drawProjTable(viewRows);
 }
 /* ----- Kunder ----- */
