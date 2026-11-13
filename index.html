@@ -3851,7 +3851,8 @@ $('#pdlg-close').addEventListener('click', () => pdlg.close());
 function pipeEdit(x, preset = {}) {
   if (Store.mode() !== 'supabase') { toast('Pipeline gemmes i Supabase. Log ind for at oprette leads.'); return; }
   const ny = !x, p = x?.p || {};
-  const v = { type: 'opgave', fase: 'lead', ...(x || {}) };
+  // Nyt miniudbud fra en rammeaftale: type og rammeaftale er udfyldt på forhånd
+  const v = { type: 'opgave', fase: 'lead', ...(x || {}), ...(!x ? { type: preset.type || 'opgave', ramme_id: preset.ramme_id || null } : {}) };
   const today = cphDay(Date.now());
   const firstBu = S.bus.size === 1 ? [...S.bus][0] : '';
   const opts = (list, cur) => list.map(([k, l]) => { const o = h('option', { value: k, text: l }); if (k === cur) o.selected = true; return o; });
@@ -4059,6 +4060,7 @@ function pipeEdit(x, preset = {}) {
     btnSave.disabled = false;
   };
   const btnSave = h('button', { class: 'btn primary', type: 'button', text: ny ? 'Opret' : 'Gem', onclick: save });
+  const btnMini = !ny && v.type === 'rammeaftale' ? h('button', { class: 'btn', type: 'button', text: 'Nyt miniudbud under aftalen', title: 'Opretter et miniudbud, der hører under denne rammeaftale. Ændringer her skal gemmes først', onclick: () => { pdlg.close(); pipeEdit(null, { type: 'miniudbud', ramme_id: x.id }); } }) : null;
   const canDel = !ny && !p.projektnummer;
   const btnDel = canDel ? h('button', { class: 'btn danger', type: 'button', text: 'Slet', onclick: () => {
     const nk = (S.pipe || []).filter((y) => y.ramme_id === x.id).length;
@@ -4131,7 +4133,7 @@ function pipeEdit(x, preset = {}) {
         : h('p', { class: 'note', text: 'Ingen ændringer registreret endnu. Loggen startede 13/11/2026.' }));
     } catch (e) { box.textContent = 'Historikken kunne ikke hentes: ' + e.message; }
   });
-  $('#pdlg-title').textContent = ny ? 'Nyt lead, PQ eller tilbud' : `${PTYPE[v.type] || 'Lead'}: ${pTitle(p)}`;
+  $('#pdlg-title').textContent = ny ? (v.type === 'miniudbud' && v.ramme_id ? `Nyt miniudbud under ${pTitle((S.pipe || []).find((y) => y.id === v.ramme_id)?.p)}` : 'Nyt lead, PQ eller tilbud') : `${PTYPE[v.type] || 'Lead'}: ${pTitle(p)}`;
   const sec = (t) => h('div', { class: 'pf-sec', text: t });
   const pipeAll = S.pipe || [];
   const form = h('div', { class: 'form' },
@@ -4155,7 +4157,7 @@ function pipeEdit(x, preset = {}) {
     L('Bemærkning', fNote),
     hist,
     sum,
-    h('div', { class: 'pf-acts' }, btnSave, h('button', { class: 'btn', type: 'button', text: 'Annullér', onclick: () => pdlg.close() }), h('span', { class: 'sp' }), btnDel));
+    h('div', { class: 'pf-acts' }, btnSave, h('button', { class: 'btn', type: 'button', text: 'Annullér', onclick: () => pdlg.close() }), btnMini, h('span', { class: 'sp' }), btnDel));
   $('#pdlg-b').replaceChildren(form);
   drawParts(); drawUd(); drawRad(); sync();
   pdlg.showModal();
