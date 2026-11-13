@@ -3868,7 +3868,11 @@ function pipeEdit(x, preset = {}) {
   const rammer = (S.pipe || []).filter((y) => y.type === 'rammeaftale' && y.id !== x?.id);
   const fType = h('select', { id: 'pf-type' }, opts(Object.entries(PTYPE), v.type));
   const fStart = h('select', { id: 'pf-fase' }, opts([['lead', 'Lead'], ['pq', 'PQ'], ['tilbud', 'Tilbud']], 'lead'));
-  const fRamme = h('select', { id: 'pf-ramme' }, h('option', { value: '', text: 'Vælg rammeaftale' }), rammer.map((y) => { const o = h('option', { value: y.id, text: pTitle(y.p) + (y.p?.salgsnummer ? ` (${y.p.salgsnummer})` : '') }); if (y.id === v.ramme_id) o.selected = true; return o; }));
+  // Miniudbud vælger den rammeaftale, det hører under (vundne først)
+  const rOrd = (y) => (y.fase === 'vundet' ? 0 : pOpen(y.fase) ? 1 : 2);
+  const fRamme = h('select', { id: 'pf-ramme' }, h('option', { value: '', text: rammer.length ? 'Vælg rammeaftale' : 'Opret rammeaftalen først' }),
+    rammer.slice().sort((a, b) => rOrd(a) - rOrd(b) || pTitle(a.p).localeCompare(pTitle(b.p), 'da')).map((y) => { const o = h('option', { value: y.id, text: `${pTitle(y.p)} (${PFASE[y.fase] || y.fase})` }); if (y.id === v.ramme_id) o.selected = true; return o; }));
+  if (!v.ramme_id && rammer.length === 1) fRamme.value = rammer[0].id;
   const fTitel = inp('pf-titel', p.arbejdstitel || p.titel || '', { required: '' });
   const fSalg = inp('pf-salg', p.salgsnummer || '');
   const fUdbud = inp('pf-udbud', v.udbud || '', { list: 'pf-udbudl', placeholder: 'Fælles navn for delaftaler' });
@@ -3917,7 +3921,7 @@ function pipeEdit(x, preset = {}) {
   const sum = h('div', { class: 'pf-sum', 'aria-live': 'polite' });
   const g = {
     opgave: h('div', { class: 'pf-grid' }, L('Anlægssum (tDKK)', fAnl), L('Teamets honorar (tDKK)', fHon, 'Hele rådgiverteamets honorar. NIRAS-andelen står under Team')),
-    mini: h('div', { class: 'pf-grid' }, L('Rammeaftale', fRamme)),
+    mini: L(h('span', {}, 'Rammeaftale ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fRamme, 'Den rammeaftale, miniudbuddet hører under. Når miniudbuddet er vundet, trækkes honoraret fra rammeaftalens rest'),
     ramme: h('div', { class: 'pf-grid' }, L('Aftalens samlede værdi (tDKK)', fRv), L('Antal vindere', fVind), L('Teamets andel af rammen (%)', fAndel, 'Tom = 1 ÷ antal vindere'),
       D('pf-astart', v.aftale_start, 'Aftale start'), D('pf-aslut', v.aftale_slut, 'Aftale slut')),
     udbud: L('Udbud (delaftaler)', fUdbud, 'Samme navn på alle delaftaler i et udbud, fx "Kejd rammeaftale"'),
@@ -3933,7 +3937,7 @@ function pipeEdit(x, preset = {}) {
   };
   const sync = () => {
     const t = fType.value, f = udf ? udf.fase : ny ? fStart.value : v.fase;
-    g.opgave.hidden = t === 'rammeaftale'; g.mini.hidden = t !== 'miniudbud'; g.ramme.hidden = t !== 'rammeaftale'; g.udbud.hidden = t === 'opgave';
+    g.opgave.hidden = t === 'rammeaftale'; g.mini.hidden = t !== 'miniudbud'; g.ramme.hidden = t !== 'rammeaftale'; g.udbud.hidden = t !== 'rammeaftale';
     chanceL.textContent = t === 'rammeaftale' ? 'Chance for at komme på aftalen (%)' : 'Vinderchance (%)';
     const vind = parseN(fVind.value);
     fAndel.placeholder = vind > 0 ? `${nf1.format(100 / vind)} % (1/${vind})` : '%';
@@ -4027,7 +4031,7 @@ function pipeEdit(x, preset = {}) {
       type: t, vinderchance: isNum(nums.chance) ? nums.chance / 100 : null,
       honorar: ramme ? null : isNum(nums.hon) ? nums.hon * 1000 : null, niras_andel: Math.abs(sp.niras - 100) < 0.05 ? null : sp.niras / 100,
       anlaegssum: !ramme && isNum(nums.anl) ? nums.anl * 1000 : null,
-      udbud: t === 'opgave' ? null : fUdbud.value.trim() || null, rolle: fRolle.value || null, ansvarlige: fAnsv.value || null,
+      udbud: t === 'rammeaftale' ? fUdbud.value.trim() || null : null, rolle: fRolle.value || null, ansvarlige: fAnsv.value || null,
       ramme_id: t === 'miniudbud' ? fRamme.value : null,
       ramme_vaerdi: ramme && isNum(nums.rv) ? nums.rv * 1000 : null, antal_vindere: ramme && isNum(nums.vind) ? nums.vind : null,
       andel: ramme && isNum(nums.andel) ? nums.andel / 100 : null, aftale_start: ramme ? d.as : null, aftale_slut: ramme ? d.ae : null,
@@ -4133,7 +4137,7 @@ function pipeEdit(x, preset = {}) {
   const form = h('div', { class: 'form' },
     S.kunder ? h('datalist', { id: 'pf-kunder' }, S.kunder.filter((k) => k.type === 'erp' || !k.erp_id).map((k) => h('option', { value: k.navn, label: k.type === 'erp' ? 'ERP' : 'Midlertidig' })))
       : dl('pf-kunder', [...pipeAll.map((y) => y.p?.kunde), ...S.P.map((r) => r.kunde)]), dl('pf-bus', S.P.map((r) => r.bu)), dl('pf-udbudl', pipeAll.map((y) => y.udbud)),
-    h('div', { class: 'pf-grid' }, L('Type', fType), ny ? L('Fase', fStart) : null, L(h('span', {}, 'Projektnavn ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fTitel, 'Arbejdstitel. Når opgaven er vundet og kommer i ERP, vises ERP\'s projektnavn, og arbejdstitlen gemmes'), g.udbud),
+    h('div', { class: 'pf-grid' }, L('Type', fType), ny ? L('Fase', fStart) : null, L(h('span', {}, 'Projektnavn ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fTitel, 'Arbejdstitel. Når opgaven er vundet og kommer i ERP, vises ERP\'s projektnavn, og arbejdstitlen gemmes'), g.udbud, g.mini),
     p.projektnummer ? h('p', { class: 'note', style: 'margin:0', text: `ERP-projektnummer ${p.projektnummer}${p.titel && p.titel !== p.arbejdstitel ? ` · ERP-navn: ${p.titel}` : ''}. Titel, BU, PL og PA opdateres fra ERP-udtrækket.` }) : null,
     h('div', { class: 'pf-grid' }, L('Kunde', h('span', { class: 'pf-kwrap' }, fKunde, kStat)), L('Ansvarlig', fAnsv, 'Kan skiftes mellem faser og undervejs. Listen redigeres under Regler'), L('Salgs- eller midl. nummer', fSalg), L('BU', fBu)),
     ny ? null : sec('Udfald'), udBtns, udBox,
@@ -4141,7 +4145,7 @@ function pipeEdit(x, preset = {}) {
     h('div', { class: 'pf-grid' }, L('NIRAS\' rolle', fRolle), L('NIRAS\' andel af honoraret (%)', fNiras, 'Er NIRAS eneste rådgiver, er andelen 100 %. Tom = resten efter partnerne')),
     h('div', { class: 'pf-lab', text: 'Partnere (virksomhed, rolle og andel af honoraret)' }), partBox, split,
     sec('Økonomi'),
-    g.opgave, g.mini, g.ramme,
+    g.opgave, g.ramme,
     h('div', { class: 'pf-grid' }, h('label', {}, chanceL, fChance)),
     sec('Datoer'),
     h('div', { class: 'pf-grid' }, D('pf-sp', v.sporgefrist, 'Spørgefrist'), D('pf-pq', v.pq_frist, 'PQ-dato'), D('pf-pqa', v.pq_afleveret, 'PQ afleveret'), D('pf-prak', v.prakvalificeret, 'Prækvalificeret')),
