@@ -4004,6 +4004,15 @@ function pipeEdit(x, preset = {}) {
     const titel = fTitel.value.trim();
     if (!titel) { fTitel.focus(); toast('Skriv et projektnavn'); return; }
     const t = fType.value;
+    // Et lead har ingen dato: har det fået PQ-dato eller tilbudsdato, foreslås PQ eller tilbud
+    const lead = ny ? fStart.value === 'lead' : !udf && v.fase === 'lead';
+    const hasPq = !!$('#pf-pq').value.trim(), hasTb = !!$('#pf-tb').value.trim();
+    if (lead && (hasPq || hasTb)) {
+      const til = hasPq ? 'pq' : 'tilbud';
+      if (confirm(`Sagen har en ${hasPq ? 'PQ-dato' : 'tilbudsdato'}, men står som Lead. Et lead har ingen dato.\n\nSkal den stå som ${PFASE[til]}? (Annullér gemmer den som Lead)`)) {
+        if (ny) fStart.value = til; else udf = { fase: til };
+      }
+    }
     const f = udf ? udf.fase : ny ? fStart.value : v.fase;
     const nums = { chance: parseN(fChance.value), niras: parseN(fNiras.value), hon: parseN(fHon.value), anl: parseN(fAnl.value), rv: parseN(fRv.value), vind: parseN(fVind.value), andel: parseN(fAndel.value) };
     if (Object.values(nums).some((n) => Number.isNaN(n))) { toast('Tal skal skrives som fx 1.250 eller 12,5'); return; }
@@ -4167,6 +4176,11 @@ function pipeEdit(x, preset = {}) {
     h('div', { class: 'pf-acts' }, btnSave, h('button', { class: 'btn', type: 'button', text: 'Annullér', onclick: () => pdlg.close() }), btnMini, h('span', { class: 'sp' }), btnDel));
   $('#pdlg-b').replaceChildren(form);
   drawParts(); drawUd(); drawRad(); sync();
+  // Ny sag: skrives en PQ-dato eller tilbudsdato, skifter fasen fra Lead
+  if (ny) {
+    const auto = () => { if (fStart.value !== 'lead') return; if ($('#pf-pq').value.trim()) fStart.value = 'pq'; else if ($('#pf-tb').value.trim()) fStart.value = 'tilbud'; else return; sync(); toast(`Fasen er sat til ${PFASE[fStart.value]}, fordi sagen har en dato`); };
+    ['#pf-pq', '#pf-tb'].forEach((id) => $(id).addEventListener('change', auto));
+  }
   pdlg.showModal();
   (udf ? udBox.querySelector('input,select') || btnSave : ny ? fTitel : fTitel).focus();
 }
