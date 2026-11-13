@@ -365,6 +365,8 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .pcard details ul { margin: 4px 0 0; padding-left: 16px; } .pcard details li { margin: 2px 0; }
 .ptag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 7px; border-radius: 999px; background: var(--sand); color: var(--deep); margin-right: 4px; vertical-align: 1px; }
 .ptag.ramme { background: var(--deep); color: #fff; }
+.ptag.mini { background: #fff; border: 1px solid var(--red); color: var(--red); }
+.ptl-n .ptag { font-size: 10px; margin-right: 5px; }
 .ptag.rolle { background: #fff; border: 1px solid var(--sand-3); color: var(--ink); }
 .pcard .pc-u { font-size: 11px; font-weight: 700; color: var(--deep); text-transform: uppercase; letter-spacing: .04em; }
 .pcard .pc-s.ok { color: var(--ok); }
@@ -3513,8 +3515,12 @@ function drawPipe() {
   if (S.pipeView === 'tavle') drawPipeBoard(rows); else if (S.pipeView === 'tabel') drawPipeTable(rows); else if (S.pipeView === 'tidslinje') drawPipeTimeline(rows); else drawPipeList(all);
 }
 const pRolle = (r) => (r.rolle ? h('span', { class: 'ptag rolle', title: 'NIRAS er ' + rolleNavn(r.rolle).toLowerCase(), text: r.rolle === 'Eneste rådgiver' ? 'Eneste' : r.rolle }) : null);
+// Mærke for rammeaftaler og miniudbud; bruges på kort, i tabel, liste og tidslinje
+const pTypeTag = (r) => (r.type === 'rammeaftale' ? h('span', { class: 'ptag ramme', title: 'Rammeaftale', text: 'Rammeaftale' })
+  : r.type === 'miniudbud' ? h('span', { class: 'ptag mini', title: r.ramme ? 'Miniudbud under ' + r.ramme : 'Miniudbud', text: 'Miniudbud' }) : null);
+const pTypePfx = (r) => (r.type === 'rammeaftale' ? 'Rammeaftale: ' : r.type === 'miniudbud' ? 'Miniudbud: ' : '');
 function pipeCard(r) {
-  const tag = r.type === 'rammeaftale' ? h('span', { class: 'ptag ramme', text: 'Ramme' }) : r.type === 'miniudbud' ? h('span', { class: 'ptag', text: 'Miniudbud' }) : null;
+  const tag = pTypeTag(r);
   const kids = [];
   let val;
   const nirasTxt = r.niras != null && r.niras < 1 ? ` (NIRAS ${nf0.format(r.niras * 100)} %)` : '';
@@ -3607,7 +3613,7 @@ function drawPipeTable(rows) {
   const dcols = PDCOLS.filter((c) => on.has(c.k)).map((c) => ({ f: (v) => (v ? F.date(v) : ''), ...c }));
   table($('#t-pipe'), [
     { k: 'navn', l: 'Titel', cls: 'name' },
-    { k: 'typeL', l: 'Type', cell: (td, r) => { td.replaceChildren(h('span', { class: 'ptag' + (r.type === 'rammeaftale' ? ' ramme' : ''), text: r.typeL })); } },
+    { k: 'typeL', l: 'Type', cell: (td, r) => { td.replaceChildren(pTypeTag(r) || document.createTextNode(r.typeL)); } },
     { k: 'faseN', l: 'Status', f: (v, r) => r.status, cell: (td, r) => { if (r.gammel) td.classList.add('c-amb'); } },
     { k: 'kunde', l: 'Kunde', sec: 1, cell: (td, r) => { if (r.kundeMidl && !r.kundeMidl.erp_id) td.append(h('span', { class: 'ktag', title: 'Midlertidig kunde, ikke i ERP endnu', text: 'Midl.' })); } },
     { k: 'rolle', l: 'Rolle', title: 'NIRAS\' rolle' },
@@ -3651,7 +3657,7 @@ function drawPipeTimeline(rows) {
   const row = (i) => {
     const r = i.r, sorted = i.ms.map((m) => m.d).sort();
     const nm = h('div', { class: 'ptl-n', tabindex: '0', role: 'button', title: [r.navn, r.kunde, r.ansvarlige ? 'Ansvarlig ' + r.ansvarlige : ''].filter(Boolean).join(' · ') },
-      h('b', { text: r.navn }), h('div', { class: 'note', text: [r.typeL !== 'Opgave' ? r.typeL : '', r.kunde, r.ansvarlige].filter(Boolean).join(' · ') || ' ' }));
+      pTypeTag(r), h('b', { text: r.navn }), h('div', { class: 'note', text: [r.type === 'miniudbud' && r.ramme ? 'Under ' + r.ramme : '', r.kunde, r.ansvarlige].filter(Boolean).join(' · ') || ' ' }));
     nm.addEventListener('click', () => pipeEdit(r.x)); nm.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') pipeEdit(r.x); });
     return h('div', { class: 'ptl-r' }, nm, h('div', { class: 'ptl-t' }, ...grid(), todayL(),
       sorted.length > 1 ? h('div', { class: 'ptl-bar', style: `left:${pos(sorted[0])};width:calc(${pos(sorted[sorted.length - 1])} - ${pos(sorted[0])})` }) : null,
@@ -3708,7 +3714,7 @@ function drawPipeList(all) {
   const D = pipeListData(all);
   const tbl = (cols, rows, src) => h('div', { class: 'tablebox' }, h('table', { class: 't plist' },
     h('thead', {}, h('tr', {}, cols.map((c) => h('th', {}, h('button', { type: 'button', text: c }))))),
-    h('tbody', {}, rows.length ? rows.map((r, i) => { const tr = h('tr', { class: src[i].aaben ? null : 'closed' }, r.map((v) => h('td', { text: v || '' }))); tr.addEventListener('click', () => pipeEdit(src[i].x)); return tr; })
+    h('tbody', {}, rows.length ? rows.map((r, i) => { const tr = h('tr', { class: src[i].aaben ? null : 'closed' }, r.map((v, j) => (j === 0 && pTypeTag(src[i]) ? h('td', {}, pTypeTag(src[i]), v || '') : h('td', { text: v || '' })))); tr.addEventListener('click', () => pipeEdit(src[i].x)); return tr; })
       : [h('tr', {}, h('td', { colspan: cols.length, class: 'note', text: 'Ingen' }))])));
   $('#pipe-list').replaceChildren(
     h('div', { class: 'pipe-acts' },
@@ -3745,8 +3751,9 @@ async function pipePptx(D) {
       return s;
     };
     const W6 = [2.9, 2.0, 2.0, 2.4, 1.6, 1.4];
-    tblSlide(`Tilbud · pr. ${F.date(D.dato)}`, D.tilbud.cols, D.tilbud.rows, W6);
-    tblSlide(`PQ'er · pr. ${F.date(D.dato)}`, D.pq.cols, D.pq.rows, W6);
+    const pfx = (rows, src) => rows.map((r, i) => [pTypePfx(src[i]) + (r[0] || ''), ...r.slice(1)]);
+    tblSlide(`Tilbud · pr. ${F.date(D.dato)}`, D.tilbud.cols, pfx(D.tilbud.rows, D.tilbud.src), W6);
+    tblSlide(`PQ'er · pr. ${F.date(D.dato)}`, D.pq.cols, pfx(D.pq.rows, D.pq.src), W6);
     D.grupper.forEach((g) => tblSlide(`Udbud: ${g.udbud}`, g.cols, g.rows, [2.6, 1.6, 2.4, 1.1, 2.3, 2.3]));
     // Pakkes om uden mappeposter i zip-filen, så den også kan åbnes og redigeres fra SharePoint og OneDrive
     const src = await window.JSZip.loadAsync(await pres.write({ outputType: 'arraybuffer' }));
