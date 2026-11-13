@@ -109,6 +109,33 @@ Hvert modul har også kolonnen `projekt` med en kopi af projektnummeret, som dat
 - `pipe_paamindelser(dato)` giver PQ- og tilbudsfrister til påmindelsesmailen kl. 07 dagen før.
 - SQL: `supabase/07_pipeline.sql` og `supabase/09_pipeline_felter.sql`.
 
+### Pipeline udgave 3 (13. nov. 2026, `14_pipeline_v3.sql`)
+
+Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere leads, PQ og tilbud). En sag er ét lead, én PQ eller ét tilbud, der skifter fase; historik, log og Deal Radar følger sagen hele vejen.
+
+| Tabel | Indhold |
+|---|---|
+| `pipe_rolle` | Roller for partnere og NIRAS: kode, navn, sortering, aktiv. Start: TE (totalentreprenør), TR (totalrådgiver), UR (underrådgiver). Redigeres under Regler |
+| `kollega` | Hvem der kan være ansvarlig: initialer, navn, e-mail, aktiv. Start: KEH, NEBR, LARN, HBEI, RLP, MHJ. Redigeres under Regler |
+| `pipe_partner` | Partnere på en sag: virksomhed (`kunde_id`, samme liste som kunder), rolle, andel af teamets honorar (0-1), sortering |
+| `deal_radar` | Deal Radar-vurderinger: dato, Pain, Power, Vision, Value, Process, Alignment (0-5), note, næste handling |
+| `pipe_log` | Ændringslog skrevet af triggere på `projekt_pipeline`, `pipe_partner`, `deal_radar` og projektets navn, numre, kunde og BU: tabel, handling, ændrede felter ({felt: [før, efter]}), bruger, tid. Bevares, når en sag slettes |
+| `projekt_pipeline.no_bid_aarsag` | Årsag til no bid (valgt fra en liste) |
+
+- **Felter på sagen:** projektnavn (arbejdstitel; ERP-navnet vises, når opgaven er kommet i ERP), kunde, ansvarlig (`ansvarlige`, én kollega, kan skiftes), NIRAS' rolle, anlægssum, teamets honorar, NIRAS' andel, partnere med rolle og andel, vinderchance, datoer og bemærkning.
+- **Honorarsplit:** NIRAS' andel + partnernes andele skal give 100 %. Tom NIRAS-andel = resten efter partnerne; er NIRAS eneste rådgiver, er andelen 100 %. Over 100 % kan ikke gemmes.
+- **Udfald pr. fase** (knapper i formularen, gemmes med resten):
+  - Lead: videre til PQ, direkte til tilbud, no bid, annulleret.
+  - PQ: prækvalificeret (sagen går til tilbud, og datoen gemmes i `prakvalificeret`), ikke prækvalificeret (tabt i PQ), no bid, annulleret.
+  - Tilbud: vundet (evt. ERP-nummer), tabt, no bid, annulleret.
+  - Afgjorte sager kan genåbnes. No bid kræver en årsag.
+- **Datoer:** PQ-dato (`pq_frist`) er afleveringsfristen for PQ, tilbudsdato (`tilbudsfrist`) for tilbuddet. Et lead har ingen dato. Mangler datoen i PQ eller tilbud, står det på kortet.
+- **Hitrater (12 mdr.):** tilbud = vundet ÷ (vundet + tabt i tilbud); PQ = prækvalificeret ÷ (prækvalificeret + ikke prækvalificeret). No bid og annulleret tæller ikke.
+- **Deal Radar:** seks akser fra jeres Deal Radar med beskrivelserne ved 1, 3 og 5. Radaren viser seneste vurdering og den forrige stiplet; den svageste akse og næste trin står ved siden af. Kort og tabel viser seneste score (af 30).
+- **Visninger:** tavle, tabel, liste (med PowerPoint) og tidslinje (milepæle pr. sag: spørgefrist, PQ-dato, prækvalificeret, tilbudsdato, revideret tilbud, forventet afgørelse, afgjort og forventet opstart; streg for i dag; grupperet efter fase).
+- **Bid/no bid og deal review** er ikke i formularen. De kommer som porte mellem faserne i en senere udgave; `projekt_bid` er bevaret til det.
+- **Eksport:** `v_eksport_pipeline` har fået årsag til no bid, partnerliste og seneste Deal Radar-score; nye `v_eksport_deal_radar` og `v_eksport_pipe_partner`. "Mine data" har arkene Pipeline, Deal Radar og Partnere.
+
 ## Personnoter (10. nov. 2026)
 
 - `person_noter`: initialer (som PL/PA i ERP), dato, note, opfølgning, frist, status, koblede projekter (`projektnumre`), oprettet, redigeret. Kolonnen `projekter` (uuid[]) er ubrugt.
