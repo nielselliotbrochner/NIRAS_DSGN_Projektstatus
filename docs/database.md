@@ -136,6 +136,25 @@ Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere le
 - **Bid/no bid og deal review** er ikke i formularen. De kommer som porte mellem faserne i en senere udgave; `projekt_bid` er bevaret til det.
 - **Eksport:** `v_eksport_pipeline` har fået årsag til no bid, partnerliste og seneste Deal Radar-score; nye `v_eksport_deal_radar` og `v_eksport_pipe_partner`. "Mine data" har arkene Pipeline, Deal Radar og Partnere.
 
+## PL-belastning (14. nov. 2026, `16_pl_belastning.sql`)
+
+Fanen PL-belastning viser projektledernes belastning i procent af fuld tid pr. måned.
+
+| Tabel / felt | Indhold |
+|---|---|
+| `kollega.pl` | Personen vises i PL-belastning |
+| `kollega.ansvarlig` | Personen kan være ansvarlig for leads, PQ og tilbud (afløser `aktiv`, som dashboardet holder lig med `ansvarlig`) |
+| `pl_linje` | En linje pr. person og ERP-projekt (`projekt`) eller intern aktivitet (`aktivitet`), med note, skjult og sortering. ERP-projekter, hvor personen er PL, får først en linje, når der skrives procent eller note |
+| `pl_belastning` | Procent (0-300) pr. linje og måned (første dag i måneden) |
+| `pl_log` | Ændringslog fra triggere på `pl_linje`, `pl_belastning` og `kollega` |
+| `v_eksport_pl_belastning` | Eksport; arket PL-belastning i "Mine data" |
+
+- **Personlisten** (knappen "Vælg projektledere" i fanen og "Åbn personlisten" under Regler): alle, der er PL eller PA i det valgte PTD, med antal projekter som PL i den valgte BU og i andre BU'er, plus personer tilføjet manuelt. To afkrydsninger: "Vis i PL-belastning" og "Ansvarlig i pipeline". "Ny" markerer en PL med projekter i BU'en, som ikke er gennemgået. "Kun PL'er med projekter i BU" er slået til som standard.
+- **Linjer pr. person:** ERP-projekter, hvor personen er PL i det valgte PTD (alle BU'er), med forventet slutdato; "+ Projekt fra ERP" tilføjer et andet ERP-projekt; "+ Intern aktivitet" (fx salg og tilbud, administration). Klik på et navn giver note, skjul (ERP-projekter; tæller så ikke i summen) og fjern (tilføjede linjer).
+- **Celler:** klik og skriv procent. Enter gemmer, Shift+Enter gentager til højre frem til projektets forventede slutdato (ellers periodens slutning), Tab går til næste måned, Escape fortryder, tom celle sletter.
+- **Sum og farver:** personens linje summerer de viste linjer; cellen farves grøn under 75 %, gul 75-99 % og rød fra 100 %.
+- **Periode:** nu + 12 mdr. (standard), nu + 24 mdr. eller 6 mdr. tilbage + 12 frem. "Fold alle sammen" giver én linje pr. person; valget huskes i browseren.
+
 ## Personnoter (10. nov. 2026)
 
 - `person_noter`: initialer (som PL/PA i ERP), dato, note, opfølgning, frist, status, koblede projekter (`projektnumre`), oprettet, redigeret. Kolonnen `projekter` (uuid[]) er ubrugt.

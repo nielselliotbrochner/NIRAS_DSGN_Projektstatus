@@ -405,6 +405,43 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 #pdlg .pf-pair { display: flex; gap: 6px; } #pdlg .pf-pair input { min-width: 0; }
 .t td .ptag { margin: 0; }
 #pdlg { width: min(820px, 94vw); }
+#pldlg { width: min(760px, 94vw); }
+#pldlg .pld td { vertical-align: middle; } #pldlg .pld td.c, #pldlg .pld th.c { text-align: center; }
+#pldlg .pld .pld-navn { width: 100%; min-width: 120px; font: inherit; font-size: 12px; }
+#pldlg .pld tr.sec td { background: var(--sand-2); font-weight: 600; font-size: 12px; color: var(--muted); }
+#pldlg .pld input[type=checkbox] { width: 16px; height: 16px; }
+#pldlg .pld th.c { white-space: normal; width: 104px; line-height: 1.2; }
+#pldlg .pld-kun { display: inline-flex !important; flex-direction: row !important; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+#pldlg .pld-kun input { width: 16px; height: 16px; margin: 0; }
+.plb-acts { justify-content: flex-end; }
+.plb-leg { margin: 6px 0 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.plb-leg i { display: inline-block; width: 14px; height: 12px; border-radius: 3px; margin-left: 8px; }
+.plb-leg i.h0 { background: #E3F1E8; } .plb-leg i.h1 { background: #FBEFC9; } .plb-leg i.h2 { background: #F6CDD1; }
+.plb-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: #fff; }
+table.plb { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+table.plb th, table.plb td { border-bottom: 1px solid var(--line); padding: 5px 4px; text-align: right; white-space: nowrap; min-width: 46px; width: 46px; }
+table.plb th { background: var(--sand-2); color: var(--muted); font-weight: 600; font-size: 11px; position: sticky; top: 0; z-index: 2; }
+table.plb th.past { color: #b3a79e; font-weight: 400; }
+table.plb .n { text-align: left; min-width: 250px; width: 250px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid var(--line); }
+table.plb th.n { z-index: 3; background: var(--sand-2); }
+table.plb .cur { box-shadow: inset 2px 0 0 var(--red); }
+table.plb tr.p td { font-weight: 600; cursor: pointer; border-top: 1px solid var(--sand-3); }
+table.plb tr.p td.n { background: var(--sand-2); }
+table.plb tr.p:focus-visible td.n { outline: 2px solid var(--red); outline-offset: -2px; }
+table.plb .chev { display: inline-block; width: 12px; color: var(--muted); }
+table.plb .sub { color: var(--muted); font-weight: 400; font-size: 11px; } table.plb .sub.blk { display: block; overflow: hidden; text-overflow: ellipsis; }
+table.plb tr.c td.n { padding-left: 20px; cursor: pointer; } table.plb tr.c td.nm:hover { background: var(--sand-2); }
+table.plb tr.skjult td { color: var(--muted); }
+table.plb td.h0 { background: #E3F1E8; } table.plb td.h1 { background: #FBEFC9; } table.plb td.h2 { background: #F6CDD1; }
+table.plb td.e { cursor: text; } table.plb td.e:hover { outline: 1px solid var(--sand-3); outline-offset: -1px; }
+table.plb td.end { background: repeating-linear-gradient(135deg, transparent 0 4px, #EEE5DD 4px 5px); }
+table.plb td input { width: 40px; height: 22px; font: inherit; text-align: right; padding: 0 3px; border: 1px solid var(--red); border-radius: 3px; }
+table.plb tr.add td, table.plb tr.act td { background: #fff; text-align: left; }
+table.plb .pl-stick { position: sticky; left: 20px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; width: max-content; max-width: calc(100vw - 80px); }
+table.plb .plact { display: flex; flex-direction: column; gap: 6px; max-width: 640px; position: sticky; left: 20px; }
+table.plb .plact textarea { font: inherit; font-size: 12px; width: 100%; }
+table.plb .ptag { font-size: 10px; } .plnote { color: var(--red); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--deep); text-decoration: underline; cursor: pointer; font: inherit; font-size: 12px; }
 #pdlg .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
 .pf-kwrap { display: flex; flex-direction: column; gap: 3px; }
 .pf-kstat { font-size: 11px; color: var(--muted); font-weight: 400; min-height: 14px; }
@@ -1204,6 +1241,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <button class="tab" role="tab" data-tab="ov" aria-selected="true" type="button">Overblik</button>
         <button class="tab" role="tab" data-tab="proj" aria-selected="false" type="button">Projekter</button>
         <button class="tab" role="tab" data-tab="pers" aria-selected="false" type="button">Personer</button>
+        <button class="tab" role="tab" data-tab="plb" aria-selected="false" type="button">PL-belastning</button>
         <button class="tab" role="tab" data-tab="kunder" aria-selected="false" type="button">Kunder</button>
         <button class="tab" role="tab" data-tab="risiko" aria-selected="false" type="button">Risiko</button>
         <button class="tab" role="tab" data-tab="kort" aria-selected="false" type="button">Kort</button>
@@ -1290,6 +1328,25 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </section>
 
     <!-- PERSONER -->
+    <!-- PL-BELASTNING -->
+    <section class="page" id="plb" hidden>
+      <div class="card">
+        <div class="phead">
+          <div><h2>PL-belastning</h2><p class="note">Projektledernes belastning i procent af fuld tid pr. måned. Klik på en person for at se projekterne, og klik på en celle for at skrive procent.</p></div>
+          <div class="pf-acts plb-acts">
+            <label class="note" style="display:inline-flex;gap:6px;align-items:center">Periode
+              <select id="plb-per"><option value="12">Nu + 12 mdr.</option><option value="24">Nu + 24 mdr.</option><option value="-6">6 mdr. tilbage + 12 frem</option></select></label>
+            <button class="btn" type="button" id="plb-fold">Fold alle sammen</button>
+            <button class="btn" type="button" id="plb-ud">Fold alle ud</button>
+            <button class="btn primary" type="button" id="plb-valg">Vælg projektledere</button>
+          </div>
+        </div>
+        <div class="plb-leg note">Personens samlede belastning: <i class="h0"></i>under 75 % <i class="h1"></i>75 til 99 % <i class="h2"></i>100 % eller mere</div>
+        <div class="plb-wrap" id="plb-wrap"></div>
+        <p class="note">Enter gemmer cellen. Shift+Enter gentager værdien til højre frem til projektets forventede slutdato (ellers periodens slutning). Tab går til næste måned, Escape fortryder. Skraveret er efter forventet slutdato i ERP. Klik på et projektnavn for note, skjul eller fjern.</p>
+      </div>
+    </section>
+
     <!-- KUNDER -->
     <section class="page" id="kunder" hidden>
       <div class="card" id="k-detail" hidden>
@@ -1549,7 +1606,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <div class="card">
           <h2>Pipeline: ansvarlige</h2>
-          <p class="note">Kolleger, der kan være ansvarlige for et lead, PQ eller tilbud. De behøver ikke være PL eller PA i ERP.</p>
+          <p class="note">Kolleger, der kan være ansvarlige for et lead, PQ eller tilbud, og projektledere, der vises i PL-belastning. Begge vælges i personlisten.</p>
           <div id="rg-kolleger"></div>
         </div>
       </div>
@@ -1597,6 +1654,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <dialog id="pdlg" aria-labelledby="pdlg-title">
   <div class="dlg-h"><h2 id="pdlg-title">Nyt lead</h2><button class="tbtn" id="pdlg-close" type="button">Luk</button></div>
   <div class="dlg-b" id="pdlg-b"></div>
+</dialog>
+<dialog id="pldlg" aria-labelledby="pldlg-title">
+  <div class="dlg-h"><h2 id="pldlg-title">Projektledere og ansvarlige</h2><button class="tbtn" id="pldlg-close" type="button">Luk</button></div>
+  <div class="dlg-b" id="pldlg-b"></div>
 </dialog>
 <dialog id="dlg">
   <div class="dlg-h"><h2>Indstillinger</h2><button class="tbtn" id="dlg-close" type="button">Luk</button></div>
@@ -2159,6 +2220,15 @@ const Store = {
   kollegaSave(row) { return this.sbFetch('/rest/v1/kollega?on_conflict=initialer', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) }); },
   async radarAdd(row) { const r = await this.sbFetch('/rest/v1/deal_radar', { method: 'POST', body: JSON.stringify(row) }); return r[0]; },
   radarDelete(id) { return this.sbFetch('/rest/v1/deal_radar?id=eq.' + id, { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); },
+  plLoad() { return this.fetchAll('/rest/v1/pl_linje?select=*,b:pl_belastning(maaned,procent)&order=sortering,oprettet'); },
+  async plLinjeAdd(row) { const r = await this.sbFetch('/rest/v1/pl_linje', { method: 'POST', body: JSON.stringify(row) }); return r[0]; },
+  plLinjePatch(id, patch) { return this.sbFetch('/rest/v1/pl_linje?id=eq.' + id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) }); },
+  plLinjeDelete(id) { return this.sbFetch('/rest/v1/pl_linje?id=eq.' + id, { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); },
+  // Procent for en række måneder: null sletter
+  plSet(linjeId, months, procent) {
+    if (procent == null) return this.sbFetch(`/rest/v1/pl_belastning?linje_id=eq.${linjeId}&maaned=in.(${months.join(',')})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    return this.sbFetch('/rest/v1/pl_belastning?on_conflict=linje_id,maaned', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(months.map((m) => ({ linje_id: linjeId, maaned: m, procent }))) });
+  },
   pipeLog(pipeId) { return this.fetchAll('/rest/v1/pipe_log?pipeline_id=eq.' + pipeId + '&select=*&order=tid.desc,id.desc'); },
   // Partnere: retter eksisterende, opretter nye og sletter fjernede
   async partnerSync(pipeId, rows, prev) {
@@ -2340,7 +2410,8 @@ const S = {
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', kt: '', regel: null, q: '', pRole: 'pl',
-  kSel: null, kq: '', kAll: false, kunder: null, kById: new Map(), kErpByLc: new Map(), kMidl: 'aabne',
+  kSel: null, kq: '', kAll: false,
+  plPer: ls.get('pd.plper', '12'), plOpen: new Set(ls.get('pd.plopen', [])), plVis: new Set(), plAct: null, plAdd: null, plLinjer: null, plRowMap: new Map(), plQ: '', plKun: true, kunder: null, kById: new Map(), kErpByLc: new Map(), kMidl: 'aabne',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, kunder: { k: 'baseline', d: -1 }, kproj: { k: 'baseline', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
   pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30), pipeColsOpen: false,
   pnotes: null, pnKey: '', pnEdit: null, pnFiles: [], pnFilter: 'alle', pnMore: 40, pnOpf: [],
@@ -2559,6 +2630,7 @@ function render() {
   if (S.tab === 'proj') drawProjects(rows);
   if (S.tab === 'pers') drawPersons();
   if (S.tab === 'kunder') drawKunder();
+  if (S.tab === 'plb') drawPlb();
   if (S.tab === 'regler') { drawRules(rows); drawPipeLister(); }
   if (S.tab === 'risiko') drawRisk();
   if (S.tab === 'kort') drawMap(rows);
@@ -3382,6 +3454,7 @@ async function loadPipe() {
   // Roller og ansvarlige (14_pipeline_v3.sql)
   try { S.roller = await Store.pipeRoller(); } catch (e) { S.roller = PROLLER_STD; }
   try { S.kolleger = await Store.pipeKolleger(); } catch (e) { S.kolleger = []; }
+  await loadPl();
 }
 /* ----- Kunder: ERP-kunder og midlertidige kunder ----- */
 const kLc = (t) => String(t || '').trim().toLowerCase();
@@ -3886,7 +3959,7 @@ function pipeEdit(x, preset = {}) {
   const fUdbud = inp('pf-udbud', v.udbud || '', { list: 'pf-udbudl', placeholder: 'Fælles navn for delaftaler' });
   const fBu = inp('pf-bu', ny ? firstBu || 'DSGN' : p.bu || '', { list: 'pf-bus' });
   // Ansvarlig: kolleger fra tabellen kollega (kan ændres undervejs; ændringer står i historikken)
-  const kol = (S.kolleger || []).filter((k) => k.aktiv !== false);
+  const kol = (S.kolleger || []).filter(kolAnsv);
   const ansv0 = (v.ansvarlige || '').toUpperCase();
   const fAnsv = h('select', { id: 'pf-ansv' }, h('option', { value: '', text: 'Vælg ansvarlig' }),
     ...[...kol.map((k) => [k.initialer, k.navn ? `${k.initialer} · ${k.navn}` : k.initialer]), ...(ansv0 && !kol.some((k) => k.initialer === ansv0) ? [[ansv0, ansv0 + ' (ikke på listen)']] : [])]
@@ -4185,6 +4258,225 @@ function pipeEdit(x, preset = {}) {
   (udf ? udBox.querySelector('input,select') || btnSave : ny ? fTitel : fTitel).focus();
 }
 $('#pipe-new').addEventListener('click', () => pipeEdit(null));
+/* ----- PL-belastning: projektledernes belastning pr. måned ----- */
+const PL_AKT = ['Salg og tilbud', 'Administration', 'Intern udvikling', 'PA og sparring', 'Uddannelse', 'Ferie og fravær'];
+const PL_PER = { 12: [0, 12], 24: [0, 24], '-6': [-6, 18] };
+async function loadPl() {
+  if (Store.mode() !== 'supabase') { S.plLinjer = null; return; }
+  try { S.plLinjer = await Store.plLoad(); } catch (e) { S.plLinjer = null; console.warn('PL-belastning kunne ikke hentes', e); }
+}
+const plM0 = () => cphDay(Date.now()).slice(0, 7) + '-01';
+const plAddM = (m, n) => { const d = new Date(m + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7) + '-01'; };
+const plMonths = () => { const [a, n] = PL_PER[S.plPer] || PL_PER[12], m0 = plM0(); return Array.from({ length: n }, (_, k) => plAddM(m0, a + k)); };
+const PL_MN = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const plLab = (m) => { const i = Number(m.slice(5, 7)) - 1; return i === 0 ? `jan ${m.slice(2, 4)}` : PL_MN[i]; };
+const plHeat = (v) => (v >= 100 ? 'h2' : v >= 75 ? 'h1' : 'h0');
+const kolAnsv = (k) => (k.ansvarlig === undefined ? k.aktiv !== false : !!k.ansvarlig);
+const plPersoner = () => (S.kolleger || []).filter((k) => k.pl).sort((a, b) => a.initialer.localeCompare(b.initialer, 'da'));
+// Linjer for en person: ERP-projekter, hvor personen er PL i det valgte PTD, plus egne linjer (andre ERP-projekter og interne aktiviteter)
+function plRows(i) {
+  const lin = (S.plLinjer || []).filter((l) => l.initialer === i);
+  const byP = new Map(lin.filter((l) => l.projekt).map((l) => [l.projekt, l]));
+  const erp = S.P.filter((r) => r.pl === i).sort((a, b) => num(b.baseline) - num(a.baseline));
+  const rows = erp.map((r) => ({ key: 'p:' + i + ':' + r.projekt, i, kind: 'erp', projekt: r.projekt, navn: r.navn, sub: `${r.projekt}${r.bu && r.bu !== 'DSGN' ? ' · ' + r.bu : ''}${r.forv_slut ? ' · slut ' + F_dmy(r.forv_slut).slice(3) : ''}`, l: byP.get(r.projekt) || null, slut: r.forv_slut || null }));
+  lin.forEach((l) => {
+    if (l.projekt && erp.some((r) => r.projekt === l.projekt)) return;
+    const r = l.projekt ? S.P.find((x) => x.projekt === l.projekt) : null;
+    rows.push(l.projekt ? { key: 'l:' + l.id, i, kind: 'ekstra', projekt: l.projekt, navn: r?.navn || l.projekt, sub: `${l.projekt} · tilføjet${r?.pl ? ', PL ' + r.pl : ''}${r?.forv_slut ? ' · slut ' + F_dmy(r.forv_slut).slice(3) : ''}${r ? '' : ' · ikke i valgte PTD'}`, l, slut: r?.forv_slut || null }
+      : { key: 'l:' + l.id, i, kind: 'intern', navn: l.aktivitet, sub: 'Intern aktivitet', l, slut: null });
+  });
+  return rows;
+}
+const plVal = (row, m) => { const b = row.l?.b?.find((x) => pDay(x.maaned) === m); return b ? Number(b.procent) : null; };
+const plEnd = (row, m) => !!row.slut && m > row.slut.slice(0, 7) + '-01';
+function drawPlb() {
+  const box = $('#plb-wrap');
+  $('#plb-per').value = String(S.plPer);
+  if (Store.mode() !== 'supabase') { box.replaceChildren(h('p', { class: 'empty', text: 'PL-belastning gemmes i Supabase. Log ind for at bruge fanen.' })); return; }
+  if (S.plLinjer === null) { box.replaceChildren(h('p', { class: 'empty', text: 'Tabellerne til PL-belastning findes ikke i databasen endnu (16_pl_belastning.sql).' })); return; }
+  const pers = plPersoner();
+  if (!pers.length) { box.replaceChildren(h('div', { class: 'empty' }, h('p', { text: 'Vælg de projektledere, der skal vises.' }), h('button', { class: 'btn primary', type: 'button', text: 'Vælg projektledere', onclick: plDlgOpen }))); return; }
+  const ms = plMonths(), m0 = plM0(), sl = box.scrollLeft;
+  S.plRowMap = new Map();
+  const cells = (fn) => ms.map((m) => fn(m));
+  const head = h('tr', {}, h('th', { class: 'n', text: 'Projektleder og projekt' }), ...cells((m) => h('th', { class: (m < m0 ? 'past' : '') + (m === m0 ? ' cur' : ''), title: new Date(m + 'T12:00:00Z').toLocaleDateString('da-DK', { month: 'long', year: 'numeric', timeZone: 'UTC' }), text: plLab(m) })));
+  const body = [];
+  pers.forEach((k) => {
+    const i = k.initialer, rows = plRows(i), open = S.plOpen.has(i), vis = S.plVis.has(i);
+    const shown = rows.filter((r) => !r.l?.skjult), hidden = rows.length - shown.length;
+    const nErp = rows.filter((r) => r.kind === 'erp').length;
+    const sum = (m) => shown.reduce((a, r) => a + (plVal(r, m) || 0), 0);
+    const tr = h('tr', { class: 'p', tabindex: '0', 'aria-expanded': String(open), title: open ? 'Fold sammen' : 'Fold ud' },
+      h('td', { class: 'n' }, h('span', { class: 'chev', text: open ? '▾' : '▸' }), h('b', { text: ' ' + i }), h('span', { class: 'sub', text: `${k.navn ? ' ' + k.navn + ' ·' : ''} ${nErp} projekt${nErp === 1 ? '' : 'er'} som PL` })),
+      ...cells((m) => { const v = sum(m); return h('td', { class: plHeat(v) + (m === m0 ? ' cur' : ''), text: nf0.format(v) + ' %' }); }));
+    const tog = () => { if (open) S.plOpen.delete(i); else S.plOpen.add(i); ls.set('pd.plopen', [...S.plOpen]); drawPlb(); };
+    tr.addEventListener('click', tog); tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } });
+    body.push(tr);
+    if (!open) return;
+    (vis ? rows : shown).forEach((r) => {
+      S.plRowMap.set(r.key, r);
+      const nm = h('td', { class: 'n nm', tabindex: '0', title: [r.navn, r.l?.note ? 'Note: ' + r.l.note : '', 'Klik for note og flere valg'].filter(Boolean).join('\n') },
+        r.kind === 'intern' ? h('span', { class: 'ptag', text: 'Intern' }) : r.kind === 'ekstra' ? h('span', { class: 'ptag rolle', text: 'Tilføjet' }) : null,
+        h('span', { text: r.navn }), r.l?.note ? h('span', { class: 'plnote', 'aria-label': 'Har note', text: ' ✎' }) : null, r.l?.skjult ? h('span', { class: 'sub', text: ' (skjult)' }) : null,
+        h('span', { class: 'sub blk', text: r.sub }));
+      const act = () => { S.plAct = S.plAct === r.key ? null : r.key; drawPlb(); };
+      nm.addEventListener('click', act); nm.addEventListener('keydown', (e) => { if (e.key === 'Enter') act(); });
+      body.push(h('tr', { class: 'c' + (r.l?.skjult ? ' skjult' : '') }, nm,
+        ...cells((m) => { const v = plVal(r, m); return h('td', { class: 'e' + (plEnd(r, m) && v == null ? ' end' : '') + (m === m0 ? ' cur' : ''), 'data-k': r.key, 'data-m': m, tabindex: '-1', text: v == null ? '' : nf0.format(v) }); })));
+      if (S.plAct === r.key) body.push(plActRow(r, ms.length));
+    });
+    if (hidden) body.push(h('tr', { class: 'c add' }, h('td', { colspan: ms.length + 1 }, h('div', { class: 'pl-stick' }, h('button', { class: 'linkbtn', type: 'button', text: vis ? `Skjul ${hidden} skjulte igen` : `Vis ${hidden} skjulte projekt${hidden === 1 ? '' : 'er'}`, onclick: () => { if (vis) S.plVis.delete(i); else S.plVis.add(i); drawPlb(); } })))));
+    body.push(S.plAdd?.i === i ? plAddRow(i, ms.length) : h('tr', { class: 'c add' }, h('td', { colspan: ms.length + 1 }, h('div', { class: 'pl-stick pf-acts' },
+      h('button', { class: 'btn small', type: 'button', text: '+ Projekt fra ERP', onclick: () => { S.plAdd = { i, kind: 'erp' }; drawPlb(); $('#plb-add')?.focus(); } }),
+      h('button', { class: 'btn small', type: 'button', text: '+ Intern aktivitet', onclick: () => { S.plAdd = { i, kind: 'intern' }; drawPlb(); $('#plb-add')?.focus(); } })))));
+  });
+  box.replaceChildren(h('table', { class: 'plb' }, h('thead', {}, head), h('tbody', {}, ...body)));
+  box.scrollLeft = sl;
+}
+// Note, skjul og fjern for en linje
+function plActRow(r, n) {
+  const fN = h('textarea', { rows: 2, placeholder: 'Note til linjen, fx "Faser ud efter dispositionsforslag"', 'aria-label': 'Note' }); fN.value = r.l?.note || '';
+  const gem = () => plDo(async () => {
+    const l = await plEnsure(r); await Store.plLinjePatch(l.id, { note: fN.value.trim() || null }); l.note = fN.value.trim() || null;
+  }, 'Noten er gemt');
+  return h('tr', { class: 'c act' }, h('td', { colspan: n + 1 }, h('div', { class: 'plact' }, fN,
+    h('div', { class: 'pf-acts' }, h('button', { class: 'btn small primary', type: 'button', text: 'Gem note', onclick: gem }),
+      r.kind === 'erp' ? h('button', { class: 'btn small', type: 'button', text: r.l?.skjult ? 'Vis projektet igen' : 'Skjul projektet', title: 'Skjulte projekter tæller ikke med i summen', onclick: () => plDo(async () => { const l = await plEnsure(r); await Store.plLinjePatch(l.id, { skjult: !l.skjult }); l.skjult = !l.skjult; }, r.l?.skjult ? 'Projektet vises igen' : 'Projektet er skjult') }) : null,
+      r.kind !== 'erp' ? h('button', { class: 'btn small danger', type: 'button', text: 'Fjern linjen', onclick: () => { if (!confirm(`Fjern ${r.navn} fra ${r.i}? Procenterne på linjen slettes også.`)) return; plDo(async () => { await Store.plLinjeDelete(r.l.id); S.plLinjer = S.plLinjer.filter((x) => x.id !== r.l.id); S.plAct = null; }, 'Linjen er fjernet'); } }) : null,
+      h('button', { class: 'btn small', type: 'button', text: 'Luk', onclick: () => { S.plAct = null; drawPlb(); } })))));
+}
+function plAddRow(i, n) {
+  const erp = S.plAdd.kind === 'erp';
+  const fA = h('input', { id: 'plb-add', type: 'text', list: erp ? 'plb-prj' : 'plb-akt', autocomplete: 'off', placeholder: erp ? 'Søg projektnummer eller navn' : 'Fx Salg og tilbud', style: 'width:min(360px,60vw)' });
+  const dl = erp ? h('datalist', { id: 'plb-prj' }, S.P.map((r) => h('option', { value: `${r.projekt} · ${r.navn}` }))) : h('datalist', { id: 'plb-akt' }, PL_AKT.map((a) => h('option', { value: a })));
+  const go = () => {
+    const t = fA.value.trim();
+    if (!t) { fA.focus(); return; }
+    let row;
+    if (erp) {
+      const nr = (/^(\d{6,10})/.exec(t) || [])[1];
+      if (!nr || !S.P.some((r) => r.projekt === nr)) { toast('Vælg et projekt fra listen'); fA.focus(); return; }
+      if (plRows(i).some((r) => r.projekt === nr)) { toast(`Projektet står allerede hos ${i}`); return; }
+      row = { initialer: i, projekt: nr };
+    } else row = { initialer: i, aktivitet: t };
+    plDo(async () => { const l = await Store.plLinjeAdd({ ...row, sortering: (S.plLinjer || []).filter((x) => x.initialer === i).length }); S.plLinjer.push({ ...l, b: [] }); S.plAdd = null; }, `${erp ? 'Projektet' : t} er tilføjet hos ${i}`);
+  };
+  fA.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); if (e.key === 'Escape') { S.plAdd = null; drawPlb(); } });
+  return h('tr', { class: 'c add' }, h('td', { colspan: n + 1 }, h('div', { class: 'pf-acts pl-stick' }, dl, fA,
+    h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj', onclick: go }), h('button', { class: 'btn small', type: 'button', text: 'Annullér', onclick: () => { S.plAdd = null; drawPlb(); } }))));
+}
+const plDo = async (fn, ok) => { try { await fn(); drawPlb(); if (ok) toast(ok); } catch (e) { toast('Kunne ikke gemme: ' + (e.message || e), true); await loadPl(); drawPlb(); } };
+// ERP-projekter får først en linje i databasen, når der skrives procent eller note
+async function plEnsure(r) {
+  if (r.l) return r.l;
+  const l = { ...(await Store.plLinjeAdd({ initialer: r.i, projekt: r.projekt })), b: [] };
+  S.plLinjer.push(l); r.l = l; return l;
+}
+// Celleredigering: Enter gemmer, Shift+Enter gentager til højre frem til slutdatoen, Tab går videre, Escape fortryder
+function plEdit(td) {
+  if (td.querySelector('input')) return;
+  const r = S.plRowMap.get(td.dataset.k), m = td.dataset.m;
+  if (!r) return;
+  const inp = h('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${r.navn}, ${plLab(m)}` });
+  const v0 = plVal(r, m); inp.value = v0 == null ? '' : String(v0).replace('.', ',');
+  td.textContent = ''; td.append(inp); inp.focus(); inp.select();
+  let done = false;
+  const fin = async (fill, next) => {
+    if (done) return; done = true;
+    const t = inp.value.trim().replace('%', '').replace(',', '.');
+    const v = t === '' ? null : Number(t);
+    if (t !== '' && (!Number.isFinite(v) || v < 0 || v > 300)) { toast('Skriv en procent mellem 0 og 300'); drawPlb(); return; }
+    const ms = plMonths(), last = ms[ms.length - 1];
+    const stop = fill ? (r.slut && r.slut.slice(0, 7) + '-01' > m ? (r.slut.slice(0, 7) + '-01' < last ? r.slut.slice(0, 7) + '-01' : last) : last) : m;
+    const til = ms.filter((x) => x >= m && x <= stop);
+    const same = !fill && (v == null ? v0 == null : v0 === Math.round(v * 10) / 10);
+    if (!same) {
+      try {
+        const l = await plEnsure(r);
+        const vv = v == null ? null : Math.round(v * 10) / 10;
+        await Store.plSet(l.id, til, vv);
+        l.b = (l.b || []).filter((x) => !til.includes(pDay(x.maaned)));
+        if (vv != null) til.forEach((x) => l.b.push({ maaned: x, procent: vv }));
+        if (fill && til.length > 1) toast(`${nf0.format(vv ?? 0)} % sat i ${til.length} måneder til og med ${plLab(stop)}`);
+      } catch (e) { toast('Kunne ikke gemme: ' + (e.message || e), true); await loadPl(); }
+    }
+    drawPlb();
+    if (next) { const n = $(`#plb-wrap td.e[data-k="${CSS.escape(r.key)}"][data-m="${plAddM(m, 1)}"]`); if (n) plEdit(n); }
+  };
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); fin(e.shiftKey, false); }
+    else if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); fin(false, true); }
+    else if (e.key === 'Escape') { done = true; drawPlb(); }
+  });
+  inp.addEventListener('blur', () => fin(false, false));
+}
+$('#plb-wrap').addEventListener('click', (e) => { const td = e.target.closest('td.e'); if (td) plEdit(td); });
+$('#plb-per').addEventListener('change', (e) => { S.plPer = e.target.value; ls.set('pd.plper', S.plPer); drawPlb(); });
+$('#plb-fold').addEventListener('click', () => { S.plOpen = new Set(); ls.set('pd.plopen', []); drawPlb(); });
+$('#plb-ud').addEventListener('click', () => { S.plOpen = new Set(plPersoner().map((k) => k.initialer)); ls.set('pd.plopen', [...S.plOpen]); drawPlb(); });
+$('#plb-valg').addEventListener('click', () => plDlgOpen());
+/* ----- Vinduet Projektledere: hvem vises i PL-belastning, og hvem kan være ansvarlig i pipelinen ----- */
+const pldlg = $('#pldlg');
+$('#pldlg-close').addEventListener('click', () => pldlg.close());
+pldlg.addEventListener('close', () => render());
+function plDlgOpen() {
+  if (Store.mode() !== 'supabase') { toast('Personlisten gemmes i Supabase. Log ind først.'); return; }
+  if (!S.kolleger || (S.kolleger.length && S.kolleger[0].pl === undefined)) { toast('Tabellen til personlisten mangler i databasen (16_pl_belastning.sql).', true); return; }
+  S.plQ = ''; S.plKun = true; drawPlDlg(); pldlg.showModal(); $('#pld-q')?.focus();
+}
+function drawPlDlg() {
+  const kol = new Map((S.kolleger || []).map((k) => [k.initialer, k]));
+  const erpI = new Set(S.P.flatMap((r) => [r.pl, r.po]).filter(Boolean));
+  const bu = S.bus.size ? listTxt(S.bus, 'BU') : 'alle BU';
+  const info = (i) => { const pl = S.P.filter((r) => r.pl === i); return { i, inBu: pl.filter(buOk).length, andre: pl.filter((r) => !buOk(r)).length, pa: S.P.some((r) => r.po === i && buOk(r)) }; };
+  const q = S.plQ.toUpperCase();
+  const m = (i) => !q || i.includes(q) || (kol.get(i)?.navn || '').toUpperCase().includes(q);
+  const erp = [...erpI].map(info).filter((p) => m(p.i) && (!S.plKun || p.inBu > 0 || kol.has(p.i))).sort((a, b) => (kol.get(b.i)?.pl ? 1 : 0) - (kol.get(a.i)?.pl ? 1 : 0) || b.inBu - a.inBu || a.i.localeCompare(b.i, 'da'));
+  const man = [...kol.values()].filter((k) => !erpI.has(k.initialer) && m(k.initialer)).sort((a, b) => a.initialer.localeCompare(b.initialer, 'da'));
+  const save = async (i, patch, msg) => {
+    const k = kol.get(i);
+    const row = { initialer: i, ...(k ? {} : { pl: false, ansvarlig: false, aktiv: false }), ...patch };
+    if ('ansvarlig' in patch) row.aktiv = patch.ansvarlig;
+    try { await Store.kollegaSave(row); S.kolleger = await Store.pipeKolleger(); drawPlDlg(); toast(msg); } catch (e) { toast('Kunne ikke gemme: ' + (e.message || e), true); }
+  };
+  const row = (i, txt, ny) => {
+    const k = kol.get(i);
+    const cb = (key, lab) => { const c = h('input', { type: 'checkbox', 'aria-label': `${lab}: ${i}` }); c.checked = key === 'ansvarlig' ? !!k && kolAnsv(k) : !!k?.[key]; c.addEventListener('change', () => save(i, { [key]: c.checked }, `${i}: ${lab.toLowerCase()} ${c.checked ? 'til' : 'fra'}`)); return c; };
+    const nIn = h('input', { type: 'text', class: 'pld-navn', placeholder: 'Navn', 'aria-label': 'Navn for ' + i }); nIn.value = k?.navn || '';
+    nIn.addEventListener('change', () => save(i, { navn: nIn.value.trim() || null }, `Navnet på ${i} er gemt`));
+    return h('tr', {}, h('td', {}, h('b', { text: i }), ny ? h('span', { class: 'kt kt-fp', style: 'margin-left:6px', title: 'Har projekter i ' + bu + ', men er ikke gennemgået i listen endnu', text: 'Ny' }) : null, h('div', { class: 'note', text: txt })),
+      h('td', {}, nIn), h('td', { class: 'c' }, cb('pl', 'Vis i PL-belastning')), h('td', { class: 'c' }, cb('ansvarlig', 'Ansvarlig i pipeline')));
+  };
+  const fI = h('input', { id: 'pld-ni', type: 'text', placeholder: 'Initialer, fx ABCD', maxlength: 8, style: 'width:140px' });
+  const fN = h('input', { type: 'text', placeholder: 'Navn (valgfrit)', style: 'width:200px' });
+  const add = () => {
+    const i = fI.value.trim().toUpperCase();
+    if (!/^[A-ZÆØÅ0-9]{2,8}$/.test(i)) { toast('Initialer skal være 2 til 8 bogstaver eller tal'); fI.focus(); return; }
+    if (kol.has(i)) { toast(`${i} findes allerede i listen`); return; }
+    save(i, { navn: fN.value.trim() || null, pl: true }, `${i} er tilføjet og vises i PL-belastning`);
+  };
+  fI.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  const qIn = h('input', { id: 'pld-q', type: 'search', placeholder: 'Søg initialer eller navn', style: 'flex:1;min-width:160px' }); qIn.value = S.plQ;
+  qIn.addEventListener('input', () => { S.plQ = qIn.value.trim(); const pos = qIn.selectionStart; drawPlDlg(); const n = $('#pld-q'); n.focus(); n.setSelectionRange(pos, pos); });
+  const kun = h('input', { type: 'checkbox' }); kun.checked = S.plKun; kun.addEventListener('change', () => { S.plKun = kun.checked; drawPlDlg(); });
+  const nPl = [...kol.values()].filter((k) => k.pl).length, nAn = [...kol.values()].filter(kolAnsv).length;
+  const sec = (t) => h('tr', { class: 'sec' }, h('td', { colspan: 4, text: t }));
+  const bx = $('#pldlg-b'), st = bx.scrollTop;
+  bx.replaceChildren(h('div', { class: 'form' },
+    h('div', { class: 'pf-acts' }, qIn, h('label', { class: 'pld-kun' }, kun, `Kun PL'er med projekter i ${bu}`)),
+    h('p', { class: 'note', style: 'margin:0', text: `${nPl} vises i PL-belastning · ${nAn} kan være ansvarlige i pipelinen. Navne gemmes, når du forlader feltet.` }),
+    h('div', { class: 'tablebox' }, h('table', { class: 't pld' },
+      h('thead', {}, h('tr', {}, h('th', { text: 'Person' }), h('th', { text: 'Navn' }), h('th', { class: 'c', text: 'Vis i PL-belastning' }), h('th', { class: 'c', text: 'Ansvarlig i pipeline' }))),
+      h('tbody', {}, sec('Fra ERP (PL eller PA i det valgte PTD)'),
+        ...(erp.length ? erp.map((p) => row(p.i, p.inBu || p.andre ? `${p.inBu} projekt${p.inBu === 1 ? '' : 'er'} som PL i ${bu}${p.andre ? ` · ${p.andre} i andre BU'er` : ''}` : p.pa ? `PA i ${bu}, ingen projekter som PL` : 'Ingen projekter i ' + bu, p.inBu > 0 && !kol.has(p.i)))
+          : [h('tr', {}, h('td', { colspan: 4, class: 'note', text: 'Ingen matcher.' }))]),
+        sec('Tilføjet manuelt (ikke i ERP)'),
+        ...(man.length ? man.map((k) => row(k.initialer, 'Ikke i det valgte PTD')) : [h('tr', {}, h('td', { colspan: 4, class: 'note', text: 'Ingen' }))])))),
+    h('div', { class: 'pf-sec', text: 'Tilføj en person, der ikke står i ERP' }),
+    h('div', { class: 'pf-acts' }, fI, fN, h('button', { class: 'btn primary', type: 'button', text: 'Tilføj', onclick: add }))));
+  bx.scrollTop = st;
+}
+
 /* ----- Regler: roller og ansvarlige til pipelinen ----- */
 function drawPipeLister() {
   const ok = Store.mode() === 'supabase' && S.roller && S.roller !== PROLLER_STD;
@@ -4206,24 +4498,10 @@ function drawPipeLister() {
       if (S.roller.some((r) => r.kode === k)) { toast(`Rollen ${k} findes allerede`); return; }
       act(() => Store.rolleSave({ kode: k, navn: n, sortering: 100 + S.roller.length }), `Rollen ${k} er tilføjet`);
     } })));
-  const fI = h('input', { type: 'text', placeholder: 'Initialer, fx ABCD', maxlength: 8, style: 'width:130px', 'aria-label': 'Initialer' });
-  const fNa = h('input', { type: 'text', placeholder: 'Navn (valgfrit)', 'aria-label': 'Navn' });
-  const pl = new Set(S.P.map((r) => r.pl)), pa = new Set(S.P.map((r) => r.po));
+  const kol = S.kolleger || [];
   $('#rg-kolleger').replaceChildren(
-    h('table', { class: 't' }, h('thead', {}, h('tr', {}, h('th', { text: 'Initialer' }), h('th', { text: 'Navn' }), h('th', { text: 'I ERP' }), h('th', { text: '' }))),
-      h('tbody', {}, ...(S.kolleger || []).map((k) => {
-        const n = h('input', { type: 'text', value: k.navn || '', placeholder: 'Navn', 'aria-label': 'Navn for ' + k.initialer });
-        n.addEventListener('change', () => { const v = n.value.trim() || null; if (v !== (k.navn || null)) act(() => Store.kollegaSave({ initialer: k.initialer, navn: v }), `${k.initialer} er opdateret`); });
-        return h('tr', { class: k.aktiv ? null : 'closed' }, h('td', {}, h('b', { text: k.initialer })), h('td', {}, n),
-          h('td', { class: 'note', text: [pl.has(k.initialer) ? 'PL' : '', pa.has(k.initialer) ? 'PA' : ''].filter(Boolean).join(' og ') || 'Ny' }),
-          h('td', {}, tog(k.aktiv, () => act(() => Store.kollegaSave({ initialer: k.initialer, aktiv: !k.aktiv }), k.aktiv ? `${k.initialer} er skjult` : `${k.initialer} kan vælges igen`))));
-      }))),
-    h('div', { style: 'display:flex;gap:6px;margin-top:8px;flex-wrap:wrap' }, fI, fNa, h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj ansvarlig', onclick: () => {
-      const i = fI.value.trim().toUpperCase();
-      if (!/^[A-ZÆØÅ0-9]{2,8}$/.test(i)) { toast('Initialer skal være 2 til 8 bogstaver eller tal'); fI.focus(); return; }
-      if ((S.kolleger || []).some((k) => k.initialer === i)) { toast(`${i} findes allerede`); return; }
-      act(() => Store.kollegaSave({ initialer: i, navn: fNa.value.trim() || null }), `${i} er tilføjet som ansvarlig`);
-    } })));
+    h('p', { class: 'note', text: `${kol.filter(kolAnsv).length} kan være ansvarlige i pipelinen: ${kol.filter(kolAnsv).map((k) => k.initialer).join(', ') || 'ingen'}. ${kol.filter((k) => k.pl).length} vises i PL-belastning.` }),
+    h('button', { class: 'btn primary', type: 'button', text: 'Åbn personlisten', onclick: () => plDlgOpen() }));
 }
 $$('.chip[data-pchip]').forEach((b) => b.addEventListener('click', () => { S.pipeChip = b.dataset.pchip; render(); }));
 $$('.seg [data-pipeview]').forEach((b) => b.addEventListener('click', () => { S.pipeView = b.dataset.pipeview; ls.set('pd.pipeview', S.pipeView); render(); }));
@@ -5025,7 +5303,7 @@ function buildXlsx(sheets) {
 const download = (blob, name) => { const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 
 /* ----- Mine data: saml alt egenproduceret ----- */
-const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'deal_radar', 'pipe_partner', 'personnoter', 'kunder'];
+const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'deal_radar', 'pipe_partner', 'personnoter', 'kunder', 'pl_belastning'];
 async function collectOwnData(onlyScope) {
   const by = new Map(S.P.map((r) => [r.projekt, r]));
   const enrich = (x) => {
@@ -5036,9 +5314,9 @@ async function collectOwnData(onlyScope) {
   const D = { kilde: Store.label(), eksporteret: new Date().toISOString() };
   if (Store.mode() === 'supabase') {
     // Kundetabellen kan mangle i en ældre database; så springes arket over
-    const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`).catch((e) => { if (['kunder', 'deal_radar', 'pipe_partner'].includes(m)) return []; throw e; })));
+    const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`).catch((e) => { if (['kunder', 'deal_radar', 'pipe_partner', 'pl_belastning'].includes(m)) return []; throw e; })));
     const pick = new Set([...S.pls, ...S.pas]);
-    EX_MODULES.forEach((m, i) => { D[m] = m === 'kunder' ? got[i] : m === 'personnoter' ? got[i].filter((x) => !onlyScope || !pick.size || pick.has(x.initialer)) : got[i].map(enrich).filter(keep); });
+    EX_MODULES.forEach((m, i) => { D[m] = m === 'kunder' || m === 'pl_belastning' ? got[i] : m === 'personnoter' ? got[i].filter((x) => !onlyScope || !pick.size || pick.has(x.initialer)) : got[i].map(enrich).filter(keep); });
     const pr = await Store.fetchAll('/rest/v1/projekt?select=*&order=oprettet');
     D.projekter = pr.filter((x) => x.salgsnummer || x.arbejdstitel || ['tilbud', 'no bid', 'tabt'].includes(x.status) || (x.ekstra && Object.keys(x.ekstra).length))
       .map((x) => ({ ...x, projektnavn: x.titel || x.arbejdstitel, ekstra: x.ekstra && Object.keys(x.ekstra).length ? x.ekstra : null })).filter(keep);
@@ -5046,7 +5324,7 @@ async function collectOwnData(onlyScope) {
     D.noter = ls.get('pd.notes', []).map(enrich).filter(keep);
     D.fokus = Object.entries(ls.get('pd.fokus', {})).map(([projekt, v]) => enrich({ projekt, ...v })).filter(keep);
     D.info = Object.entries(ls.get('pd.info', {})).map(([projekt, v]) => enrich({ projekt, ...v })).filter(keep);
-    ['bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'deal_radar', 'pipe_partner', 'personnoter', 'kunder', 'projekter'].forEach((m) => { D[m] = []; });
+    ['bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'deal_radar', 'pipe_partner', 'personnoter', 'kunder', 'pl_belastning', 'projekter'].forEach((m) => { D[m] = []; });
   }
   D.regler = S.rules.map((x) => ({ regel: x.regel, niveau: x.niveau, navn: x.navn, betingelse: x.tekst(x.g, x.g2), graense: x.g, graense2: x.g2 ?? null, standard: RULES_DEFAULT.find((y) => y.regel === x.regel).g }));
   return D;
@@ -5065,11 +5343,12 @@ const EX_SHEETS = [
   ['Partnere', 'pipe_partner', [{ l: 'Partner', k: 'partner', w: 32 }, { l: 'Koblet til ERP-kunde', k: 'partner_erp_navn', w: 32 }, { l: 'Rolle', k: 'rolle', w: 8 }, { l: 'Rolle (navn)', k: 'rolle_navn', w: 20 }, { l: 'Andel af honoraret', k: 'andel', t: 'num', w: 12 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Personnoter', 'personnoter', [{ l: 'Person', k: 'initialer', w: 10 }, { l: 'Dato', k: 'dato', t: 'date', w: 12 }, { l: 'Note', k: 'note', w: 60 }, { l: 'Opfølgning', k: 'opfoelgning', w: 40 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 9 }, { l: 'Vedrører projekter', k: 'projektnumre', w: 28 }, { l: 'Filer', k: 'filer', w: 40 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }, { l: 'Redigeret', k: 'redigeret', t: 'ts', w: 17 }]],
   ['Kunder', 'kunder', [{ l: 'Kunde', k: 'navn', w: 40 }, { l: 'Type', k: 'type', w: 12 }, { l: 'Koblet til ERP-kunde', k: 'erp_navn', w: 40 }, { l: 'Koblet', k: 'koblet', t: 'date', w: 12 }, { l: 'Koblet af', k: 'koblet_af', w: 22 }, { l: 'Pipeline-punkter', k: 'pipeline_punkter', t: 'num', w: 10 }, { l: 'Oprettet', k: 'oprettet', t: 'date', w: 12 }]],
+  ['PL-belastning', 'pl_belastning', [{ l: 'Initialer', k: 'initialer', w: 10 }, { l: 'Navn', k: 'navn', w: 22 }, { l: 'Projektnummer', k: 'projekt', w: 12 }, { l: 'Projektnavn', k: 'projektnavn', w: 36 }, { l: 'Intern aktivitet', k: 'aktivitet', w: 24 }, { l: 'Måned', k: 'maaned', t: 'date', w: 12 }, { l: 'Procent', k: 'procent', t: 'num', w: 9 }, { l: 'Skjult', k: 'skjult', w: 8 }, { l: 'Note', k: 'note', w: 40 }]],
   ['Dokumenter', 'dokument', [{ l: 'Type', k: 'type', w: 14 }, { l: 'Titel', k: 'titel', w: 34 }, { l: 'Link', k: 'url', w: 50 }]],
 ];
 function ownDataSheets(D) {
   const sheets = EX_SHEETS.filter(([, key, , always]) => always || D[key].length).map(([name, key, cols]) => {
-    const all = [...(key === 'kunder' ? [] : ID_COLS), ...cols];
+    const all = [...(key === 'kunder' || key === 'pl_belastning' ? [] : ID_COLS), ...cols];
     const rows = [...D[key]].sort((a, b) => String(a.projektnummer || a.salgsnummer || '').localeCompare(String(b.projektnummer || b.salgsnummer || ''), 'da', { numeric: true }) || String(a.oprettet || '').localeCompare(String(b.oprettet || '')));
     return { name, cols: all.map((c) => ({ l: c.l, t: c.t || 'txt', w: c.w })), rows: rows.map((r) => all.map((c) => r[c.k])) };
   });
@@ -5185,7 +5464,7 @@ async function logOut() {
 
 /* ================= Start ================= */
 (async () => {
-  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'kunder', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler'].includes(h0)) S.tab = h0;
+  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'plb', 'kunder', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler'].includes(h0)) S.tab = h0;
   await ensureLogin();
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
