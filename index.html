@@ -443,6 +443,16 @@ table.plb .pl-stick { position: sticky; left: 20px; display: flex; gap: 6px; ali
 table.plb .plact { display: flex; flex-direction: column; gap: 6px; max-width: 640px; position: sticky; left: 20px; }
 table.plb .plact textarea { font: inherit; font-size: 12px; width: 100%; }
 table.plb .ptag { font-size: 10px; } .plnote { color: var(--red); }
+table.plb .ptag.pulje { background: #ECE7F6; color: #43306E; }
+table.plb .pl-panel { flex-direction: column; align-items: stretch; background: var(--sand-2); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; max-width: min(640px, calc(100vw - 80px)); white-space: normal; }
+table.plb .pl-panel-h { font-weight: 600; font-size: 13px; }
+table.plb .pl-panel .note, table.plb .plact .note { margin: 0; white-space: normal; }
+table.plb .pl-seg { display: inline-flex; align-self: flex-start; }
+table.plb .pl-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 14px; font-size: 12px; max-height: 220px; overflow: auto; white-space: normal; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; }
+table.plb .pl-checks label { display: flex; gap: 6px; align-items: baseline; }
+table.plb .pl-panel input[type=text], table.plb .plact input[type=text] { text-align: left; }
+table.plb .pl-checks input { width: auto; height: auto; margin: 0; flex: none; }
+table.plb .plact label.note { display: flex; gap: 6px; align-items: center; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--deep); text-decoration: underline; cursor: pointer; font: inherit; font-size: 12px; }
 #pdlg .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
 .pf-kwrap { display: flex; flex-direction: column; gap: 3px; }
@@ -4288,20 +4298,6 @@ const plLab = (m) => { const i = Number(m.slice(5, 7)) - 1; return i === 0 ? `ja
 const plHeat = (v) => (v >= 100 ? 'h2' : v >= 75 ? 'h1' : 'h0');
 const kolAnsv = (k) => (k.ansvarlig === undefined ? k.aktiv !== false : !!k.ansvarlig);
 const plPersoner = () => (S.kolleger || []).filter((k) => k.pl).sort((a, b) => a.initialer.localeCompare(b.initialer, 'da'));
-// Linjer for en person: ERP-projekter, hvor personen er PL i det valgte PTD, plus egne linjer (andre ERP-projekter og interne aktiviteter)
-function plRows(i) {
-  const lin = (S.plLinjer || []).filter((l) => l.initialer === i);
-  const byP = new Map(lin.filter((l) => l.projekt).map((l) => [l.projekt, l]));
-  const erp = S.P.filter((r) => r.pl === i).sort((a, b) => num(b.baseline) - num(a.baseline));
-  const rows = erp.map((r) => ({ key: 'p:' + i + ':' + r.projekt, i, kind: 'erp', projekt: r.projekt, navn: r.navn, sub: `${r.projekt}${r.bu && r.bu !== 'DSGN' ? ' · ' + r.bu : ''}${r.forv_slut ? ' · slut ' + F_dmy(r.forv_slut).slice(3) : ''}`, l: byP.get(r.projekt) || null, slut: r.forv_slut || null }));
-  lin.forEach((l) => {
-    if (l.projekt && erp.some((r) => r.projekt === l.projekt)) return;
-    const r = l.projekt ? S.P.find((x) => x.projekt === l.projekt) : null;
-    rows.push(l.projekt ? { key: 'l:' + l.id, i, kind: 'ekstra', projekt: l.projekt, navn: r?.navn || l.projekt, sub: `${l.projekt} · tilføjet${r?.pl ? ', PL ' + r.pl : ''}${r?.forv_slut ? ' · slut ' + F_dmy(r.forv_slut).slice(3) : ''}${r ? '' : ' · ikke i valgte PTD'}`, l, slut: r?.forv_slut || null }
-      : { key: 'l:' + l.id, i, kind: 'intern', navn: l.aktivitet, sub: 'Intern aktivitet', l, slut: null });
-  });
-  return rows;
-}
 const plVal = (row, m) => { const b = row.l?.b?.find((x) => pDay(x.maaned) === m); return b ? Number(b.procent) : null; };
 const plEnd = (row, m) => !!row.slut && m > row.slut.slice(0, 7) + '-01';
 function drawPlb() {
@@ -4321,7 +4317,7 @@ function drawPlb() {
   pers.forEach((k) => {
     const i = k.initialer, rows = plRows(i), open = S.plOpen.has(i), vis = S.plVis.has(i);
     const shown = rows.filter((r) => !r.l?.skjult), hidden = rows.length - shown.length;
-    const nErp = rows.filter((r) => r.kind === 'erp').length;
+    const nErp = S.P.filter((r) => r.pl === i).length;
     const sum = (m) => shown.reduce((a, r) => a + (plVal(r, m) || 0), 0);
     const tr = h('tr', { class: 'p', tabindex: '0', 'aria-expanded': String(open), title: open ? 'Fold sammen' : 'Fold ud' },
       h('td', { class: 'n', title: `${i}${k.navn ? ' · ' + k.navn : ''} · ${nErp} projekt${nErp === 1 ? '' : 'er'} som PL` }, h('span', { class: 'chev', text: open ? '▾' : '▸' }), h('b', { text: ' ' + i }), plDatoChip(i), h('span', { class: 'sub', text: ` ${nErp} proj.` })),
@@ -4333,7 +4329,8 @@ function drawPlb() {
     (vis ? rows : shown).forEach((r) => {
       S.plRowMap.set(r.key, r);
       const nm = h('td', { class: 'n nm', tabindex: '0', title: [r.navn, r.l?.note ? 'Note: ' + r.l.note : '', 'Klik for note og flere valg'].filter(Boolean).join('\n') },
-        r.kind === 'intern' ? h('span', { class: 'ptag', text: 'Intern' }) : r.kind === 'ekstra' ? h('span', { class: 'ptag rolle', text: 'Tilføjet' }) : null,
+        r.kind === 'intern' ? h('span', { class: 'ptag', text: 'Intern' }) : r.kind === 'ekstra' ? h('span', { class: 'ptag rolle', text: 'Tilføjet' })
+          : r.kind === 'pulje' ? h('span', { class: 'ptag pulje', text: 'Pulje' }) : r.kind === 'alle' ? h('span', { class: 'ptag pulje', text: 'Alle projekter' }) : null,
         h('span', { text: r.navn }), r.l?.note ? h('span', { class: 'plnote', 'aria-label': 'Har note', text: ' ✎' }) : null, r.l?.skjult ? h('span', { class: 'sub', text: ' (skjult)' }) : null,
         h('span', { class: 'sub blk', text: r.sub }));
       const act = () => { S.plAct = S.plAct === r.key ? null : r.key; drawPlb(); };
@@ -4344,50 +4341,149 @@ function drawPlb() {
     });
     if (hidden) body.push(h('tr', { class: 'c add' }, h('td', { colspan: ms.length + 1 }, h('div', { class: 'pl-stick' }, h('button', { class: 'linkbtn', type: 'button', text: vis ? `Skjul ${hidden} skjulte igen` : `Vis ${hidden} skjulte projekt${hidden === 1 ? '' : 'er'}`, onclick: () => { if (vis) S.plVis.delete(i); else S.plVis.add(i); drawPlb(); } })))));
     body.push(S.plAdd?.i === i ? plAddRow(i, ms.length) : h('tr', { class: 'c add' }, h('td', { colspan: ms.length + 1 }, h('div', { class: 'pl-stick pf-acts' },
-      h('button', { class: 'btn small', type: 'button', text: '+ Projekt fra ERP', onclick: () => { S.plAdd = { i, kind: 'erp' }; drawPlb(); $('#plb-add')?.focus(); } }),
+      h('button', { class: 'btn small', type: 'button', text: '+ Projekter fra ERP', onclick: () => { S.plAdd = { i, kind: 'erp' }; drawPlb(); $('#plb-add')?.focus(); } }),
+      h('button', { class: 'btn small', type: 'button', text: '+ Diverse projekter', onclick: () => { S.plAdd = { i, kind: 'diverse' }; drawPlb(); $('#plb-add')?.select(); } }),
       h('button', { class: 'btn small', type: 'button', text: '+ Intern aktivitet', onclick: () => { S.plAdd = { i, kind: 'intern' }; drawPlb(); $('#plb-add')?.focus(); } }),
       h('button', { class: 'btn small', type: 'button', text: 'Gennemgået i dag', title: 'Sætter datoen for senest opdateret til i dag uden at ændre tal', onclick: () => plDo(async () => { const t = new Date().toISOString(); await Store.kollegaSave({ initialer: i, pl_gennemgaaet: t }); const kk = S.kolleger.find((x) => x.initialer === i); if (kk) kk.pl_gennemgaaet = t; }, `${i} er markeret som gennemgået i dag`) })))));
   });
   box.replaceChildren(h('table', { class: 'plb' }, h('thead', {}, head), h('tbody', {}, ...body)));
   box.scrollLeft = sl;
 }
-// Note, skjul og fjern for en linje
+// Linjetype: projekt (ERP), intern, diverse, pulje (flere ERP-projekter på én linje) eller alle (alle projekter som PL)
+const plType = (l) => l.type || (l.projekt ? 'projekt' : 'intern');
+const plSlut = (r) => (r?.forv_slut ? ' · slut ' + F_dmy(r.forv_slut).slice(3) : '');
+const plPNavn = (p) => S.P.find((x) => x.projekt === p)?.navn || p + ' (ikke i valgte PTD)';
+// Linjer for en person: alle-linjen eller ERP-projekter som PL (minus dem i puljer), tilføjede ERP-projekter, puljer, diverse og interne aktiviteter
+function plRows(i) {
+  const lin = (S.plLinjer || []).filter((l) => l.initialer === i);
+  const byP = new Map(lin.filter((l) => plType(l) === 'projekt').map((l) => [l.projekt, l]));
+  const alle = lin.find((l) => plType(l) === 'alle');
+  const puljer = lin.filter((l) => plType(l) === 'pulje');
+  const iPulje = new Map(); puljer.forEach((l) => (l.projekter || []).forEach((p) => iPulje.set(p, l)));
+  const erp = S.P.filter((r) => r.pl === i).sort((a, b) => num(b.baseline) - num(a.baseline));
+  const rows = [];
+  if (alle) rows.push({ key: 'l:' + alle.id, i, kind: 'alle', navn: alle.aktivitet || 'Alle projekter som PL', sub: `${erp.length} projekt${erp.length === 1 ? '' : 'er'} som PL i ERP${erp.length ? ': ' + erp.slice(0, 2).map((r) => r.navn).join(', ') + (erp.length > 2 ? ' …' : '') : ''}`, l: alle, slut: null });
+  else erp.forEach((r) => { if (!iPulje.has(r.projekt)) rows.push({ key: 'p:' + i + ':' + r.projekt, i, kind: 'erp', projekt: r.projekt, navn: r.navn, sub: `${r.projekt}${r.bu && r.bu !== 'DSGN' ? ' · ' + r.bu : ''}${plSlut(r)}`, l: byP.get(r.projekt) || null, slut: r.forv_slut || null }); });
+  lin.filter((l) => plType(l) === 'projekt' && !erp.some((r) => r.projekt === l.projekt) && !iPulje.has(l.projekt)).forEach((l) => {
+    const r = S.P.find((x) => x.projekt === l.projekt);
+    rows.push({ key: 'l:' + l.id, i, kind: 'ekstra', projekt: l.projekt, navn: r?.navn || l.projekt, sub: `${l.projekt} · tilføjet${r?.pl ? ', PL ' + r.pl : ''}${plSlut(r)}${r ? '' : ' · ikke i valgte PTD'}`, l, slut: r?.forv_slut || null });
+  });
+  puljer.forEach((l) => { const ps = l.projekter || []; const over = alle && ps.some((p) => erp.some((r) => r.projekt === p)); rows.push({ key: 'l:' + l.id, i, kind: 'pulje', navn: l.aktivitet, sub: `${ps.length} projekt${ps.length === 1 ? '' : 'er'}: ${ps.slice(0, 2).map(plPNavn).join(', ')}${ps.length > 2 ? ' …' : ''}${over ? ' · overlapper Alle projekter' : ''}`, l, slut: null }); });
+  lin.filter((l) => plType(l) === 'diverse').forEach((l) => rows.push({ key: 'l:' + l.id, i, kind: 'diverse', navn: l.aktivitet, sub: l.aktivitet === 'Diverse projekter' ? 'Uden projektnummer' : 'Diverse projekter', l, slut: null }));
+  lin.filter((l) => plType(l) === 'intern').forEach((l) => rows.push({ key: 'l:' + l.id, i, kind: 'intern', navn: l.aktivitet, sub: 'Intern aktivitet', l, slut: null }));
+  return rows;
+}
+// Projekter, der kan vælges til en pulje: personens projekter som PL, der ikke er i en anden pulje, plus puljens egne
+function plPuljeValg(i, l) {
+  const andre = new Set((S.plLinjer || []).filter((x) => x.initialer === i && plType(x) === 'pulje' && x.id !== l?.id).flatMap((x) => x.projekter || []));
+  const egne = l?.projekter || [];
+  const pl = S.P.filter((r) => r.pl === i && !andre.has(r.projekt)).map((r) => r.projekt);
+  return [...new Set([...egne, ...pl])];
+}
+function plChecks(list, sel, onChange) {
+  return h('div', { class: 'pl-checks' }, ...(list.length ? list.map((p) => { const c = h('input', { type: 'checkbox' }); c.checked = sel.has(p); c.addEventListener('change', () => { if (c.checked) sel.add(p); else sel.delete(p); onChange?.(); }); return h('label', {}, c, ` ${plPNavn(p)}`, h('span', { class: 'sub', text: ' ' + p })); })
+    : [h('span', { class: 'note', text: 'Ingen projekter at vælge. Søg et ERP-projekt frem nedenfor.' })]));
+}
+function plSoegTil(onAdd) {
+  const f = h('input', { type: 'text', list: 'plb-prj', autocomplete: 'off', placeholder: 'Søg et andet ERP-projekt', style: 'width:min(300px,60vw)' });
+  const go = () => { const nr = (/^(\d{6,10})/.exec(f.value.trim()) || [])[1]; if (!nr || !S.P.some((r) => r.projekt === nr)) { toast('Vælg et projekt fra listen'); f.focus(); return; } onAdd(nr); };
+  f.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  return h('div', { class: 'pf-acts' }, h('datalist', { id: 'plb-prj' }, S.P.map((r) => h('option', { value: `${r.projekt} · ${r.navn}` }))), f, h('button', { class: 'btn small', type: 'button', text: 'Tilføj til listen', onclick: go }));
+}
+// Navn, note, puljens projekter, skjul og fjern for en linje
 function plActRow(r, n) {
-  const fN = h('textarea', { rows: 2, placeholder: 'Note til linjen, fx "Faser ud efter dispositionsforslag"', 'aria-label': 'Note' }); fN.value = r.l?.note || '';
-  const gem = () => plDo(async () => {
-    const l = await plEnsure(r); await Store.plLinjePatch(l.id, { note: fN.value.trim() || null }); l.note = fN.value.trim() || null; plStamp(r.i);
-  }, 'Noten er gemt');
-  return h('tr', { class: 'c act' }, h('td', { colspan: n + 1 }, h('div', { class: 'plact' }, fN,
-    h('div', { class: 'pf-acts' }, h('button', { class: 'btn small primary', type: 'button', text: 'Gem note', onclick: gem }),
+  const navnbar = ['pulje', 'diverse', 'intern', 'alle'].includes(r.kind);
+  const fNavn = navnbar ? h('input', { type: 'text', 'aria-label': 'Navn på linjen', style: 'width:min(360px,70vw)' }) : null; if (fNavn) fNavn.value = r.l?.aktivitet || r.navn;
+  const fN = h('textarea', { rows: 2, placeholder: 'Note i fritekst, fx "Faser ud efter dispositionsforslag"', 'aria-label': 'Note' }); fN.value = r.l?.note || '';
+  const sel = new Set(r.kind === 'pulje' ? r.l.projekter || [] : []);
+  let valg = r.kind === 'pulje' ? plPuljeValg(r.i, r.l) : [];
+  const box = h('div');
+  const drawChecks = () => box.replaceChildren(plChecks(valg, sel), plSoegTil((nr) => { if (!valg.includes(nr)) valg.push(nr); sel.add(nr); drawChecks(); }));
+  if (r.kind === 'pulje') drawChecks();
+  const gem = () => {
+    const patch = { note: fN.value.trim() || null };
+    if (fNavn) { const t = fNavn.value.trim(); if (!t) { toast('Linjen skal have et navn'); fNavn.focus(); return; } patch.aktivitet = t; }
+    if (r.kind === 'pulje') {
+      if (!sel.size) { toast('Vælg mindst ét projekt til puljen'); return; }
+      const andre = new Set((S.plLinjer || []).filter((x) => x.initialer === r.i && plType(x) === 'pulje' && x.id !== r.l.id).flatMap((x) => x.projekter || []));
+      const dob = [...sel].filter((p) => andre.has(p)); if (dob.length) { toast(`${dob.join(', ')} ligger allerede i en anden pulje`); return; }
+      patch.projekter = [...sel];
+    }
+    plDo(async () => { const l = await plEnsure(r); await Store.plLinjePatch(l.id, patch); Object.assign(l, patch); plStamp(r.i); S.plAct = null; }, 'Linjen er gemt');
+  };
+  return h('tr', { class: 'c act' }, h('td', { colspan: n + 1 }, h('div', { class: 'plact' },
+    fNavn ? h('label', { class: 'note' }, 'Navn ', fNavn) : null,
+    fN,
+    r.kind === 'pulje' ? h('div', { class: 'note', text: 'Projekter i puljen (et projekt kan kun ligge i én pulje hos samme person):' }) : null, r.kind === 'pulje' ? box : null,
+    h('div', { class: 'pf-acts' }, h('button', { class: 'btn small primary', type: 'button', text: 'Gem', onclick: gem }),
       r.kind === 'erp' ? h('button', { class: 'btn small', type: 'button', text: r.l?.skjult ? 'Vis projektet igen' : 'Skjul projektet', title: 'Skjulte projekter tæller ikke med i summen', onclick: () => plDo(async () => { const l = await plEnsure(r); await Store.plLinjePatch(l.id, { skjult: !l.skjult }); l.skjult = !l.skjult; plStamp(r.i); }, r.l?.skjult ? 'Projektet vises igen' : 'Projektet er skjult') }) : null,
-      r.kind !== 'erp' ? h('button', { class: 'btn small danger', type: 'button', text: 'Fjern linjen', onclick: () => { if (!confirm(`Fjern ${r.navn} fra ${r.i}? Procenterne på linjen slettes også.`)) return; plDo(async () => { await Store.plLinjeDelete(r.l.id); S.plLinjer = S.plLinjer.filter((x) => x.id !== r.l.id); S.plAct = null; plStamp(r.i); }, 'Linjen er fjernet'); } }) : null,
+      r.kind !== 'erp' ? h('button', { class: 'btn small danger', type: 'button', text: 'Fjern linjen', onclick: () => { if (!confirm(`Fjern ${r.navn} fra ${r.i}? Procenterne på linjen slettes også.${r.kind === 'pulje' || r.kind === 'alle' ? ' Projekterne vises igen som egne linjer.' : ''}`)) return; plDo(async () => { await Store.plLinjeDelete(r.l.id); S.plLinjer = S.plLinjer.filter((x) => x.id !== r.l.id); S.plAct = null; plStamp(r.i); }, 'Linjen er fjernet'); } }) : null,
       h('button', { class: 'btn small', type: 'button', text: 'Luk', onclick: () => { S.plAct = null; drawPlb(); } })))));
 }
+// Tilføj: ERP-projekt (ét, pulje eller alle), diverse projekter eller intern aktivitet
 function plAddRow(i, n) {
-  const erp = S.plAdd.kind === 'erp';
-  const fA = h('input', { id: 'plb-add', type: 'text', list: erp ? 'plb-prj' : 'plb-akt', autocomplete: 'off', placeholder: erp ? 'Søg projektnummer eller navn' : 'Fx Salg og tilbud', style: 'width:min(360px,60vw)' });
-  const dl = erp ? h('datalist', { id: 'plb-prj' }, S.P.map((r) => h('option', { value: `${r.projekt} · ${r.navn}` }))) : h('datalist', { id: 'plb-akt' }, PL_AKT.map((a) => h('option', { value: a })));
-  const go = () => {
-    const t = fA.value.trim();
-    if (!t) { fA.focus(); return; }
-    let row;
-    if (erp) {
-      const nr = (/^(\d{6,10})/.exec(t) || [])[1];
-      if (!nr || !S.P.some((r) => r.projekt === nr)) { toast('Vælg et projekt fra listen'); fA.focus(); return; }
-      if (plRows(i).some((r) => r.projekt === nr)) { toast(`Projektet står allerede hos ${i}`); return; }
-      row = { initialer: i, projekt: nr };
-    } else row = { initialer: i, aktivitet: t };
-    plDo(async () => { const l = await Store.plLinjeAdd({ ...row, sortering: (S.plLinjer || []).filter((x) => x.initialer === i).length }); S.plLinjer.push({ ...l, b: [] }); S.plAdd = null; plStamp(i); }, `${erp ? 'Projektet' : t} er tilføjet hos ${i}`);
-  };
-  fA.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); if (e.key === 'Escape') { S.plAdd = null; drawPlb(); } });
-  return h('tr', { class: 'c add' }, h('td', { colspan: n + 1 }, h('div', { class: 'pf-acts pl-stick' }, dl, fA,
-    h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj', onclick: go }), h('button', { class: 'btn small', type: 'button', text: 'Annullér', onclick: () => { S.plAdd = null; drawPlb(); } }))));
+  const a = S.plAdd, lin = (S.plLinjer || []).filter((l) => l.initialer === i);
+  const harAlle = lin.some((l) => plType(l) === 'alle');
+  const add = (row, ok) => plDo(async () => { const l = await Store.plLinjeAdd({ ...row, sortering: lin.length }); S.plLinjer.push({ ...l, b: [] }); S.plAdd = null; plStamp(i); }, ok);
+  const luk = h('button', { class: 'btn small', type: 'button', text: 'Annullér', onclick: () => { S.plAdd = null; drawPlb(); } });
+  let body;
+  if (a.kind === 'erp') {
+    a.mode ||= 'en'; a.sel ||= new Set(); a.valg ||= plPuljeValg(i, null);
+    const seg = h('div', { class: 'seg pl-seg', role: 'group', 'aria-label': 'Hvad skal tilføjes' }, ...[['en', 'Ét projekt'], ['pulje', 'Pulje af projekter'], ['alle', 'Alle projekter']].map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(a.mode === k), text: l, onclick: () => { a.mode = k; drawPlb(); } })));
+    let inner;
+    if (a.mode === 'en') {
+      const fA = h('input', { id: 'plb-add', type: 'text', list: 'plb-prj', autocomplete: 'off', placeholder: 'Søg projektnummer eller navn', style: 'width:min(360px,60vw)' });
+      const go = () => {
+        const nr = (/^(\d{6,10})/.exec(fA.value.trim()) || [])[1];
+        if (!nr || !S.P.some((r) => r.projekt === nr)) { toast('Vælg et projekt fra listen'); fA.focus(); return; }
+        if (plRows(i).some((r) => r.projekt === nr) || lin.some((l) => (l.projekter || []).includes(nr))) { toast(`Projektet står allerede hos ${i}`); return; }
+        add({ initialer: i, type: 'projekt', projekt: nr }, `Projektet er tilføjet hos ${i}`);
+      };
+      fA.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); if (e.key === 'Escape') { S.plAdd = null; drawPlb(); } });
+      inner = [h('div', { class: 'pf-acts' }, h('datalist', { id: 'plb-prj' }, S.P.map((r) => h('option', { value: `${r.projekt} · ${r.navn}` }))), fA, h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj', onclick: go }), luk),
+        h('p', { class: 'note', text: 'Projektet får sin egen linje. Det kan også være et projekt, hvor personen ikke er PL.' })];
+    } else if (a.mode === 'pulje') {
+      const fP = h('input', { id: 'plb-add', type: 'text', placeholder: 'Navn på puljen, fx Carlsberg, mindre sager', style: 'width:min(360px,70vw)' }); fP.value = a.navn || '';
+      fP.addEventListener('input', () => { a.navn = fP.value; });
+      const box = h('div');
+      const drawC = () => box.replaceChildren(plChecks(a.valg, a.sel), plSoegTil((nr) => { if (!a.valg.includes(nr)) a.valg.push(nr); a.sel.add(nr); drawC(); }));
+      drawC();
+      const go = () => {
+        const t = fP.value.trim();
+        if (!t) { toast('Giv puljen et navn'); fP.focus(); return; }
+        if (!a.sel.size) { toast('Vælg mindst ét projekt til puljen'); return; }
+        const andre = new Set(lin.filter((l) => plType(l) === 'pulje').flatMap((l) => l.projekter || []));
+        const dob = [...a.sel].filter((p) => andre.has(p)); if (dob.length) { toast(`${dob.join(', ')} ligger allerede i en anden pulje`); return; }
+        add({ initialer: i, type: 'pulje', aktivitet: t, projekter: [...a.sel] }, `Puljen ${t} er tilføjet hos ${i}`);
+      };
+      inner = [fP, h('div', { class: 'note', text: `Vælg projekterne i puljen (${i}'s projekter som PL; søg for at tilføje andre):` }), box,
+        harAlle ? h('p', { class: 'note', text: `${i} har allerede linjen "Alle projekter". Projekter som PL er dækket af den.` }) : null,
+        h('p', { class: 'note', text: 'Puljen får én linje med én procent pr. måned. Projekterne i puljen vises ikke som egne linjer og tælles kun én gang.' }),
+        h('div', { class: 'pf-acts' }, h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj puljen', onclick: go }), luk)];
+    } else {
+      const nErp = S.P.filter((r) => r.pl === i).length;
+      inner = [h('p', { style: 'margin:0', text: harAlle ? `${i} har allerede linjen "Alle projekter".` : `Én linje "Alle projekter som PL" dækker alle ${nErp} projekter, hvor ${i} er PL i ERP, også nye, der kommer til senere.` }),
+        h('p', { class: 'note', text: 'Projekterne vises ikke som egne linjer, og puljer med projekter som PL bliver overflødige. Tilføjede ERP-projekter, diverse og interne aktiviteter står stadig for sig.' }),
+        h('div', { class: 'pf-acts' }, harAlle ? null : h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj "Alle projekter"', onclick: () => add({ initialer: i, type: 'alle', aktivitet: 'Alle projekter som PL' }, `"Alle projekter" er tilføjet hos ${i}`) }), luk)];
+    }
+    body = [h('div', { class: 'pl-panel-h', text: 'Projekter fra ERP' }), seg, ...inner];
+  } else {
+    const div = a.kind === 'diverse';
+    const fA = h('input', { id: 'plb-add', type: 'text', list: div ? null : 'plb-akt', autocomplete: 'off', placeholder: div ? 'Fx Diverse Rockwool-sager' : 'Fx Salg og tilbud', style: 'width:min(360px,60vw)' });
+    if (div) fA.value = 'Diverse projekter';
+    const go = () => { const t = fA.value.trim(); if (!t) { fA.focus(); return; } add({ initialer: i, type: div ? 'diverse' : 'intern', aktivitet: t }, `${t} er tilføjet hos ${i}`); };
+    fA.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); if (e.key === 'Escape') { S.plAdd = null; drawPlb(); } });
+    body = [h('div', { class: 'pl-panel-h', text: div ? 'Diverse projekter' : 'Intern aktivitet' }),
+      h('div', { class: 'pf-acts' }, div ? null : h('datalist', { id: 'plb-akt' }, PL_AKT.map((x) => h('option', { value: x }))), fA, h('button', { class: 'btn small primary', type: 'button', text: 'Tilføj', onclick: go }), luk),
+      h('p', { class: 'note', text: div ? 'En linje til projekter, du ikke vil liste enkeltvis, fx småsager eller projekter, der ikke er oprettet i ERP endnu. Linjen tæller med i projekterne og får intet mærke.' : 'Fx salg og tilbud, administration, intern udvikling eller fravær.' })];
+  }
+  return h('tr', { class: 'c add' }, h('td', { colspan: n + 1 }, h('div', { class: 'pl-panel pl-stick' }, ...body)));
 }
 const plDo = async (fn, ok) => { try { await fn(); drawPlb(); if (ok) toast(ok); } catch (e) { toast('Kunne ikke gemme: ' + (e.message || e), true); await loadPl(); drawPlb(); } };
 // ERP-projekter får først en linje i databasen, når der skrives procent eller note
 async function plEnsure(r) {
   if (r.l) return r.l;
-  const l = { ...(await Store.plLinjeAdd({ initialer: r.i, projekt: r.projekt })), b: [] };
+  const l = { ...(await Store.plLinjeAdd({ initialer: r.i, type: 'projekt', projekt: r.projekt })), b: [] };
   S.plLinjer.push(l); r.l = l; return l;
 }
 // Celleredigering: Enter gemmer, Shift+Enter gentager til højre frem til slutdatoen, Tab går videre, Escape fortryder

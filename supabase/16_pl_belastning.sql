@@ -105,3 +105,15 @@ select initialer, max(tid) as opdateret from public.pl_log
 where tabel in ('pl_linje', 'pl_belastning') and initialer is not null
 group by initialer;
 grant select on public.v_pl_opdateret to authenticated;
+
+-- Linjetyper: projekt (ERP), intern, diverse (navngiven linje uden projektnummer), pulje (flere ERP-projekter på én linje), alle (alle projekter som PL)
+-- Navnet på intern, diverse, pulje og alle står i aktivitet; puljens projektnumre i projekter.
+alter table public.pl_linje add column if not exists type text check (type in ('projekt', 'intern', 'diverse', 'pulje', 'alle'));
+alter table public.pl_linje add column if not exists projekter text[];
+update public.pl_linje set type = case when projekt is not null then 'projekt' else 'intern' end where type is null;
+create unique index if not exists pl_linje_alle_uq on public.pl_linje (initialer) where type = 'alle';
+create or replace view public.v_eksport_pl_belastning with (security_invoker = true) as
+select l.initialer, k.navn, l.projekt, p.titel as projektnavn, l.aktivitet, l.note, l.skjult, b.maaned, b.procent, l.type, array_to_string(l.projekter, ', ') as projekter
+from public.pl_linje l join public.kollega k on k.initialer = l.initialer
+left join public.pl_belastning b on b.linje_id = l.id
+left join public.projekt p on p.projektnummer = l.projekt;
