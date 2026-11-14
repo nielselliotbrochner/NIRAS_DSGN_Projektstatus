@@ -153,6 +153,7 @@ Fanen PL-belastning viser projektledernes belastning i procent af fuld tid pr. m
 - **Linjer pr. person:** ERP-projekter, hvor personen er PL i det valgte PTD (alle BU'er), med forventet slutdato; "+ Projekt fra ERP" tilføjer et andet ERP-projekt; "+ Intern aktivitet" (fx salg og tilbud, administration). Klik på et navn giver note, skjul (ERP-projekter; tæller så ikke i summen) og fjern (tilføjede linjer).
 - **Celler:** klik og skriv procent. Enter gemmer, Shift+Enter gentager til højre frem til projektets forventede slutdato (ellers periodens slutning), Tab går til næste måned, Escape fortryder, tom celle sletter.
 - **Sum og farver:** personens linje summerer de viste linjer; cellen farves grøn under 75 %, gul 75-99 % og rød fra 100 %.
+- **Senest opdateret** står ved hver person: seneste ændring af personens linjer, procenter eller noter (`v_pl_opdateret` fra `pl_log`) eller "Gennemgået i dag" (`kollega.pl_gennemgaaet`), hvad der er nyest. Grøn inden for 30 dage, gul 31-60 dage, rød over 60 dage eller aldrig. Kan sorteres med ældst opdateret først.
 - **Periode:** nu + 12 mdr. (standard), nu + 24 mdr. eller 6 mdr. tilbage + 12 frem. "Fold alle sammen" giver én linje pr. person; valget huskes i browseren.
 
 ## Personnoter (10. nov. 2026)

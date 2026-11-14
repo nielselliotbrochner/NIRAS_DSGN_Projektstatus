@@ -97,3 +97,11 @@ from public.pl_linje l join public.kollega k on k.initialer = l.initialer
 left join public.pl_belastning b on b.linje_id = l.id
 left join public.projekt p on p.projektnummer = l.projekt;
 grant select on public.v_eksport_pl_belastning to authenticated;
+
+-- Senest opdateret pr. person: seneste ændring af personens linjer eller procenter, eller "Gennemgået i dag"
+alter table public.kollega add column if not exists pl_gennemgaaet timestamptz;
+create or replace view public.v_pl_opdateret with (security_invoker = true) as
+select initialer, max(tid) as opdateret from public.pl_log
+where tabel in ('pl_linje', 'pl_belastning') and initialer is not null
+group by initialer;
+grant select on public.v_pl_opdateret to authenticated;

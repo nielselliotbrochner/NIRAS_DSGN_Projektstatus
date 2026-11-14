@@ -416,13 +416,15 @@ dialog::backdrop { background: rgba(34,27,24,.4); }
 .plb-acts { justify-content: flex-end; }
 .plb-leg { margin: 6px 0 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .plb-leg i { display: inline-block; width: 14px; height: 12px; border-radius: 3px; margin-left: 8px; }
-.plb-leg i.h0 { background: #E3F1E8; } .plb-leg i.h1 { background: #FBEFC9; } .plb-leg i.h2 { background: #F6CDD1; }
+.plb-leg i.h0, .plb-leg i.d0, .pl-d.d0 { background: #E3F1E8; } .plb-leg i.h1, .plb-leg i.d1, .pl-d.d1 { background: #FBEFC9; } .plb-leg i.h2, .plb-leg i.d2, .pl-d.d2 { background: #F6CDD1; }
+.pl-d { display: inline-block; font-size: 10.5px; font-weight: 400; padding: 0 6px; border-radius: 4px; margin-left: 6px; color: var(--ink); }
+.plb-leg + .plb-leg { margin-top: -4px; }
 .plb-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: #fff; }
 table.plb { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
 table.plb th, table.plb td { border-bottom: 1px solid var(--line); padding: 5px 4px; text-align: right; white-space: nowrap; min-width: 46px; width: 46px; }
 table.plb th { background: var(--sand-2); color: var(--muted); font-weight: 600; font-size: 11px; position: sticky; top: 0; z-index: 2; }
 table.plb th.past { color: #b3a79e; font-weight: 400; }
-table.plb .n { text-align: left; min-width: 250px; width: 250px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid var(--line); }
+table.plb .n { text-align: left; min-width: 270px; width: 270px; max-width: 270px; overflow: hidden; text-overflow: ellipsis; position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid var(--line); }
 table.plb th.n { z-index: 3; background: var(--sand-2); }
 table.plb .cur { box-shadow: inset 2px 0 0 var(--red); }
 table.plb tr.p td { font-weight: 600; cursor: pointer; border-top: 1px solid var(--sand-3); }
@@ -1336,12 +1338,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <div class="pf-acts plb-acts">
             <label class="note" style="display:inline-flex;gap:6px;align-items:center">Periode
               <select id="plb-per"><option value="12">Nu + 12 mdr.</option><option value="24">Nu + 24 mdr.</option><option value="-6">6 mdr. tilbage + 12 frem</option></select></label>
+            <label class="note" style="display:inline-flex;gap:6px;align-items:center">Sortér
+              <select id="plb-sort"><option value="i">Initialer</option><option value="d">Ældst opdateret først</option></select></label>
             <button class="btn" type="button" id="plb-fold">Fold alle sammen</button>
             <button class="btn" type="button" id="plb-ud">Fold alle ud</button>
             <button class="btn primary" type="button" id="plb-valg">Vælg projektledere</button>
           </div>
         </div>
         <div class="plb-leg note">Personens samlede belastning: <i class="h0"></i>under 75 % <i class="h1"></i>75 til 99 % <i class="h2"></i>100 % eller mere</div>
+        <div class="plb-leg note">Senest opdateret: <i class="d0"></i>inden for 30 dage <i class="d1"></i>31 til 60 dage <i class="d2"></i>mere end 60 dage eller aldrig</div>
         <div class="plb-wrap" id="plb-wrap"></div>
         <p class="note">Enter gemmer cellen. Shift+Enter gentager værdien til højre frem til projektets forventede slutdato (ellers periodens slutning). Tab går til næste måned, Escape fortryder. Skraveret er efter forventet slutdato i ERP. Klik på et projektnavn for note, skjul eller fjern.</p>
       </div>
@@ -2411,7 +2416,7 @@ const S = {
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
   tab: 'ov', pview: ls.get('pd.pview', 'begge'), sel: null, chip: 'alle', kt: '', regel: null, q: '', pRole: 'pl',
   kSel: null, kq: '', kAll: false,
-  plPer: ls.get('pd.plper', '12'), plOpen: new Set(ls.get('pd.plopen', [])), plVis: new Set(), plAct: null, plAdd: null, plLinjer: null, plRowMap: new Map(), plQ: '', plKun: true, kunder: null, kById: new Map(), kErpByLc: new Map(), kMidl: 'aabne',
+  plPer: ls.get('pd.plper', '12'), plOpen: new Set(ls.get('pd.plopen', [])), plVis: new Set(), plAct: null, plAdd: null, plLinjer: null, plRowMap: new Map(), plQ: '', plKun: true, plOpd: new Map(), plSort: ls.get('pd.plsort', 'i'), kunder: null, kById: new Map(), kErpByLc: new Map(), kMidl: 'aabne',
   sorts: { proj: { k: 'score', d: -1 }, pers: { k: 'oms', d: -1 }, kunder: { k: 'baseline', d: -1 }, kproj: { k: 'baseline', d: -1 }, risk: { k: 'klasse', d: -1 }, opf: { k: 'frist', d: 1 }, rp: { k: 'score', d: -1 }, pipe: { k: 'frist', d: 1 } }, ochip: 'aabne', oq: '', rpChip: 'alle', rpQ: '',
   pipe: [], pipeView: ls.get('pd.pipeview', 'tavle'), pipeChip: 'aabne', pipeType: 'alle', pipeQ: '', pipeListDays: ls.get('pd.pipedays', 30), pipeColsOpen: false,
   pnotes: null, pnKey: '', pnEdit: null, pnFiles: [], pnFilter: 'alle', pnMore: 40, pnOpf: [],
@@ -4264,6 +4269,16 @@ const PL_PER = { 12: [0, 12], 24: [0, 24], '-6': [-6, 18] };
 async function loadPl() {
   if (Store.mode() !== 'supabase') { S.plLinjer = null; return; }
   try { S.plLinjer = await Store.plLoad(); } catch (e) { S.plLinjer = null; console.warn('PL-belastning kunne ikke hentes', e); }
+  try { S.plOpd = new Map((await Store.fetchAll('/rest/v1/v_pl_opdateret?select=*')).map((r) => [r.initialer, r.opdateret])); } catch (e) { S.plOpd = new Map(); }
+}
+// Senest opdateret: seneste ændring hos personen eller "Gennemgået i dag"
+const plDato = (i) => { const a = S.plOpd.get(i) || null, b = (S.kolleger || []).find((k) => k.initialer === i)?.pl_gennemgaaet || null; return a && b ? (a > b ? a : b) : a || b; };
+const plStamp = (i) => S.plOpd.set(i, new Date().toISOString());
+function plDatoChip(i) {
+  const d = plDato(i);
+  if (!d) return h('span', { class: 'pl-d d2', title: 'Ingen ændringer registreret endnu', text: 'aldrig opdateret' });
+  const dag = cphDay(Date.parse(d)), n = Math.round((Date.parse(cphDay(Date.now())) - Date.parse(dag)) / 864e5);
+  return h('span', { class: 'pl-d ' + (n > 60 ? 'd2' : n > 30 ? 'd1' : 'd0'), title: 'Senest opdateret eller gennemgået ' + F.date(dag), text: `${F.date(dag)} (${n === 0 ? 'i dag' : n === 1 ? 'i går' : n + ' dage'})` });
 }
 const plM0 = () => cphDay(Date.now()).slice(0, 7) + '-01';
 const plAddM = (m, n) => { const d = new Date(m + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7) + '-01'; };
@@ -4295,11 +4310,13 @@ function drawPlb() {
   if (Store.mode() !== 'supabase') { box.replaceChildren(h('p', { class: 'empty', text: 'PL-belastning gemmes i Supabase. Log ind for at bruge fanen.' })); return; }
   if (S.plLinjer === null) { box.replaceChildren(h('p', { class: 'empty', text: 'Tabellerne til PL-belastning findes ikke i databasen endnu (16_pl_belastning.sql).' })); return; }
   const pers = plPersoner();
+  $('#plb-sort').value = S.plSort;
+  if (S.plSort === 'd') pers.sort((a, b) => String(plDato(a.initialer) || '').localeCompare(String(plDato(b.initialer) || '')) || a.initialer.localeCompare(b.initialer, 'da'));
   if (!pers.length) { box.replaceChildren(h('div', { class: 'empty' }, h('p', { text: 'Vælg de projektledere, der skal vises.' }), h('button', { class: 'btn primary', type: 'button', text: 'Vælg projektledere', onclick: plDlgOpen }))); return; }
   const ms = plMonths(), m0 = plM0(), sl = box.scrollLeft;
   S.plRowMap = new Map();
   const cells = (fn) => ms.map((m) => fn(m));
-  const head = h('tr', {}, h('th', { class: 'n', text: 'Projektleder og projekt' }), ...cells((m) => h('th', { class: (m < m0 ? 'past' : '') + (m === m0 ? ' cur' : ''), title: new Date(m + 'T12:00:00Z').toLocaleDateString('da-DK', { month: 'long', year: 'numeric', timeZone: 'UTC' }), text: plLab(m) })));
+  const head = h('tr', {}, h('th', { class: 'n', text: 'Projektleder · senest opdateret' }), ...cells((m) => h('th', { class: (m < m0 ? 'past' : '') + (m === m0 ? ' cur' : ''), title: new Date(m + 'T12:00:00Z').toLocaleDateString('da-DK', { month: 'long', year: 'numeric', timeZone: 'UTC' }), text: plLab(m) })));
   const body = [];
   pers.forEach((k) => {
     const i = k.initialer, rows = plRows(i), open = S.plOpen.has(i), vis = S.plVis.has(i);
@@ -4307,7 +4324,7 @@ function drawPlb() {
     const nErp = rows.filter((r) => r.kind === 'erp').length;
     const sum = (m) => shown.reduce((a, r) => a + (plVal(r, m) || 0), 0);
     const tr = h('tr', { class: 'p', tabindex: '0', 'aria-expanded': String(open), title: open ? 'Fold sammen' : 'Fold ud' },
-      h('td', { class: 'n' }, h('span', { class: 'chev', text: open ? '▾' : '▸' }), h('b', { text: ' ' + i }), h('span', { class: 'sub', text: `${k.navn ? ' ' + k.navn + ' ·' : ''} ${nErp} projekt${nErp === 1 ? '' : 'er'} som PL` })),
+      h('td', { class: 'n', title: `${i}${k.navn ? ' · ' + k.navn : ''} · ${nErp} projekt${nErp === 1 ? '' : 'er'} som PL` }, h('span', { class: 'chev', text: open ? '▾' : '▸' }), h('b', { text: ' ' + i }), plDatoChip(i), h('span', { class: 'sub', text: ` ${nErp} proj.` })),
       ...cells((m) => { const v = sum(m); return h('td', { class: plHeat(v) + (m === m0 ? ' cur' : ''), text: nf0.format(v) + ' %' }); }));
     const tog = () => { if (open) S.plOpen.delete(i); else S.plOpen.add(i); ls.set('pd.plopen', [...S.plOpen]); drawPlb(); };
     tr.addEventListener('click', tog); tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } });
@@ -4328,7 +4345,8 @@ function drawPlb() {
     if (hidden) body.push(h('tr', { class: 'c add' }, h('td', { colspan: ms.length + 1 }, h('div', { class: 'pl-stick' }, h('button', { class: 'linkbtn', type: 'button', text: vis ? `Skjul ${hidden} skjulte igen` : `Vis ${hidden} skjulte projekt${hidden === 1 ? '' : 'er'}`, onclick: () => { if (vis) S.plVis.delete(i); else S.plVis.add(i); drawPlb(); } })))));
     body.push(S.plAdd?.i === i ? plAddRow(i, ms.length) : h('tr', { class: 'c add' }, h('td', { colspan: ms.length + 1 }, h('div', { class: 'pl-stick pf-acts' },
       h('button', { class: 'btn small', type: 'button', text: '+ Projekt fra ERP', onclick: () => { S.plAdd = { i, kind: 'erp' }; drawPlb(); $('#plb-add')?.focus(); } }),
-      h('button', { class: 'btn small', type: 'button', text: '+ Intern aktivitet', onclick: () => { S.plAdd = { i, kind: 'intern' }; drawPlb(); $('#plb-add')?.focus(); } })))));
+      h('button', { class: 'btn small', type: 'button', text: '+ Intern aktivitet', onclick: () => { S.plAdd = { i, kind: 'intern' }; drawPlb(); $('#plb-add')?.focus(); } }),
+      h('button', { class: 'btn small', type: 'button', text: 'Gennemgået i dag', title: 'Sætter datoen for senest opdateret til i dag uden at ændre tal', onclick: () => plDo(async () => { const t = new Date().toISOString(); await Store.kollegaSave({ initialer: i, pl_gennemgaaet: t }); const kk = S.kolleger.find((x) => x.initialer === i); if (kk) kk.pl_gennemgaaet = t; }, `${i} er markeret som gennemgået i dag`) })))));
   });
   box.replaceChildren(h('table', { class: 'plb' }, h('thead', {}, head), h('tbody', {}, ...body)));
   box.scrollLeft = sl;
@@ -4337,12 +4355,12 @@ function drawPlb() {
 function plActRow(r, n) {
   const fN = h('textarea', { rows: 2, placeholder: 'Note til linjen, fx "Faser ud efter dispositionsforslag"', 'aria-label': 'Note' }); fN.value = r.l?.note || '';
   const gem = () => plDo(async () => {
-    const l = await plEnsure(r); await Store.plLinjePatch(l.id, { note: fN.value.trim() || null }); l.note = fN.value.trim() || null;
+    const l = await plEnsure(r); await Store.plLinjePatch(l.id, { note: fN.value.trim() || null }); l.note = fN.value.trim() || null; plStamp(r.i);
   }, 'Noten er gemt');
   return h('tr', { class: 'c act' }, h('td', { colspan: n + 1 }, h('div', { class: 'plact' }, fN,
     h('div', { class: 'pf-acts' }, h('button', { class: 'btn small primary', type: 'button', text: 'Gem note', onclick: gem }),
-      r.kind === 'erp' ? h('button', { class: 'btn small', type: 'button', text: r.l?.skjult ? 'Vis projektet igen' : 'Skjul projektet', title: 'Skjulte projekter tæller ikke med i summen', onclick: () => plDo(async () => { const l = await plEnsure(r); await Store.plLinjePatch(l.id, { skjult: !l.skjult }); l.skjult = !l.skjult; }, r.l?.skjult ? 'Projektet vises igen' : 'Projektet er skjult') }) : null,
-      r.kind !== 'erp' ? h('button', { class: 'btn small danger', type: 'button', text: 'Fjern linjen', onclick: () => { if (!confirm(`Fjern ${r.navn} fra ${r.i}? Procenterne på linjen slettes også.`)) return; plDo(async () => { await Store.plLinjeDelete(r.l.id); S.plLinjer = S.plLinjer.filter((x) => x.id !== r.l.id); S.plAct = null; }, 'Linjen er fjernet'); } }) : null,
+      r.kind === 'erp' ? h('button', { class: 'btn small', type: 'button', text: r.l?.skjult ? 'Vis projektet igen' : 'Skjul projektet', title: 'Skjulte projekter tæller ikke med i summen', onclick: () => plDo(async () => { const l = await plEnsure(r); await Store.plLinjePatch(l.id, { skjult: !l.skjult }); l.skjult = !l.skjult; plStamp(r.i); }, r.l?.skjult ? 'Projektet vises igen' : 'Projektet er skjult') }) : null,
+      r.kind !== 'erp' ? h('button', { class: 'btn small danger', type: 'button', text: 'Fjern linjen', onclick: () => { if (!confirm(`Fjern ${r.navn} fra ${r.i}? Procenterne på linjen slettes også.`)) return; plDo(async () => { await Store.plLinjeDelete(r.l.id); S.plLinjer = S.plLinjer.filter((x) => x.id !== r.l.id); S.plAct = null; plStamp(r.i); }, 'Linjen er fjernet'); } }) : null,
       h('button', { class: 'btn small', type: 'button', text: 'Luk', onclick: () => { S.plAct = null; drawPlb(); } })))));
 }
 function plAddRow(i, n) {
@@ -4359,7 +4377,7 @@ function plAddRow(i, n) {
       if (plRows(i).some((r) => r.projekt === nr)) { toast(`Projektet står allerede hos ${i}`); return; }
       row = { initialer: i, projekt: nr };
     } else row = { initialer: i, aktivitet: t };
-    plDo(async () => { const l = await Store.plLinjeAdd({ ...row, sortering: (S.plLinjer || []).filter((x) => x.initialer === i).length }); S.plLinjer.push({ ...l, b: [] }); S.plAdd = null; }, `${erp ? 'Projektet' : t} er tilføjet hos ${i}`);
+    plDo(async () => { const l = await Store.plLinjeAdd({ ...row, sortering: (S.plLinjer || []).filter((x) => x.initialer === i).length }); S.plLinjer.push({ ...l, b: [] }); S.plAdd = null; plStamp(i); }, `${erp ? 'Projektet' : t} er tilføjet hos ${i}`);
   };
   fA.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); if (e.key === 'Escape') { S.plAdd = null; drawPlb(); } });
   return h('tr', { class: 'c add' }, h('td', { colspan: n + 1 }, h('div', { class: 'pf-acts pl-stick' }, dl, fA,
@@ -4394,7 +4412,7 @@ function plEdit(td) {
       try {
         const l = await plEnsure(r);
         const vv = v == null ? null : Math.round(v * 10) / 10;
-        await Store.plSet(l.id, til, vv);
+        await Store.plSet(l.id, til, vv); plStamp(r.i);
         l.b = (l.b || []).filter((x) => !til.includes(pDay(x.maaned)));
         if (vv != null) til.forEach((x) => l.b.push({ maaned: x, procent: vv }));
         if (fill && til.length > 1) toast(`${nf0.format(vv ?? 0)} % sat i ${til.length} måneder til og med ${plLab(stop)}`);
@@ -4412,6 +4430,7 @@ function plEdit(td) {
 }
 $('#plb-wrap').addEventListener('click', (e) => { const td = e.target.closest('td.e'); if (td) plEdit(td); });
 $('#plb-per').addEventListener('change', (e) => { S.plPer = e.target.value; ls.set('pd.plper', S.plPer); drawPlb(); });
+$('#plb-sort').addEventListener('change', (e) => { S.plSort = e.target.value; ls.set('pd.plsort', S.plSort); drawPlb(); });
 $('#plb-fold').addEventListener('click', () => { S.plOpen = new Set(); ls.set('pd.plopen', []); drawPlb(); });
 $('#plb-ud').addEventListener('click', () => { S.plOpen = new Set(plPersoner().map((k) => k.initialer)); ls.set('pd.plopen', [...S.plOpen]); drawPlb(); });
 $('#plb-valg').addEventListener('click', () => plDlgOpen());
