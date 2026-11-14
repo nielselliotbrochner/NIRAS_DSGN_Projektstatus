@@ -427,6 +427,9 @@ table.plb th.past { color: #b3a79e; font-weight: 400; }
 table.plb .n { text-align: left; min-width: 270px; width: 270px; max-width: 270px; overflow: hidden; text-overflow: ellipsis; position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid var(--line); }
 table.plb th.n { z-index: 3; background: var(--sand-2); }
 table.plb .cur { box-shadow: inset 2px 0 0 var(--red); }
+table.plb th.yl, table.plb td.yl { border-left: 2px solid var(--ink, #2b2522); }
+table.plb th.ql, table.plb td.ql { border-left: 1px dashed #9c8f86; }
+.plb-leg i.hz { background: #fff; border: 1px solid var(--line); } .plb-leg i.yl { width: 0; height: 14px; border-radius: 0; border-left: 2px solid var(--ink, #2b2522); } .plb-leg i.ql { width: 0; height: 14px; border-radius: 0; border-left: 1px dashed #9c8f86; }
 table.plb tr.p td { font-weight: 600; cursor: pointer; border-top: 1px solid var(--sand-3); }
 table.plb tr.p td.n { background: var(--sand-2); }
 table.plb tr.p:focus-visible td.n { outline: 2px solid var(--red); outline-offset: -2px; }
@@ -434,7 +437,7 @@ table.plb .chev { display: inline-block; width: 12px; color: var(--muted); }
 table.plb .sub { color: var(--muted); font-weight: 400; font-size: 11px; } table.plb .sub.blk { display: block; overflow: hidden; text-overflow: ellipsis; }
 table.plb tr.c td.n { padding-left: 20px; cursor: pointer; } table.plb tr.c td.nm:hover { background: var(--sand-2); }
 table.plb tr.skjult td { color: var(--muted); }
-table.plb td.h0 { background: #E3F1E8; } table.plb td.h1 { background: #FBEFC9; } table.plb td.h2 { background: #F6CDD1; }
+table.plb td.hz { background: #fff; } table.plb td.h0 { background: #E3F1E8; } table.plb td.h1 { background: #FBEFC9; } table.plb td.h2 { background: #F6CDD1; }
 table.plb td.e { cursor: text; } table.plb td.e:hover { outline: 1px solid var(--sand-3); outline-offset: -1px; }
 table.plb td.end { background: repeating-linear-gradient(135deg, transparent 0 4px, #EEE5DD 4px 5px); }
 table.plb td input { width: 40px; height: 22px; font: inherit; text-align: right; padding: 0 3px; border: 1px solid var(--red); border-radius: 3px; }
@@ -1355,7 +1358,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <button class="btn primary" type="button" id="plb-valg">Vælg projektledere</button>
           </div>
         </div>
-        <div class="plb-leg note">Personens samlede belastning: <i class="h0"></i>under 75 % <i class="h1"></i>75 til 99 % <i class="h2"></i>100 % eller mere</div>
+        <div class="plb-leg note">Personens samlede belastning: <i class="hz"></i>0 % <i class="h0"></i>1 til 74 % <i class="h1"></i>75 til 99 % <i class="h2"></i>100 % eller mere <i class="yl"></i>årsskifte <i class="ql"></i>kvartalsskifte</div>
         <div class="plb-leg note">Senest opdateret: <i class="d0"></i>inden for 30 dage <i class="d1"></i>31 til 60 dage <i class="d2"></i>mere end 60 dage eller aldrig</div>
         <div class="plb-wrap" id="plb-wrap"></div>
         <p class="note">Enter gemmer cellen. Shift+Enter gentager værdien til højre frem til projektets forventede slutdato (ellers periodens slutning). Tab går til næste måned, Escape fortryder. Skraveret er efter forventet slutdato i ERP. Klik på et projektnavn for note, skjul eller fjern.</p>
@@ -4295,7 +4298,9 @@ const plAddM = (m, n) => { const d = new Date(m + 'T12:00:00Z'); d.setUTCMonth(d
 const plMonths = () => { const [a, n] = PL_PER[S.plPer] || PL_PER[12], m0 = plM0(); return Array.from({ length: n }, (_, k) => plAddM(m0, a + k)); };
 const PL_MN = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 const plLab = (m) => { const i = Number(m.slice(5, 7)) - 1; return i === 0 ? `jan ${m.slice(2, 4)}` : PL_MN[i]; };
-const plHeat = (v) => (v >= 100 ? 'h2' : v >= 75 ? 'h1' : 'h0');
+const plHeat = (v) => (v >= 100 ? 'h2' : v >= 75 ? 'h1' : v > 0 ? 'h0' : 'hz');
+// Lodrette linjer: fuld streg ved årsskiftet, stiplet ved kvartalsskifte
+const plSkel = (m, k) => (k === 0 ? '' : m.slice(5, 7) === '01' ? 'yl' : ['04', '07', '10'].includes(m.slice(5, 7)) ? 'ql' : '');
 const kolAnsv = (k) => (k.ansvarlig === undefined ? k.aktiv !== false : !!k.ansvarlig);
 const plPersoner = () => (S.kolleger || []).filter((k) => k.pl).sort((a, b) => a.initialer.localeCompare(b.initialer, 'da'));
 const plVal = (row, m) => { const b = row.l?.b?.find((x) => pDay(x.maaned) === m); return b ? Number(b.procent) : null; };
@@ -4311,7 +4316,7 @@ function drawPlb() {
   if (!pers.length) { box.replaceChildren(h('div', { class: 'empty' }, h('p', { text: 'Vælg de projektledere, der skal vises.' }), h('button', { class: 'btn primary', type: 'button', text: 'Vælg projektledere', onclick: plDlgOpen }))); return; }
   const ms = plMonths(), m0 = plM0(), sl = box.scrollLeft;
   S.plRowMap = new Map();
-  const cells = (fn) => ms.map((m) => fn(m));
+  const cells = (fn) => ms.map((m, k) => { const el = fn(m), c = plSkel(m, k); if (c) el.classList.add(c); return el; });
   const head = h('tr', {}, h('th', { class: 'n', text: 'Projektleder · senest opdateret' }), ...cells((m) => h('th', { class: (m < m0 ? 'past' : '') + (m === m0 ? ' cur' : ''), title: new Date(m + 'T12:00:00Z').toLocaleDateString('da-DK', { month: 'long', year: 'numeric', timeZone: 'UTC' }), text: plLab(m) })));
   const body = [];
   pers.forEach((k) => {
