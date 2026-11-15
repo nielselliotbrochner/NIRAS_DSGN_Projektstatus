@@ -136,6 +136,19 @@ Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere le
 - **Bid/no bid og deal review** er ikke i formularen. De kommer som porte mellem faserne i en senere udgave; `projekt_bid` er bevaret til det.
 - **Eksport:** `v_eksport_pipeline` har fået årsag til no bid, partnerliste og seneste Deal Radar-score; nye `v_eksport_deal_radar` og `v_eksport_pipe_partner`. "Mine data" har arkene Pipeline, Deal Radar og Partnere.
 
+## Filer på leads, PQ og tilbud (15. nov. 2026, `17_pipe_filer.sql`)
+
+| Tabel / felt | Indhold |
+|---|---|
+| `pipe_fil` | Én række pr. fil på en sag i pipelinen (lead, PQ, tilbud, rammeaftale eller miniudbud): `pipeline_id`, sti, filnavn, type, størrelse, oprettet. Slettes sammen med sagen |
+| Bucket `pipe-filer` | Privat; filerne ligger under sagens pipeline-id. Højst 50 MB pr. fil; pdf, billeder, Word, Excel, PowerPoint, msg, eml, txt, csv og zip |
+| `v_eksport_pipe_fil` | Eksport; arket Pipeline-filer i "Mine data" (filnavne, ikke selve filerne) |
+
+- **I sagens dialog** står afsnittet Filer: træk filer ind eller klik for at vælge. På en eksisterende sag uploades filen med det samme; på en ny sag uploades den, når du trykker Opret.
+- Klik på filnavnet åbner filen med et link, der virker i 5 minutter. "slet" fjerner filen fra både bucket og tabel.
+- Kortet på tavlen viser antal filer. Ændringsloggen (`pipe_log`) viser "Fil vedhæftet" og "Fil slettet".
+- Slettes en sag, slettes dens filer også.
+
 ## PL-belastning (14. nov. 2026, `16_pl_belastning.sql`)
 
 Fanen PL-belastning viser projektledernes belastning i procent af fuld tid pr. måned.
