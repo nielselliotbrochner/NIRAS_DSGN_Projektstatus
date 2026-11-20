@@ -270,7 +270,10 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .t td { padding: 6px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .t .num { text-align: right; }
 .t tbody tr { cursor: pointer; }
-.t tbody tr:hover { background: var(--sand-2); }
+/* Hver anden linje svagt grå, så lange lister er lette at følge (lav specificitet: valgt, forfalden og hover vinder) */
+.t tbody tr:where(:nth-child(even)) { background: #F4F2F0; }
+#t-pipe tbody tr:where(:nth-child(even)) td:first-child { background: #F4F2F0; }
+.t tbody tr:hover, #t-pipe tbody tr:hover td:first-child { background: #F7ECE2; }
 .t tr.sel { background: var(--sand); }
 .t td.name { white-space: normal; min-width: 220px; }
 .t td.wrapc { white-space: normal; min-width: 200px; }
