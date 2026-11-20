@@ -138,6 +138,18 @@ Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere le
 - **Bid/no bid og deal review** er ikke i formularen. De kommer som porte mellem faserne i en senere udgave; `projekt_bid` er bevaret til det.
 - **Eksport:** `v_eksport_pipeline` har fået årsag til no bid, partnerliste og seneste Deal Radar-score; nye `v_eksport_deal_radar` og `v_eksport_pipe_partner`. "Mine data" har arkene Pipeline, Deal Radar og Partnere.
 
+## Filer på projektnoter (20. nov. 2026, `18_projekt_note_filer.sql`)
+
+| Tabel / felt | Indhold |
+|---|---|
+| `projekt_note_fil` | Én række pr. fil på en note i projektets detalje (`projekt_noter`): `projekt_note_id`, sti, filnavn, type, størrelse, oprettet. Slettes sammen med noten |
+| Bucket `projekt-filer` | Privat; filerne ligger under notens id. Højst 50 MB pr. fil; pdf, billeder, Word, Excel, PowerPoint, msg, eml, txt, csv og zip |
+| `v_eksport_projekt_note_fil` | Eksport; arket "Filer på noter" i "Mine data" (filnavne, ikke selve filerne) |
+
+- Under Bemærkning, Opfølgning og Frist er der et felt til filer. Filerne gemmes sammen med noten, når du trykker Gem note. En note kan bestå af en fil alene.
+- Under "Redigér" kan filer tilføjes (gemmes med det samme) og slettes. Klik på et filnavn åbner filen med et link, der virker i 5 minutter.
+- Slettes noten, slettes dens filer også. Filfeltet vises kun, når noterne gemmes i Supabase.
+
 ## Filer på leads, PQ og tilbud (15. nov. 2026, `17_pipe_filer.sql`)
 
 | Tabel / felt | Indhold |

@@ -505,7 +505,8 @@ table.plb .plact label.note { display: flex; gap: 6px; align-items: center; }
 #pdlg .pr-b { width: 32px; height: 28px; border: 1px solid var(--line); background: #fff; border-radius: 4px; cursor: pointer; font: inherit; font-variant-numeric: tabular-nums; }
 #pdlg .pr-b[aria-pressed="true"] { background: var(--deep); color: #fff; border-color: var(--deep); }
 #pdlg .pr-desc { font-size: 12px; margin: 0; }
-#pdlg .pf-filer { display: flex; flex-direction: column; gap: 8px; }
+.pf-filer { display: flex; flex-direction: column; gap: 8px; }
+.entry .pn-files { margin-top: 6px; }
 #pdlg .pf-filer .pn-file .linkbtn { font-size: 12px; }
 #pdlg .pf-hist summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--deep); }
 #pdlg .pf-log { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; max-height: 260px; overflow: auto; }
@@ -1703,6 +1704,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <label>Opfølgning<input id="n-fu" type="text" placeholder="Fx PL sender ny ETC"></label>
         <label>Frist<span id="n-due-slot"></span></label>
       </div>
+      <div id="n-files-slot"></div>
       <div><button class="btn primary" id="n-save" type="button">Gem note</button></div>
     </div>
     <div class="log" id="d-log"></div>
@@ -2236,8 +2238,11 @@ const Store = {
   async harAdgang() { return (await this.sbFetch('/rest/v1/rpc/har_adgang', { method: 'POST', body: '{}' })) === true; },
   async load() {
     if (this.mode() === 'local') return { notes: ls.get('pd.notes', []), fokus: ls.get('pd.fokus', {}), info: ls.get('pd.info', {}) };
+    // Filer på noterne (18_projekt_note_filer.sql) hentes med, hvis tabellen findes
+    const noter = () => this.sbFetch('/rest/v1/projekt_noter?select=*,filer:projekt_note_fil(id,sti,filnavn,mime,stoerrelse,oprettet)&order=oprettet.asc')
+      .catch((e) => { console.warn('Filer på noter kunne ikke hentes', e); return this.sbFetch('/rest/v1/projekt_noter?select=*&order=oprettet.asc'); });
     const [notes, fok, inf] = await Promise.all([
-      this.sbFetch('/rest/v1/projekt_noter?select=*&order=oprettet.asc'),
+      noter(),
       this.sbFetch('/rest/v1/projekt_fokus?select=*'),
       this.fetchAll('/rest/v1/projekt_info?select=*'),
     ]);
@@ -2341,6 +2346,19 @@ const Store = {
     await this.sbFetch('/storage/v1/object/pipe-filer/' + sti, { method: 'POST', headers: { 'Content-Type': mime || 'application/octet-stream', 'x-upsert': 'false' }, body: file });
     const r = await this.sbFetch('/rest/v1/pipe_fil', { method: 'POST', body: JSON.stringify({ pipeline_id: pipeId, sti, filnavn: file.name, mime, stoerrelse: file.size }) });
     return r[0];
+  },
+  // Filer på projektnoter: private bucket projekt-filer under notens id
+  async uploadPrjNoteFile(noteId, file, mime) {
+    const safe = String(file.name).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.\-]+/g, '_').slice(-80);
+    const sti = `${noteId}/${Date.now()}-${safe}`;
+    await this.sbFetch('/storage/v1/object/projekt-filer/' + sti, { method: 'POST', headers: { 'Content-Type': mime || 'application/octet-stream', 'x-upsert': 'false' }, body: file });
+    const r = await this.sbFetch('/rest/v1/projekt_note_fil', { method: 'POST', body: JSON.stringify({ projekt_note_id: noteId, sti, filnavn: file.name, mime, stoerrelse: file.size }) });
+    return r[0];
+  },
+  async deletePrjNoteFiles(filer) {
+    if (!filer?.length) return;
+    await this.sbFetch('/storage/v1/object/projekt-filer', { method: 'DELETE', body: JSON.stringify({ prefixes: filer.map((f) => f.sti) }) });
+    await this.sbFetch('/rest/v1/projekt_note_fil?id=in.(' + filer.map((f) => f.id).join(',') + ')', { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   },
   async deletePipeFiles(filer) {
     if (!filer.length) return;
@@ -3355,6 +3373,50 @@ const pnSize = (b) => (!b ? '' : b >= 1048576 ? nf1.format(b / 1048576) + ' MB' 
 const PF_EXT = { ...PN_EXT, ppt: 'application/vnd.ms-powerpoint', zip: 'application/zip' };
 const PF_MAX = 50 * 1024 * 1024;
 const pfMime = (f) => PF_EXT[String(f.name).split('.').pop().toLowerCase()] || '';
+// Filfelt: gemte filer (åbn, slet), filer der venter på at blive gemt, og et felt man kan trække filer til
+// o = { files: () => [...], pending: [] | null, bucket, onAdd: async (filer) => {}, onDelete: async (fil) => {}, hint }
+function fileZone(o) {
+  const box = h('div', { class: 'pf-filer' });
+  const inp = h('input', { type: 'file', multiple: '', accept: Object.keys(PF_EXT).map((e) => '.' + e).join(','), style: 'display:none' });
+  const drop = h('div', { class: 'pn-drop', tabindex: '0', role: 'button' });
+  const add = async (list) => {
+    const ok = [];
+    for (const fl of list) {
+      if (fl.size > PF_MAX) { toast(`${fl.name} er større end 50 MB`, true); continue; }
+      if (!pfMime(fl)) { toast(`${fl.name}: filtypen kan ikke gemmes (pdf, billeder, Office, msg, eml, txt, csv, zip)`, true); continue; }
+      ok.push(fl);
+    }
+    if (!ok.length) return;
+    if (o.pending) { o.pending.push(...ok); draw(); return; }
+    drop.textContent = `Uploader ${ok.length === 1 ? ok[0].name : ok.length + ' filer'} …`;
+    try { await o.onAdd(ok); toast(ok.length === 1 ? `${ok[0].name} er vedhæftet` : `${ok.length} filer er vedhæftet`); } catch (e) { toast(e.message, true); }
+    draw();
+  };
+  inp.addEventListener('change', () => { add([...inp.files]); inp.value = ''; });
+  drop.addEventListener('click', () => inp.click());
+  drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('on'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('on'));
+  drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('on'); add([...e.dataTransfer.files]); });
+  const draw = () => {
+    drop.textContent = 'Vedhæft filer: træk dem hertil eller klik · højst 50 MB pr. fil';
+    const fs = (o.files() || []).slice().sort((a, b) => String(a.oprettet).localeCompare(String(b.oprettet)));
+    box.replaceChildren(...[
+      fs.length ? h('div', { class: 'pn-files' }, ...fs.map((fl) => h('span', { class: 'pn-file' },
+        h('button', { class: 'linkbtn', type: 'button', title: 'Åbn ' + fl.filnavn, text: pnIcon(fl.mime) + ' ' + fl.filnavn, onclick: () => pnOpenFile(fl, o.bucket) }),
+        h('span', { class: 'note', text: ' ' + pnSize(fl.stoerrelse) + ' ' }),
+        o.onDelete ? h('button', { class: 'linkbtn danger', type: 'button', text: 'slet', onclick: async () => {
+          if (!confirm(`Slet filen ${fl.filnavn}?`)) return;
+          try { await o.onDelete(fl); draw(); toast('Filen er slettet'); } catch (e) { toast(e.message, true); }
+        } }) : null))) : null,
+      o.pending?.length ? h('div', { class: 'pn-files' }, ...o.pending.map((fl, i) => h('span', { class: 'pn-file new' }, pnIcon(pfMime(fl)) + ' ' + fl.name + ' ', h('span', { class: 'note', text: pnSize(fl.size) + ' ' }),
+        h('button', { class: 'linkbtn', type: 'button', text: '×', title: 'Fjern', onclick: () => { o.pending.splice(i, 1); draw(); } })))) : null,
+      drop, inp,
+      o.pending?.length && o.hint ? h('p', { class: 'note', style: 'margin:0', text: o.hint }) : null].filter(Boolean));
+  };
+  draw(); box.redraw = draw;
+  return box;
+}
 const pnSel = () => [...new Set([...S.pls, ...S.pas])].filter((x) => x && x !== '?').sort();
 async function loadPersonOpf() {
   if (Store.mode() !== 'supabase') { S.pnOpf = []; return; }
@@ -5155,6 +5217,7 @@ function drawDrawer() {
     ...kv('TFM EAC', F.tfm(r.tfm_eac)), ...kv('DG', F.pct(r.dg)), ...kv('Baseline (tDKK)', F.tkr(r.baseline)), ...kv('POC', F.pct(r.poc)),
     ...kv('Eksterne omk. (tDKK)', F.tkr(r.ext)), ...kv('Faktureret (tDKK)', F.tkr(r.faktureret)), ...kv('Faktureret over baseline (tDKK)', F.tkr(r.over_baseline)),
     ...kv('WIP (tDKK)', F.tkr(r.wip)), ...kv('Klar til fakturering (tDKK)', F.tkr(r.til_fakt)), ...kv('Forfalden (tDKK)', F.tkr(r.forfalden)));
+  const nf = $('#n-files'); if (nf) nf.hidden = Store.mode() !== 'supabase';
   drawMeta(r);
   drawInfo(r);
   drawHist(r);
@@ -5168,10 +5231,12 @@ function drawDrawer() {
     h('div', { class: 'meta' }, h('span', { text: F.ts(n.oprettet) }), n.periode ? h('span', { text: 'Månedsluk ' + F.per(n.periode) }) : null, n.opfoelgning ? h('span', { text: n.status === 'lukket' ? 'Lukket' : 'Åben' }) : null, n.redigeret ? h('span', { title: F.ts(n.redigeret), text: 'Redigeret ' + F.date(n.redigeret) }) : null),
     n.note ? h('div', { class: 'txt', text: n.note }) : null,
     n.opfoelgning ? h('div', { class: 'fu', text: `Opfølgning: ${n.opfoelgning}${n.frist ? ' · frist ' + F.date(n.frist) : ''}` }) : null,
+    n.filer?.length ? h('div', { class: 'pn-files' }, ...n.filer.slice().sort((a, b) => String(a.oprettet).localeCompare(String(b.oprettet))).map((fl) => h('span', { class: 'pn-file' },
+      h('button', { class: 'linkbtn', type: 'button', title: 'Åbn ' + fl.filnavn, text: pnIcon(fl.mime) + ' ' + fl.filnavn, onclick: () => pnOpenFile(fl, 'projekt-filer') }), h('span', { class: 'note', text: ' ' + pnSize(fl.stoerrelse) })))) : null,
     h('div', { class: 'acts' },
       h('button', { class: 'btn small', type: 'button', text: 'Redigér', onclick: () => { S.noteEdit = n.id; drawDrawer(); setTimeout(() => $('#ne-note')?.focus(), 0); } }),
       n.opfoelgning ? h('button', { class: 'btn small', type: 'button', text: n.status === 'lukket' ? 'Genåbn' : 'Luk opfølgning', onclick: () => act(() => Store.updateNote(n.id, { status: n.status === 'lukket' ? 'åben' : 'lukket' })) }) : null,
-      h('button', { class: 'btn small', type: 'button', text: 'Slet', onclick: () => { if (confirm('Slet noten?')) act(() => Store.deleteNote(n.id)); } })))))
+      h('button', { class: 'btn small', type: 'button', text: 'Slet', onclick: () => { if (confirm(`Slet noten?${n.filer?.length ? ` De ${n.filer.length} vedhæftede filer slettes også.` : ''}`)) act(async () => { await Store.deletePrjNoteFiles(n.filer); await Store.deleteNote(n.id); }); } })))))
     : [h('p', { class: 'note', text: 'Ingen noter på projektet endnu.' })]));
 }
 // Kunde, kontrakttype, risikoklasse og datoer øverst i detaljen; kontrakt og fremdrift fra det nye ERP-format
@@ -5210,10 +5275,10 @@ function noteEditor(n) {
   const fu = h('input', { id: 'ne-fu', type: 'text', 'aria-label': 'Opfølgning', placeholder: 'Fx PL sender ny ETC' }); fu.value = n.opfoelgning || '';
   const due = dmyField('ne-due', n.frist ? String(n.frist).slice(0, 10) : '', 'Frist');
   const dt = dmyField('ne-date', day, 'Dato for noten', true);
-  const cancel = () => { S.noteEdit = null; drawDrawer(); };
+  const cancel = () => { S.noteEdit = null; reloadNotes().catch(() => drawDrawer()); };
   const save = () => {
     const note = ta.value.trim(), f = fu.value.trim();
-    if (!note && !f) { toast('Skriv en bemærkning eller en opfølgning'); return; }
+    if (!note && !f && !n.filer?.length) { toast('Skriv en bemærkning eller en opfølgning'); return; }
     const pf = readDMY('ne-due', 'Frist'); if (!pf.ok) return;
     const pdt = readDMY('ne-date', 'Dato'); if (!pdt.ok) return;
     if (!pdt.iso) { toast('Dato: noten skal have en dato'); $('#ne-date').focus(); return; }
@@ -5232,6 +5297,9 @@ function noteEditor(n) {
     h('div', { class: 'meta' }, h('span', { text: 'Redigerer note fra ' + F.ts(n.oprettet) })),
     h('label', { class: 'ne-l' }, 'Bemærkning', ta),
     h('div', { class: 'ne-row' }, h('label', { class: 'ne-l' }, 'Opfølgning', fu), h('label', { class: 'ne-l' }, 'Frist', due), h('label', { class: 'ne-l' }, 'Dato', dt)),
+    Store.mode() === 'supabase' ? fileZone({ files: () => n.filer || [], bucket: 'projekt-filer',
+      onAdd: async (list) => { for (const fl of list) n.filer = [...(n.filer || []), await Store.uploadPrjNoteFile(n.id, fl, pfMime(fl))]; },
+      onDelete: async (fl) => { await Store.deletePrjNoteFiles([fl]); n.filer = n.filer.filter((y) => y.id !== fl.id); } }) : null,
     h('div', { class: 'acts' },
       h('button', { class: 'btn small primary', type: 'button', text: 'Gem ændringer', onclick: save }),
       h('button', { class: 'btn small', type: 'button', text: 'Fortryd', onclick: cancel }),
@@ -5327,12 +5395,22 @@ $('#d-close').addEventListener('click', closeProject);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.sel && !$('#dlg').open) closeProject(); });
 $('#d-focus').addEventListener('click', () => { const r = S.P.find((x) => x.projekt === S.sel); if (r) act(() => Store.setFokus(r.projekt, !r.fokus), r.fokus ? 'Fokus fjernet' : 'Markeret som fokusprojekt'); });
 $('#n-due-slot').replaceWith(dmyField('n-due', '', 'Frist'));
+// Filer til en ny note venter, til noten gemmes (kun med Supabase)
+const nVenter = [];
+const nFiles = fileZone({ files: () => [], pending: nVenter, bucket: 'projekt-filer', hint: 'Filerne gemmes sammen med noten.' });
+nFiles.id = 'n-files';
+$('#n-files-slot').replaceWith(nFiles);
 $('#n-save').addEventListener('click', () => {
   const pd = readDMY('n-due', 'Frist'); if (!pd.ok) return;
   const note = $('#n-note').value.trim(), fu = $('#n-fu').value.trim(), due = pd.iso;
-  if (!note && !fu) { toast('Skriv en bemærkning eller en opfølgning'); return; }
+  if (!note && !fu && !nVenter.length) { toast('Skriv en bemærkning, en opfølgning eller vedhæft en fil'); return; }
   const n = { id: uid(), projekt: S.sel, periode: S.periode || null, note, opfoelgning: fu || null, frist: due, status: 'åben', oprettet: new Date().toISOString() };
-  act(async () => { await Store.addNote(n); $('#n-note').value = ''; $('#n-fu').value = ''; $('#n-due').value = ''; $('#n-due').classList.remove('bad'); }, 'Note gemt');
+  act(async () => {
+    const saved = await Store.addNote(n);
+    for (const fl of nVenter.splice(0)) await Store.uploadPrjNoteFile(saved?.id || n.id, fl, pfMime(fl));
+    nFiles.redraw();
+    $('#n-note').value = ''; $('#n-fu').value = ''; $('#n-due').value = ''; $('#n-due').classList.remove('bad');
+  }, 'Note gemt');
 });
 
 /* ----- upload ----- */
@@ -5534,7 +5612,7 @@ function buildXlsx(sheets) {
 const download = (blob, name) => { const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 
 /* ----- Mine data: saml alt egenproduceret ----- */
-const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'deal_radar', 'pipe_partner', 'pipe_fil', 'personnoter', 'kunder', 'pl_belastning'];
+const EX_MODULES = ['noter', 'fokus', 'info', 'bid', 'aendring', 'kvalitet', 'milepael', 'dokument', 'pipeline', 'deal_radar', 'pipe_partner', 'pipe_fil', 'projekt_note_fil', 'personnoter', 'kunder', 'pl_belastning'];
 async function collectOwnData(onlyScope) {
   const by = new Map(S.P.map((r) => [r.projekt, r]));
   const enrich = (x) => {
@@ -5545,7 +5623,7 @@ async function collectOwnData(onlyScope) {
   const D = { kilde: Store.label(), eksporteret: new Date().toISOString() };
   if (Store.mode() === 'supabase') {
     // Kundetabellen kan mangle i en ældre database; så springes arket over
-    const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`).catch((e) => { if (['kunder', 'deal_radar', 'pipe_partner', 'pipe_fil', 'pl_belastning'].includes(m)) return []; throw e; })));
+    const got = await Promise.all(EX_MODULES.map((m) => Store.fetchAll(`/rest/v1/v_eksport_${m}?select=*`).catch((e) => { if (['kunder', 'deal_radar', 'pipe_partner', 'pipe_fil', 'projekt_note_fil', 'pl_belastning'].includes(m)) return []; throw e; })));
     const pick = new Set([...S.pls, ...S.pas]);
     EX_MODULES.forEach((m, i) => { D[m] = m === 'kunder' || m === 'pl_belastning' ? got[i] : m === 'personnoter' ? got[i].filter((x) => !onlyScope || !pick.size || pick.has(x.initialer)) : got[i].map(enrich).filter(keep); });
     const pr = await Store.fetchAll('/rest/v1/projekt?select=*&order=oprettet');
@@ -5572,6 +5650,7 @@ const EX_SHEETS = [
   ['Pipeline', 'pipeline', [{ l: 'Type', k: 'type', w: 12 }, { l: 'Fase', k: 'fase', w: 9 }, { l: 'Kunde', k: 'kunde', w: 24 }, { l: 'Ansvarlig', k: 'ansvarlige', w: 10 }, { l: 'NIRAS-rolle', k: 'rolle', w: 10 }, { l: 'Partnere (rolle, andel)', k: 'partner_liste', w: 40 }, { l: 'NIRAS-andel', k: 'niras_andel', t: 'num', w: 10 }, { l: 'Anlægssum (DKK)', k: 'anlaegssum', t: 'num', w: 14 }, { l: 'Teamets honorar (DKK)', k: 'honorar', t: 'num', w: 14 }, { l: 'Vinderchance', k: 'vinderchance', t: 'num', w: 12 }, { l: 'Deal Radar (seneste, af 30)', k: 'deal_radar_score', t: 'num', w: 12 }, { l: 'Rammens værdi (DKK)', k: 'ramme_vaerdi', t: 'num', w: 16 }, { l: 'Antal vindere', k: 'antal_vindere', t: 'num', w: 10 }, { l: 'Andel', k: 'andel', t: 'num', w: 8 }, { l: 'Aftale start', k: 'aftale_start', t: 'date', w: 12 }, { l: 'Aftale slut', k: 'aftale_slut', t: 'date', w: 12 }, { l: 'Under rammeaftale', k: 'ramme_navn', w: 28 }, { l: 'Udbud', k: 'udbud', w: 24 }, { l: 'Spørgefrist', k: 'sporgefrist', t: 'date', w: 12 }, { l: 'PQ-dato', k: 'pq_frist', t: 'date', w: 12 }, { l: 'PQ afleveret', k: 'pq_afleveret', t: 'date', w: 12 }, { l: 'Prækvalificeret', k: 'prakvalificeret', t: 'date', w: 13 }, { l: 'Tilbudsdato', k: 'tilbudsfrist', t: 'date', w: 12 }, { l: 'Tilbud afleveret', k: 'tilbud_afleveret', t: 'date', w: 13 }, { l: 'Revideret tilbud', k: 'revideret_tilbud', t: 'date', w: 13 }, { l: 'Forventet afgørelse', k: 'forventet_afgoerelse', t: 'date', w: 14 }, { l: 'Forventet opstart', k: 'forventet_opstart', t: 'date', w: 14 }, { l: 'Afgjort', k: 'resultat_dato', t: 'date', w: 12 }, { l: 'Afgjort i fase', k: 'tabt_i', w: 10 }, { l: 'Årsag til no bid', k: 'no_bid_aarsag', w: 24 }, { l: 'Bemærkning', k: 'bemaerkning', w: 50 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Deal Radar', 'deal_radar', [{ l: 'Dato', k: 'dato', t: 'date', w: 12 }, { l: 'Pain', k: 'pain', t: 'num', w: 7 }, { l: 'Power', k: 'power', t: 'num', w: 7 }, { l: 'Vision', k: 'vision', t: 'num', w: 7 }, { l: 'Value', k: 'value', t: 'num', w: 7 }, { l: 'Process', k: 'process', t: 'num', w: 7 }, { l: 'Alignment', k: 'alignment', t: 'num', w: 9 }, { l: 'Score (af 30)', k: 'score', t: 'num', w: 10 }, { l: 'Næste handling', k: 'naeste_handling', w: 40 }, { l: 'Note', k: 'note', w: 40 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Partnere', 'pipe_partner', [{ l: 'Partner', k: 'partner', w: 32 }, { l: 'Koblet til ERP-kunde', k: 'partner_erp_navn', w: 32 }, { l: 'Rolle', k: 'rolle', w: 8 }, { l: 'Rolle (navn)', k: 'rolle_navn', w: 20 }, { l: 'Andel af honoraret', k: 'andel', t: 'num', w: 12 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }]],
+  ['Filer på noter', 'projekt_note_fil', [{ l: 'Månedsluk', k: 'periode', w: 10 }, { l: 'Note oprettet', k: 'note_oprettet', t: 'ts', w: 17 }, { l: 'Filnavn', k: 'filnavn', w: 44 }, { l: 'Filtype', k: 'mime', w: 30 }, { l: 'Størrelse (byte)', k: 'stoerrelse', t: 'num', w: 14 }, { l: 'Vedhæftet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Pipeline-filer', 'pipe_fil', [{ l: 'Fase', k: 'fase', w: 10 }, { l: 'Filnavn', k: 'filnavn', w: 44 }, { l: 'Filtype', k: 'mime', w: 30 }, { l: 'Størrelse (byte)', k: 'stoerrelse', t: 'num', w: 14 }, { l: 'Vedhæftet', k: 'oprettet', t: 'ts', w: 17 }]],
   ['Personnoter', 'personnoter', [{ l: 'Person', k: 'initialer', w: 10 }, { l: 'Dato', k: 'dato', t: 'date', w: 12 }, { l: 'Note', k: 'note', w: 60 }, { l: 'Opfølgning', k: 'opfoelgning', w: 40 }, { l: 'Frist', k: 'frist', t: 'date', w: 12 }, { l: 'Status', k: 'status', w: 9 }, { l: 'Vedrører projekter', k: 'projektnumre', w: 28 }, { l: 'Filer', k: 'filer', w: 40 }, { l: 'Oprettet', k: 'oprettet', t: 'ts', w: 17 }, { l: 'Redigeret', k: 'redigeret', t: 'ts', w: 17 }]],
   ['Kunder', 'kunder', [{ l: 'Kunde', k: 'navn', w: 40 }, { l: 'Type', k: 'type', w: 12 }, { l: 'Koblet til ERP-kunde', k: 'erp_navn', w: 40 }, { l: 'Koblet', k: 'koblet', t: 'date', w: 12 }, { l: 'Koblet af', k: 'koblet_af', w: 22 }, { l: 'Pipeline-punkter', k: 'pipeline_punkter', t: 'num', w: 10 }, { l: 'Oprettet', k: 'oprettet', t: 'date', w: 12 }]],
