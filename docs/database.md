@@ -38,6 +38,8 @@ Mindst ét af projektnummer, salgsnummer eller arbejdstitel skal være udfyldt.
 
 ## ERP-udtræk (historik med dato)
 
+Fanen **Vejledning** viser trin for trin, hvordan PTD-udtrækket (Detailed Main Project View) hentes i NIRAS BI, med skærmbilleder i `vejledning/` (projektdata er dækket til, fordi repoet er offentligt), og en FAQ om indlæsning.
+
 | Tabel | Nøgle | Indhold |
 |---|---|---|
 | `erp_upload` | unik (type, noegle) | Log over uploads; dashboardet bruger kun udtræk, der står her |

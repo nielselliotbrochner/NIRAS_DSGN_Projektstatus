@@ -271,6 +271,16 @@ table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; font-varian
 .t .num { text-align: right; }
 .t tbody tr { cursor: pointer; }
 /* Hver anden linje svagt grå, så lange lister er lette at følge (lav specificitet: valgt, forfalden og hover vinder) */
+.vj-grid { grid-template-columns: minmax(0, 1fr); }
+.vj-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 22px; }
+.vj-step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+.vj-n { width: 30px; height: 30px; border-radius: 50%; background: var(--deep); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.vj-b h3 { margin: 4px 0 2px; font-size: 15px; }
+.vj-b .note { margin: 0 0 8px; }
+.vj-b img { display: block; max-width: min(100%, 760px); height: auto; border: 1px solid var(--line); border-radius: var(--r); }
+.vj-faq { border-bottom: 1px solid var(--line); padding: 8px 0; }
+.vj-faq summary { cursor: pointer; font-weight: 600; }
+.vj-faq p { margin: 6px 0 2px; max-width: 75ch; }
 .t tbody tr:where(:nth-child(even)) { background: #F4F2F0; }
 #t-pipe tbody tr:where(:nth-child(even)) td:first-child { background: #F4F2F0; }
 .t tbody tr:hover, #t-pipe tbody tr:hover td:first-child { background: #F7ECE2; }
@@ -1269,6 +1279,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <button class="tab" role="tab" data-tab="opf" aria-selected="false" type="button">Opfølgning<span class="tbadge" id="opf-badge" hidden></span></button>
         <button class="tab" role="tab" data-tab="pipe" aria-selected="false" type="button">Pipeline</button>
         <button class="tab" role="tab" data-tab="regler" aria-selected="false" type="button">Regler</button>
+        <button class="tab" role="tab" data-tab="hjaelp" aria-selected="false" type="button">Vejledning</button>
       </nav>
     </div>
 
@@ -1594,6 +1605,34 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="tablebox" id="pipe-tblbox" hidden><table class="t" id="t-pipe"></table></div>
         <div class="plistbox" id="pipe-list" hidden></div>
         <div class="ptimeline" id="pipe-timeline" hidden></div>
+      </div>
+    </section>
+
+    <!-- VEJLEDNING -->
+    <section class="page" id="hjaelp" hidden>
+      <div class="grid vj-grid">
+        <div class="card">
+          <h2>Sådan trækker du PTD-udtrækket ud af ERP</h2>
+          <p class="note">Rapporten hedder Detailed Main Project View og ligger i NIRAS BI (PM Dashboard). Billederne er fra NIRAS BI; projektdata er fjernet.</p>
+          <ol class="vj-steps">
+          <li class="vj-step"><div class="vj-n">1</div><div class="vj-b"><h3>Åbn PM Dashboard - All Projects (BU)</h3><p class="note">Find NIRAS BI Dashboard under InNIRAS › Global Finance, og vælg <b>PM Dashboard - All Projects (BU)</b>.</p><img src="vejledning/1-dashboard.jpg" alt="InNIRAS Global Finance med knappen PM Dashboard - All Projects (BU) markeret" loading="lazy"></div></li>
+          <li class="vj-step"><div class="vj-n">2</div><div class="vj-b"><h3>Tryk på filterpanelet</h3><p class="note">Tragt-ikonet i højre side åbner filtrene.</p><img src="vejledning/2-filter.jpg" alt="Portfolio-siden med tragt-ikonet for filtre markeret" loading="lazy"></div></li>
+          <li class="vj-step"><div class="vj-n">3</div><div class="vj-b"><h3>Vælg kun DSGN under BU</h3><p class="note">Sørg for, at det kun er DSGN-projekter, der er valgt i feltet BU.</p><img src="vejledning/3-bu.jpg" alt="Filterpanelet med feltet BU sat til DSGN" loading="lazy"></div></li>
+          <li class="vj-step"><div class="vj-n">4</div><div class="vj-b"><h3>Vælg Report</h3><p class="note">Menuen med de tre streger øverst til højre åbner rapporterne.</p><img src="vejledning/4-menu.jpg" alt="Portfolio-siden med menuknappen markeret" loading="lazy"></div></li>
+          <li class="vj-step"><div class="vj-n">5</div><div class="vj-b"><h3>Vælg Main Project List - Project to Date</h3><p class="note">Under Portfolio › Project Financials.</p><img src="vejledning/5-rapport.jpg" alt="Rapportmenuen med Main Project List - Project to Date markeret" loading="lazy"></div></li>
+          <li class="vj-step"><div class="vj-n">6</div><div class="vj-b"><h3>Vælg Detailed</h3><p class="note">Skift fra Overview til <b>Detailed</b>. Så har du rapporten "Detailed Main Project View" med kunde og kontrakttype.</p><img src="vejledning/6-detailed.jpg" alt="Main Project List - Project to date med knappen Overview/Detailed sat til Detailed" loading="lazy"></div></li>
+          </ol>
+        </div>
+        <div class="card">
+          <h2>FAQ</h2>
+          <details class="vj-faq"><summary>Hvordan får jeg rapporten ind i dashboardet?</summary><p>Gem rapporten som Excel-fil (.xlsx), og tryk <b>Indlæs Excel</b> øverst til højre. Du kan vælge flere filer på én gang. Dashboardet viser, hvad hver fil er genkendt som, og spørger, før udtrækket gemmes.</p></details>
+          <details class="vj-faq"><summary>Hvordan får jeg tabellen ud som Excel?</summary><p>I Power BI: hold musen over tabellen, klik på <b>…</b> (Flere indstillinger) og vælg <b>Eksportér data</b>. Vælg Excel-formatet (.xlsx).</p></details>
+          <details class="vj-faq"><summary>Hvorfor skal det være Detailed og ikke Overview?</summary><p>Kun Detailed Main Project View har kunde, kontrakttype (Fixed Price eller Time &amp; Material) og risikoklasse. Uploader du Overview eller det gamle format, er kolonnerne Kunde og Kontrakt tomme, og fanen Kunder bliver tom.</p></details>
+          <details class="vj-faq"><summary>Hvilken dato får udtrækket?</summary><p>Dashboardet læser datoen fra filterlinjen i filen. Den står i bekræftelsen, før du gemmer. Det nyeste udtræk vises som standard; ældre udtræk vælger du under PTD.</p></details>
+          <details class="vj-faq"><summary>Hvad med månedstallene?</summary><p>Månedsudtrækket hentes på samme måde, men med <b>Main Project List - Selected Month</b> i trin 5. Det giver kolonnerne under måneden i fanen Projekter.</p></details>
+          <details class="vj-faq"><summary>Skal jeg stadig sende en risikolog?</summary><p>Nej. Risikoklassen kommer med Detailed Main Project View. En risikolog kan stadig indlæses, og den har så forrang.</p></details>
+          <details class="vj-faq"><summary>Jeg kan ikke se mine ændringer</summary><p>Genindlæs siden uden cache: <b>Cmd+Shift+R</b> på Mac eller <b>Ctrl+Shift+R</b> på Windows.</p></details>
+        </div>
       </div>
     </section>
 
@@ -5657,7 +5696,7 @@ async function logOut() {
 
 /* ================= Start ================= */
 (async () => {
-  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'plb', 'kunder', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler'].includes(h0)) S.tab = h0;
+  const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'plb', 'kunder', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler', 'hjaelp'].includes(h0)) S.tab = h0;
   await ensureLogin();
   await loadData();
   try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
