@@ -117,7 +117,7 @@ Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere le
 
 | Tabel | Indhold |
 |---|---|
-| `pipe_rolle` | Roller for partnere og NIRAS: kode, navn, sortering, aktiv. Start: TE (totalentreprenør), TR (totalrådgiver), UR (underrådgiver). Redigeres under Regler |
+| `pipe_rolle` | Roller for partnere og NIRAS: kode, navn, sortering, aktiv. Start: TE (totalentreprenør), TR (totalrådgiver), UR (underrådgiver); fra 25. nov. 2026 også IR (ingeniørrådgiver, typisk NIRAS) og AR (arkitektrådgiver, typisk partner). Redigeres under Regler |
 | `kollega` | Hvem der kan være ansvarlig: initialer, navn, e-mail, aktiv. Start: KEH, NEBR, LARN, HBEI, RLP, MHJ. Redigeres under Regler |
 | `pipe_partner` | Partnere på en sag: virksomhed (`kunde_id`, samme liste som kunder), rolle, andel af teamets honorar (0-1), sortering |
 | `deal_radar` | Deal Radar-vurderinger: dato, Pain, Power, Vision, Value, Process, Alignment (0-5), note, næste handling |

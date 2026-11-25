@@ -3579,7 +3579,7 @@ const PFASE = Object.fromEntries(PFASER);
 const PFASE_N = Object.fromEntries(PFASER.map(([k], i) => [k, i]));
 const PTYPE = { opgave: 'Opgave', rammeaftale: 'Rammeaftale', miniudbud: 'Miniudbud' };
 // Roller hentes fra tabellen pipe_rolle (kan udvides under Regler); disse bruges, hvis tabellen mangler
-const PROLLER_STD = [{ kode: 'TE', navn: 'Totalentreprenør', aktiv: true }, { kode: 'TR', navn: 'Totalrådgiver', aktiv: true }, { kode: 'UR', navn: 'Underrådgiver', aktiv: true }];
+const PROLLER_STD = [{ kode: 'TE', navn: 'Totalentreprenør', aktiv: true }, { kode: 'TR', navn: 'Totalrådgiver', aktiv: true }, { kode: 'UR', navn: 'Underrådgiver', aktiv: true }, { kode: 'IR', navn: 'Ingeniørrådgiver', aktiv: true }, { kode: 'AR', navn: 'Arkitektrådgiver', aktiv: true }];
 const rolleNavn = (k) => (S.roller || PROLLER_STD).find((r) => r.kode === k)?.navn || k;
 const NOBID_AARSAG = ['Mangler kapacitet', 'Uden for strategi eller fokus', 'For lav vinderchance', 'Kontraktvilkår eller risiko', 'Honorar eller økonomi', 'Kunde eller konkurrence', 'Andet'];
 const PVENT = 60; // dage uden svar efter aflevering, før kortet markeres

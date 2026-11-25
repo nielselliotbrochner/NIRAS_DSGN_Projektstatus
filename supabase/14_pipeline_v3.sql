@@ -16,7 +16,8 @@ create table if not exists public.pipe_rolle (
   oprettet  timestamptz not null default now()
 );
 insert into public.pipe_rolle (kode, navn, sortering) values
-  ('TE', 'Totalentreprenør', 10), ('TR', 'Totalrådgiver', 20), ('UR', 'Underrådgiver', 30)
+  ('TE', 'Totalentreprenør', 10), ('TR', 'Totalrådgiver', 20), ('UR', 'Underrådgiver', 30),
+  ('IR', 'Ingeniørrådgiver', 40), ('AR', 'Arkitektrådgiver', 50)  -- tilføjet 25. nov. 2026
 on conflict (kode) do nothing;
 
 -- Ansvarlige (kolleger i NIRAS; også dem, der ikke er PL eller PA i ERP)
