@@ -150,6 +150,12 @@ Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere le
 - Under "Redigér" kan filer tilføjes (gemmes med det samme) og slettes. Klik på et filnavn åbner filen med et link, der virker i 5 minutter.
 - Slettes noten, slettes dens filer også. Filfeltet vises kun, når noterne gemmes i Supabase.
 
+## Lokation på leads, PQ og tilbud (27. nov. 2026, ingen ny tabel)
+
+- Sagens dialog i pipelinen har feltet **Lokation (GPS)** under Kunde og Ansvarlig. Det tager et Google Maps-link, en adresse eller koordinater ("55.6761, 12.5683" eller "55,6761; 12,5683") og viser de fundne koordinater og et link til Google Maps.
+- Lokationen gemmes i `projekt_info` (lokation_url, adresse, lat, lng) via `projekt_id`, så den også virker på leads uden projektnummer. Beskrivelsen i `projekt_info` røres ikke.
+- Bliver sagen vundet og koblet til et ERP-projekt, flytter `pipeline_vundet` lokationen med, så den står under "Om projektet" og på kortet.
+
 ## Filer på leads, PQ og tilbud (15. nov. 2026, `17_pipe_filer.sql`)
 
 | Tabel / felt | Indhold |

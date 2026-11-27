@@ -508,6 +508,7 @@ table.plb .plact label.note { display: flex; gap: 6px; align-items: center; }
 .pf-filer { display: flex; flex-direction: column; gap: 8px; }
 .entry .pn-files { margin-top: 6px; }
 #pdlg .pf-filer .pn-file .linkbtn { font-size: 12px; }
+#pdlg .pf-lochint { margin-top: -6px; font-size: 12px; }
 #pdlg .pf-hist summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--deep); }
 #pdlg .pf-log { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; max-height: 260px; overflow: auto; }
 #pdlg .pf-log li { border-left: 2px solid var(--line); padding-left: 8px; }
@@ -2247,8 +2248,8 @@ const Store = {
       this.fetchAll('/rest/v1/projekt_info?select=*'),
     ]);
     const fokus = {}; (fok || []).forEach((f) => { fokus[f.projekt] = { fokus: f.fokus, opdateret: f.opdateret }; });
-    const info = {}; (inf || []).forEach((x) => { info[x.projekt] = { beskrivelse: x.beskrivelse, lokation_url: x.lokation_url, adresse: x.adresse, lat: nn(x.lat), lng: nn(x.lng), opdateret: x.opdateret }; });
-    return { notes: notes || [], fokus, info };
+    const info = {}, infoPid = {}; (inf || []).forEach((x) => { const v = { beskrivelse: x.beskrivelse, lokation_url: x.lokation_url, adresse: x.adresse, lat: nn(x.lat), lng: nn(x.lng), opdateret: x.opdateret }; if (x.projekt) info[x.projekt] = v; if (x.projekt_id) infoPid[x.projekt_id] = v; });
+    return { notes: notes || [], fokus, info, infoPid };
   },
   async addNote(n) {
     if (this.mode() === 'local') { const a = ls.get('pd.notes', []); a.push(n); if (!ls.set('pd.notes', a)) throw new Error('Browseren kunne ikke gemme'); return n; }
@@ -2267,6 +2268,10 @@ const Store = {
     if (this.mode() === 'local') { const a = ls.get('pd.info', {}); a[projekt] = r; if (!ls.set('pd.info', a)) throw new Error('Browseren kunne ikke gemme'); return r; }
     await this.sbFetch('/rest/v1/projekt_info?on_conflict=projekt', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ projekt, ...r }) });
     return r;
+  },
+  // Lokation på leads, PQ og tilbud (også uden projektnummer): gemmes i projekt_info via projekt_id
+  async saveInfoPid(projektId, rec) {
+    await this.sbFetch('/rest/v1/projekt_info?on_conflict=projekt_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ projekt_id: projektId, ...rec, opdateret: new Date().toISOString() }) });
   },
   async setFokus(projekt, fokus) {
     const rec = { fokus, opdateret: new Date().toISOString() };
@@ -4144,6 +4149,19 @@ function pipeEdit(x, preset = {}) {
   const fVind = inp('pf-vind', v.antal_vindere ?? '', { inputmode: 'numeric', placeholder: 'fx 4' });
   const fAndel = pctIn('pf-andel', v.andel);
   const fNote = h('textarea', { id: 'pf-note', rows: 3 }); fNote.value = v.bemaerkning || '';
+  // Lokation: Google Maps-link, adresse eller koordinater (samme felt som "Om projektet" på projekterne)
+  const inf0 = (x?.projekt_id && S.infoPid?.[x.projekt_id]) || {};
+  const loc0 = inf0.lokation_url && !inf0.lokation_url.includes('/maps/search/') ? inf0.lokation_url : (inf0.adresse || (inf0.lat != null ? `${inf0.lat}, ${inf0.lng}` : ''));
+  const fLoc = h('input', { id: 'pf-loc', type: 'text', placeholder: 'Link fra Google Maps, adresse eller koordinater, fx 55.6761, 12.5683' }); fLoc.value = loc0;
+  const locHint = h('span', { class: 'note' });
+  const locLink = h('a', { target: '_blank', rel: 'noopener', text: 'Åbn i Google Maps ↗' });
+  const showLoc = () => {
+    const t = fLoc.value.trim(), pl = parseLoc(t);
+    locHint.textContent = !t ? 'Tip: åbn stedet i Google Maps og kopiér det lange link fra adresselinjen, eller højreklik på kortet og kopiér koordinaterne.'
+      : pl.lat != null ? `Koordinater fundet: ${pl.lat.toFixed(5).replace('.', ',')}; ${pl.lng.toFixed(5).replace('.', ',')} ` : /goo\.gl|maps\.app/i.test(t) ? 'Korte delingslinks indeholder ingen koordinater. Brug det lange link fra adresselinjen. ' : 'Gemmes som adresse uden koordinater. ';
+    locLink.hidden = !t; if (t) locLink.href = pl.lokation_url;
+  };
+  fLoc.addEventListener('input', showLoc); showLoc();
   const sum = h('div', { class: 'pf-sum', 'aria-live': 'polite' });
   const g = {
     opgave: h('div', { class: 'pf-grid' }, L('Anlægssum (tDKK)', fAnl), L('Teamets honorar (tDKK)', fHon, 'Hele rådgiverteamets honorar. NIRAS-andelen står under Team')),
@@ -4287,6 +4305,7 @@ function pipeEdit(x, preset = {}) {
         if (p.projektnummer && S.P.some((r) => r.projekt === p.projektnummer)) delete prj.kunde;
       }
       const { pid, pipeId } = await Store.pipeSave(x?.id, x?.projekt_id, prj, pipe);
+      if (fLoc.value.trim() !== loc0) { const rec = parseLoc(fLoc.value); await Store.saveInfoPid(pid, rec); S.infoPid = { ...(S.infoPid || {}), [pid]: { ...inf0, ...rec } }; }
       if (S.kunder && S.roller !== PROLLER_STD) await Store.partnerSync(pipeId, pRows.map((q) => ({ id: q.id, kunde_id: (kOf(q.t, q.k0) || {}).id || ids.get(kLc(q.t)), rolle: q.rolle, andel: isNum(q.a) ? q.a / 100 : null })), prev);
       if (f === 'vundet' && erp && !p.projektnummer) await Store.pipeWon(pid, erp);
       for (const fl of venter) await Store.uploadPipeFile(pipeId, fl, pfMime(fl));
@@ -4421,6 +4440,7 @@ function pipeEdit(x, preset = {}) {
     h('div', { class: 'pf-grid' }, L('Type', fType), ny ? L('Fase', fStart) : null, L(h('span', {}, 'Projektnavn ', h('b', { class: 'c-red', text: '*', title: 'Skal udfyldes' })), fTitel, 'Arbejdstitel. Når opgaven er vundet og kommer i ERP, vises ERP\'s projektnavn, og arbejdstitlen gemmes'), g.udbud, g.mini),
     p.projektnummer ? h('p', { class: 'note', style: 'margin:0', text: `ERP-projektnummer ${p.projektnummer}${p.titel && p.titel !== p.arbejdstitel ? ` · ERP-navn: ${p.titel}` : ''}. Titel, BU, PL og PA opdateres fra ERP-udtrækket.` }) : null,
     h('div', { class: 'pf-grid' }, L('Kunde', h('span', { class: 'pf-kwrap' }, fKunde, kStat)), L('Ansvarlig', fAnsv, 'Kan skiftes mellem faser og undervejs. Listen redigeres under Regler'), L('Salgs- eller midl. nummer', fSalg), L('BU', fBu)),
+    L('Lokation (GPS)', fLoc), h('div', { class: 'pf-lochint' }, locHint, locLink),
     ny ? null : sec('Udfald'), udBtns, udBox,
     sec('Team og honorarsplit'),
     h('div', { class: 'pf-grid' }, L('NIRAS\' rolle', fRolle), L('NIRAS\' andel af honoraret (%)', fNiras, 'Er NIRAS eneste rådgiver, er andelen 100 %. Tom = resten efter partnerne')),
@@ -5380,7 +5400,7 @@ function drawHist(r) {
 async function act(fn, ok) {
   try { await fn(); await reloadNotes(); if (ok) toast(ok); } catch (e) { toast(e.message); console.error(e); }
 }
-async function reloadNotes() { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; rebuild(); render(); }
+async function reloadNotes() { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; S.infoPid = d.infoPid || {}; rebuild(); render(); }
 
 /* ================= Hændelser ================= */
 function show(id) { S.tab = id; $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id))); $$('main > .page[id]').forEach((p) => { p.hidden = p.id !== id; }); try { history.replaceState(null, '', '#' + id); } catch (e) { /* file:// */ } render(); }
@@ -5760,7 +5780,7 @@ async function ensureLogin() {
 }
 async function afterLogin() {
   await loadData();
-  try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
+  try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; S.infoPid = d.infoPid || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
   await loadPipe();
   await loadPersonOpf();
   rebuild(); render();
@@ -5778,7 +5798,7 @@ async function logOut() {
   const h0 = location.hash.slice(1); if (['ov', 'proj', 'pers', 'plb', 'kunder', 'risiko', 'kort', 'rapport', 'opf', 'pipe', 'regler', 'hjaelp'].includes(h0)) S.tab = h0;
   await ensureLogin();
   await loadData();
-  try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
+  try { const d = await Store.load(); S.notes = d.notes; S.fokus = d.fokus; S.info = d.info || {}; S.infoPid = d.infoPid || {}; } catch (e) { toast('Kunne ikke hente noter: ' + e.message); }
   await loadPipe();
   await loadPersonOpf();
   rebuild();
