@@ -155,6 +155,7 @@ Pipelinen er startet forfra (`15_pipeline_nulstil.sql` sletter alle tidligere le
 - Sagens dialog i pipelinen har feltet **Lokation (GPS)** under Kunde og Ansvarlig. Det tager et Google Maps-link, en adresse eller koordinater ("55.6761, 12.5683" eller "55,6761; 12,5683") og viser de fundne koordinater og et link til Google Maps.
 - Lokationen gemmes i `projekt_info` (lokation_url, adresse, lat, lng) via `projekt_id`, så den også virker på leads uden projektnummer. Beskrivelsen i `projekt_info` røres ikke.
 - Bliver sagen vundet og koblet til et ERP-projekt, flytter `pipeline_vundet` lokationen med, så den står under "Om projektet" og på kortet.
+- **Kort:** fanen Kort viser åbne leads, PQ og tilbud med lokation som ruder i fasens farve (Lead grå, PQ okker, Tilbud blå) sammen med ERP-projekterne. Knapperne "ERP-projekter" og "Leads, PQ og tilbud" slår lagene til og fra (huskes i browseren). Filtrene øverst gælder som i Pipeline (BU, PL, PA og ansvarlig). Sager med et ERP-nummer, der allerede står som ERP-projekt, vises kun som ERP-projekt. Klik på en rude giver fase, kunde, honorar, chance, ansvarlig og næste frist og åbner sagen.
 
 ## Filer på leads, PQ og tilbud (15. nov. 2026, `17_pipe_filer.sql`)
 

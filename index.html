@@ -156,6 +156,9 @@ h1.title { font-family: var(--serif); font-weight: 400; font-size: 30px; margin:
 .map .leaflet-tile-pane { filter: grayscale(1) contrast(.92) brightness(1.04); }
 .map .leaflet-container { font-family: var(--sans); }
 .k-warn { background: #FBF4E6; border: 1px solid var(--amber); color: var(--ink); border-radius: var(--r); padding: 8px 12px; }
+.seg.k-vis { margin: 4px 0 8px; display: inline-flex; width: auto; max-width: 100%; align-self: flex-start; }
+.k-rude span { display: block; width: 13px; height: 13px; margin: 2.5px; transform: rotate(45deg); border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+.legend .sw.rude { transform: rotate(45deg) scale(.85); border-radius: 0; }
 .kpop { display: flex; flex-direction: column; gap: 4px; font-family: var(--sans); font-size: 12.5px; min-width: 220px; }
 .kpop b { font-size: 13.5px; }
 .kpop .m { color: var(--muted); }
@@ -1501,10 +1504,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <option value="oms">Omsætning PTD</option>
           </select></label>
         </div>
+        <div class="seg k-vis" role="group" aria-label="Vis på kortet">
+          <button type="button" data-kvis="erp" aria-pressed="true">ERP-projekter</button>
+          <button type="button" data-kvis="pipe" aria-pressed="true">Leads, PQ og tilbud</button>
+        </div>
         <div class="legend" id="k-legend"></div>
         <p class="note k-warn" id="k-warn" hidden></p>
         <div id="map" class="map"></div>
-        <p class="note">Prikkens størrelse følger baseline. Klik på en prik for nøgletal, og åbn projektet derfra. Kortbaggrunden (© CARTO, © OpenStreetMap-bidragydere) hentes fra internettet; projektdata bliver i browseren.</p>
+        <p class="note">Prikkens størrelse følger baseline. Klik på en prik for nøgletal, og åbn projektet derfra. Ruderne er åbne leads, PQ og tilbud med lokation; klik for at åbne sagen. Kortbaggrunden (© CARTO, © OpenStreetMap-bidragydere) hentes fra internettet; projektdata bliver i browseren.</p>
       </div>
     </section>
 
@@ -2506,6 +2513,7 @@ const saveRules = () => ls.set('pd.rules', Object.fromEntries(S.rules.map((r) =>
 /* ================= Tilstand ================= */
 const S = {
   ptd: null, months: {}, notes: [], fokus: {}, info: {}, infoEdit: null, rules: loadRules(),
+  kvis: new Set(ls.get('pd.kvis', ['erp', 'pipe'])),
   risk: null, riskTrend: [], riskBy: new Map(), rhist: {}, rhistCache: {}, rchip: 'k2', rq: '', rp: { pa: null, manual: {}, intro: '', ...{ r: true, y: true, n: false, minb: 0, fokus: true, open: true, risk: true, riskmin: 3, sort: 'score', age: 90, openall: true, sec: { kpi: true, flag: true, open: true, table: true, pages: true, risk: true, desc: false } }, ...ls.get('pd.rp', {}) }, kfarve: ls.get('pd.kfarve', 'flag'),
   trend: [], hist: {}, histCache: {}, ups: [], localKeys: [], src: 'local',
   P: [], periode: '', mSel: '', mLatest: '', pSel: '', pLatest: '', ptds: {}, bus: new Set(['DSGN']), pls: new Set(), pas: new Set(),
@@ -3262,15 +3270,42 @@ function kPopup(r, i) {
       h('button', { class: 'btn small primary', type: 'button', text: 'Åbn projekt', onclick: () => openProject(r.projekt) }),
       i.lokation_url ? h('a', { href: i.lokation_url, target: '_blank', rel: 'noopener', text: 'Google Maps ↗' }) : null));
 }
+// Pipeline på kortet: åbne leads, PQ og tilbud med lokation, som ruder i fasens farve
+const K_PIPE = { lead: ['#8C8279', 'Lead'], pq: ['#C98A16', 'PQ'], tilbud: ['#2F6FB0', 'Tilbud'] };
+function kPipePts() {
+  if (!S.pipe || !S.infoPid) return [];
+  const erp = new Set(S.P.map((r) => r.projekt));
+  return pipeScope().filter((r) => r.aaben && !(r.erp && erp.has(r.erp))).map((r) => ({ r, i: S.infoPid[r.projekt_id] })).filter((x) => x.i && isNum(x.i.lat) && isNum(x.i.lng));
+}
+function kPipePopup(r, i) {
+  return h('div', { class: 'kpop' },
+    h('b', { text: r.navn }),
+    h('span', { class: 'm', text: [r.faseL, r.type !== 'opgave' ? r.typeL : '', r.nr].filter(Boolean).join(' · ') }),
+    r.kunde ? h('span', { text: r.kunde }) : null,
+    i.adresse ? h('span', { text: '📍 ' + i.adresse }) : null,
+    h('span', { text: `${r.vaerdi != null ? 'Honorar ' + F.mio(r.vaerdi) : 'Honorar ikke angivet'}${r.chance != null ? ' · chance ' + F.pct(r.chance) : ''}` }),
+    r.ansvarlige ? h('span', { class: 'm', text: 'Ansvarlig ' + r.ansvarlige }) : null,
+    r.frist ? h('span', { class: r.over ? 'c-red' : r.snart ? 'c-amb' : 'm', text: `${PFRIST[r.fristL]} ${F.date(r.frist)}` }) : null,
+    h('div', { class: 'acts' },
+      h('button', { class: 'btn small primary', type: 'button', text: 'Åbn sagen', onclick: () => pipeEdit(r.x) }),
+      i.lokation_url ? h('a', { href: i.lokation_url, target: '_blank', rel: 'noopener', text: 'Google Maps ↗' }) : null));
+}
 function drawMap(rows) {
   const box = $('#map');
+  $$('.k-vis [data-kvis]').forEach((b) => b.setAttribute('aria-pressed', String(S.kvis.has(b.dataset.kvis))));
   if (!['flag', 'risiko', 'tfm', 'oms'].includes(S.kfarve)) S.kfarve = 'flag';
   $('#k-farve').value = S.kfarve;
-  const pts = rows.map((r) => ({ r, i: S.info[r.projekt] })).filter((x) => x.i && isNum(x.i.lat) && isNum(x.i.lng));
-  $('#k-sub').textContent = `${nf0.format(pts.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()} har koordinater. Lokation tilføjes i projektpanelet under "Om projektet".`;
+  const ptsAll = rows.map((r) => ({ r, i: S.info[r.projekt] })).filter((x) => x.i && isNum(x.i.lat) && isNum(x.i.lng));
+  const pts = S.kvis.has('erp') ? ptsAll : [];
+  const pp = S.kvis.has('pipe') ? kPipePts() : [];
+  const nPipe = S.pipe ? pipeScope().filter((r) => r.aaben).length : 0;
+  $('#k-sub').textContent = `${nf0.format(ptsAll.length)} af ${nf0.format(rows.length)} projekter i ${scopeLabel()} har koordinater. Lokation tilføjes i projektpanelet under "Om projektet".`
+    + (S.pipe ? ` ${nf0.format(kPipePts().length)} af ${nf0.format(nPipe)} åbne leads, PQ og tilbud har lokation (feltet Lokation i sagen).` : '');
   const leg = { risiko: () => [1, 2, 3, 4, 0].map((k) => K_RISK[k]), tfm: K_TFM, oms: () => K_OMS }[S.kfarve]?.() || K_FLAG;
   const legTitle = { tfm: `TFM i ${S.periode ? F.per(S.periode) : 'seneste måned'}:`, oms: 'Omsætning PTD:' }[S.kfarve];
-  $('#k-legend').replaceChildren(...[legTitle ? h('span', { class: 'ms-k', text: legTitle }) : null, ...leg.map(([c, l]) => h('span', {}, h('span', { class: 'sw', style: 'background:' + c }), l))].filter(Boolean));
+  $('#k-legend').replaceChildren(...[
+    ...(S.kvis.has('erp') ? [legTitle ? h('span', { class: 'ms-k', text: legTitle }) : null, ...leg.map(([c, l]) => h('span', {}, h('span', { class: 'sw', style: 'background:' + c }), l))] : []),
+    ...(S.kvis.has('pipe') ? [h('span', { class: 'ms-k', text: 'Pipeline:' }), ...Object.values(K_PIPE).map(([c, l]) => h('span', {}, h('span', { class: 'sw rude', style: 'background:' + c }), l))] : [])].filter(Boolean));
   if (!window.L) { box.replaceChildren(h('p', { class: 'empty', text: 'Kortbiblioteket kunne ikke indlæses.' })); return; }
   if (!map) {
     map = L.map(box, { zoomControl: true, attributionControl: true }).setView([56.0, 10.6], 7);
@@ -3292,13 +3327,26 @@ function drawMap(rows) {
     mk.bindPopup(() => kPopup(r, i), { maxWidth: 320 });
     mLayer.addLayer(mk);
   });
-  const key = pts.map((x) => x.r.projekt).sort().join(',');
+  pp.forEach(({ r, i }) => {
+    const c = (K_PIPE[r.fase] || K_PIPE.lead)[0];
+    const mk = L.marker([i.lat, i.lng], { icon: L.divIcon({ className: 'k-rude', html: `<span style="background:${c}"></span>`, iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -8] }), zIndexOffset: 500 });
+    mk.bindTooltip(h('span', { text: `${r.faseL} · ${r.navn}` }), { direction: 'top', offset: [0, -8] });
+    mk.bindPopup(() => kPipePopup(r, i), { maxWidth: 320 });
+    mLayer.addLayer(mk);
+  });
+  const alle = [...pts.map((x) => [x.i.lat, x.i.lng]), ...pp.map((x) => [x.i.lat, x.i.lng])];
+  const key = [...pts.map((x) => x.r.projekt), ...pp.map((x) => 'p' + x.r.id)].sort().join(',');
   if (key !== lastFit) {
     lastFit = key;
-    if (pts.length === 1) map.setView([pts[0].i.lat, pts[0].i.lng], 13);
-    else if (pts.length > 1) map.fitBounds(pts.map((x) => [x.i.lat, x.i.lng]), { padding: [40, 40], maxZoom: 13 });
+    if (alle.length === 1) map.setView(alle[0], 13);
+    else if (alle.length > 1) map.fitBounds(alle, { padding: [40, 40], maxZoom: 13 });
   }
 }
+$$('.k-vis [data-kvis]').forEach((b) => b.addEventListener('click', () => {
+  const k = b.dataset.kvis;
+  if (S.kvis.has(k)) { if (S.kvis.size === 1) return; S.kvis.delete(k); } else S.kvis.add(k);
+  ls.set('pd.kvis', [...S.kvis]); render();
+}));
 $('#k-farve').addEventListener('change', (e) => { S.kfarve = e.target.value; ls.set('pd.kfarve', S.kfarve); render(); });
 
 /* ----- Opfølgning: alle opfølgninger på tværs af projekter ----- */
